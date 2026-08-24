@@ -9,7 +9,24 @@
     <meta name="description" content="Xususiy maktablar uchun moliya va boshqaruv tizimi" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#1E2B3D" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
     <title>MaktabFinance</title>
+
+    <!--
+      GitHub Pages HTTP sarlavha qo'ya olmaydi — ya'ni Vercel'dagi
+      `X-Frame-Options: DENY` bu yerda ishlamaydi. Quyidagi uch qator
+      uning o'rnini bosadi: sahifa begona ramka ichida ochilsa, o'zini
+      tashqariga chiqaradi. Chiqib bo'lmasa (qattiq sandbox) — umuman
+      ko'rsatmaydi. Bu kirish oynasini soxta sayt ichiga joylab parol
+      o'g'irlashning oldini oladi.
+    -->
+    <script>
+      try {
+        if (self !== top) top.location.replace(self.location.href);
+      } catch (e) {
+        document.documentElement.style.display = 'none';
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

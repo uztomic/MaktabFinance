@@ -1,0 +1,85 @@
+# =====================================================================
+#  MaktabFinance → GitHub Pages
+#
+#  `main` shoxiga har bir push panelni qayta quradi va chiqaradi.
+#
+#  NEGA GITHUB PAGES: uztomic.uz allaqachon shu yerda turadi
+#  (DNS 185.199.108–111.153 — GitHub Pages manzillari), shuning uchun
+#  subdomen ham bir joyda bo'lishi qulay: bitta hisob, bitta panel.
+#
+#  MUHIM: build faqat OCHIQ kalitlarni ishlatadi. Ular
+#  `apps/maktab-panel/.env.production` da repo bilan birga keladi,
+#  shuning uchun bu yerda hech qanday sir (secret) sozlanmaydi —
+#  sozlash kerak bo'lgan sir bo'lsa, u allaqachon xato bo'lardi.
+# =====================================================================
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  # Qo'lda ham ishga tushirish (masalan DNS tarqalganini kutgandan keyin).
+  workflow_dispatch:
+
+# Pages uchun zarur ruxsatlar. Boshqa hech narsaga tegmaydi.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Ketma-ket chiqarish: ikkita push bir vaqtda kelsa oxirgisi g'alaba
+# qiladi, lekin boshlanganini yarmida to'xtatmaydi.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Bog'liqliklarni o'rnatish
+        run: npm ci
+
+      - name: Maxfiy kalit tekshiruvi
+        run: node scripts/check-secrets.mjs
+
+      - name: Tarjima kalitlari to'liqmi
+        run: node scripts/i18n-check.mjs
+
+      - name: Build
+        run: npm run build
+
+      # GitHub Pages'da server yo'naltirishlari YO'Q. SPA da esa
+      # /oquvchilar kabi yo'llar haqiqiy fayl emas. Pages topilmagan
+      # yo'lda 404.html ni beradi — shuning uchun uni index.html
+      # nusxasi qilamiz va React Router yo'lni o'zi hal qiladi.
+      - name: SPA uchun 404 nusxasi
+        run: cp apps/maktab-panel/dist/index.html apps/maktab-panel/dist/404.html
+
+      # Jekyll `_` bilan boshlanadigan fayllarni tashlab yuboradi.
+      # Vite bunday nom bermaydi, lekin kafolat sifatida.
+      - name: Jekyll ni o'chirish
+        run: touch apps/maktab-panel/dist/.nojekyll
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/maktab-panel/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

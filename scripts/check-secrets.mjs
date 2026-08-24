@@ -40,18 +40,34 @@ function isAllowed(file, match) {
   return false;
 }
 
-let files;
-try {
-  const out = execSync('git add -An .', {
-    encoding: 'utf8', maxBuffer: 64 * 1024 * 1024,
-  });
-  files = out.split('\n')
-    .map((l) => l.replace(/^add '/, '').replace(/'$/, ''))
-    .filter(Boolean);
-} catch {
+/**
+ * Tekshiriladigan fayllar: ALLAQACHON kuzatilayotganlari + endi
+ * qo'shiladiganlari.
+ *
+ * Faqat "qo'shiladiganlar" ni olish yetarli emas: CI da ish daraxti
+ * toza bo'ladi va ro'yxat bo'sh chiqib, tekshiruv jimgina o'tib
+ * ketardi. Kuzatilayotganlarini ham qo'shsak, bir marta xato bilan
+ * yuborilgan sir keyingi har bir build'da ushlanadi.
+ */
+function gitList(cmd, strip) {
+  try {
+    const out = execSync(cmd, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+    return out.split('\n').map(strip).filter(Boolean);
+  } catch {
+    return null;
+  }
+}
+
+const tracked = gitList('git ls-files', (l) => l.trim());
+const staged = gitList('git add -An .',
+  (l) => l.replace(/^add '/, '').replace(/'$/, ''));
+
+if (tracked === null && staged === null) {
   console.error("XATO: git repozitoriy topilmadi (git init qilinganmi?)");
   process.exit(1);
 }
+
+const files = [...new Set([...(tracked ?? []), ...(staged ?? [])])];
 
 const hits = [];
 
