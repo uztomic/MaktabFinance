@@ -154,19 +154,44 @@ bir buyruq bilan yaratiladi. **Dasturchi aralashuvi kerak emas.**
 
 ```bash
 node scripts/setup-platform.mjs   # Vault kalitlari + auth hook
+node scripts/harden-auth.mjs      # parol siyosati, sessiya, manzillar
 ```
+
+### Namuna ma'lumot — ikki o'quv yillik maktab
+
+```bash
+node scripts/seed-school.mjs              # nima qilishini aytadi
+node scripts/seed-school.mjs --confirm    # quradi
+```
+
+**Diqqat: bu skript bazani butunlay tozalaydi.** `--confirm` bo'lmasa
+hech narsaga tegmaydi.
+
+Quriladigan ma'lumot — 152 o'quvchi (bog'cha 3 guruh + 1–9 sinf),
+22 o'qituvchi, 8 xodim hisobi va **24 oylik to'liq tarix**:
+2024-09 dan bugungacha har oy uchun yo'qlik, hisoblanma, yakunlash,
+tasdiqlash, to'lov, xarajat va oylik hisob-kitobi.
+
+Bu shunchaki "bazani to'ldirish" emas. Skript tizimning O'Z
+funksiyalarini ishlatadi — `generate_invoices`, `finalize_invoices`,
+`register_cash_payment`, `calc_payroll_batch`. Ya'ni 24 oylik sikl
+haqiqatan ishlashini isbotlaydi. Aynan shu yo'l bilan RLS ning
+tezlik muammosi va sinf hisobotidagi bo'sh qatorlar topilgan.
 
 ---
 
 ## Sinovlar (TZ 8-bo'limi)
 
 ```bash
-npm run test:db                                    # baza mantiqi
-node scripts/smoke-test.mjs <email> <parol>        # panelning HAR BIR so'rovi
+npm run test:db                              # baza mantiqi + xavfsizlik
+npm run audit:security                       # bo'sh natija = toza
+npm run check:secrets                        # repo'da maxfiy kalit yo'q
+node scripts/smoke-test.mjs <email> [parol]  # panelning HAR BIR so'rovi
 ```
 
-`smoke-test` panel bajaradigan 62 ta so'rovni haqiqiy foydalanuvchi
-tokeni bilan tekshiradi. `npm run build` faqat TypeScript xatolarini
+`smoke-test` panel bajaradigan 86 ta so'rovni haqiqiy foydalanuvchi
+tokeni bilan tekshiradi. Parol berilmasa u `service_role` kaliti bilan
+bir martalik havola yaratadi — parolni saqlash yoki so'rash kerak emas. `npm run build` faqat TypeScript xatolarini
 topadi; noto'g'ri ustun nomi yoki RLS to'sig'i esa faqat ishlash
 paytida chiqadi — shu skript ularni oldindan topadi.
 

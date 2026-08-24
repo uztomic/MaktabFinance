@@ -17,6 +17,7 @@ import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { generatePassword } from './password.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -78,13 +79,6 @@ const lit = (s) => `'${String(s).replace(/'/g, "''")}'`;
 
 function looksLikePhone(v) {
   return !v.includes('@') && v.replace(/\D/g, '').length >= 9;
-}
-
-function generatePassword(length = 10) {
-  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
-  const bytes = new Uint8Array(length);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join('');
 }
 
 // ---------------------------------------------------------------------

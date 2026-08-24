@@ -23,7 +23,8 @@
     "i18n:check": "node scripts/i18n-check.mjs",
     "check:secrets": "node scripts/check-secrets.mjs",
     "audit:security": "node scripts/db.mjs file scripts/audit-security.sql",
-    "harden:auth": "node scripts/harden-auth.mjs"
+    "harden:auth": "node scripts/harden-auth.mjs",
+    "seed": "node scripts/seed-school.mjs"
   },
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",
