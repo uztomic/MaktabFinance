@@ -90,62 +90,53 @@ farqni sezmaydi.
 
 ---
 
-## 3. Xavfsizlik: nimani bilish kerak
+## 3. Xavfsizlik
 
-### 3.1. Repozitoriy hozir OCHIQ
+To'liq tavsif — [SECURITY.md](SECURITY.md). Qisqacha:
 
-`github.com/uztomic/MaktabFinance` hozir **public** — kodni istalgan
-odam o'qiy oladi.
+### Repozitoriy ochiq — bu ataylab
 
-Bu tizimni **buzilishga olib kelmaydi**: himoya kodni yashirishda
-emas, bazadagi RLS da. Lekin siz repozitoriy yopiq bo'lishini
-so'ragan edingiz, shuning uchun tanlov aniq bo'lsin:
-
-| Variant | Kod ko'rinadimi | Narxi |
-|---|---|---|
-| **Hozirgi** — public repo + GitHub Pages | Ha | Bepul |
-| Private repo + GitHub Pages | Yo'q | GitHub Pro (~$4/oy) |
-| Private repo + Vercel | Yo'q | Bepul |
-| Private manba + alohida public `dist` repo | Yo'q | Bepul, ikkita repo |
-
-Vercel varianti uchun [vercel.json](vercel.json) tayyor turibdi —
-repozitoriyni ulash kifoya.
-
-### 3.2. Saytni "buzib kirish" mumkin emas
-
-Sayt — statik fayllar to'plami. Serveri, bazasi, admin paneli yo'q.
-Butun huquq Supabase'da: JWT + RLS.
+Kod ko'rinadi, lekin himoya kodni yashirishga tayanmaydi. Butun
+huquq bazadagi RLS da: so'rov qayerdan kelishidan qat'i nazar —
+panel, `curl`, yoki to'g'ridan-to'g'ri API — bir xil cheklanadi.
 
 | Xavf | Nima bo'ladi |
 |---|---|
 | Publishable kalitni o'g'irlash | **Hech narsa** — token'siz bitta qator ham ko'rinmaydi |
-| Boshqa maktab ma'lumotini so'rash | **Bo'sh javob** — `test-isolation.sql` shuni tekshiradi |
-| Brauzerdan to'lov yozish | **Rad etiladi** (`42501`) — moliyaviy jadvallarga INSERT siyosati yo'q |
-| Yozuvni jimgina o'chirish | **Imkonsiz** — DELETE siyosati yo'q, hamma o'zgarish audit jurnalida |
+| Boshqa maktab ma'lumotini so'rash | **Bo'sh javob** |
+| Brauzerdan to'lov yozish | **Rad etiladi** (`42501`) |
+| Yozuvni jimgina o'chirish | **Imkonsiz** — DELETE huquqi hech qayerda yo'q |
+| Direktor o'ziga huquq qo'shishi | **Imkonsiz** — huquqlar jadvali o'zgarmas |
 
-### 3.3. GitHub Pages'ning cheklovi
+O'nta invariant bazaning o'zida tekshiriladi va sinov zanjiriga
+kiritilgan — kelajakdagi migratsiya himoyani jimgina buzib
+qo'yolmaydi:
 
-Pages HTTP sarlavhalarini sozlashga ruxsat bermaydi. Ya'ni
-`vercel.json` dagi `X-Frame-Options`, `X-Content-Type-Options`,
-`Referrer-Policy` bu yerda **qo'llanmaydi**.
+```bash
+npm run audit:security    # bo'sh natija = toza
+```
 
-O'rnini qisman bosadigan narsa `index.html` ga qo'shilgan:
+### Auth qattiqlashtirilgan
 
-- `<meta name="referrer">` — sarlavhaning to'liq o'rnini bosadi;
-- ramkadan chiqaruvchi kichik skript — `X-Frame-Options` o'rniga.
+```bash
+npm run harden:auth       # holatni ko'rsatadi
+```
 
-To'liq sarlavha nazorati kerak bo'lsa — Vercel yoki Cloudflare.
+Parol 12 belgi + harf/raqam, xatdagi havola 15 daqiqa, ro'yxatdan
+o'tish yopiq, ruxsat etilgan manzillar cheklangan.
 
-### 3.4. Haqiqiy xavflar texnik emas
+Sessiya cheklovlari Supabase'ning bepul tarifida yo'q, shuning
+uchun ilova darajasida qo'yilgan: **45 daqiqa harakat bo'lmasa
+sessiya yopiladi** ([IdleGuard.tsx](apps/maktab-panel/src/auth/IdleGuard.tsx)).
+Bu kanselyariyadagi ochiq qolgan kompyuterdan himoya qiladi.
 
-1. **Zaif parollar.** Direktorning paroli "12345678" bo'lsa RLS ham
-   yordam bermaydi.
-2. **service_role kaliti.** U RLS ni butunlay chetlab o'tadi. Faqat
-   Edge Function sirlarida turishi kerak.
-3. **GitHub va Supabase hisoblari.** Ikkalasiga ham **2FA yoqing** —
-   bu eng zaif nuqta.
+### GitHub Pages'ning cheklovi
 
-### 3.5. Kalitlarni almashtiring
+Pages HTTP sarlavhalarini sozlashga ruxsat bermaydi, ya'ni
+`vercel.json` dagi `X-Frame-Options` bu yerda qo'llanmaydi.
+O'rnini `index.html` dagi ramkadan chiqaruvchi skript bosadi.
+
+### Kalitlarni almashtiring
 
 Ishlab chiqish jarayonida service_role, access token va bot tokeni
 yozishmada ko'ringan. Repo'da ular yo'q, lekin baribir yangilanishi
@@ -155,29 +146,15 @@ kerak:
 - Supabase → Account → Access Tokens → eskisini **Revoke**
 - Telegram `@BotFather` → `/revoke`
 
-Yangi qiymatlar faqat ikki joyga yoziladi:
-
 ```bash
 .env.local                                    # repo'ga tushmaydi
 npx supabase secrets set SUPABASE_SERVICE_ROLE_KEY=... TELEGRAM_BOT_TOKEN=...
 ```
 
-### 3.6. Repo'da nima bor va nima yo'q
+### Eng zaif nuqta — hisoblar
 
-| Fayl | Repo'da | Nega |
-|---|---|---|
-| `.env.local` | **Yo'q** | service_role kaliti — to'liq huquq beradi |
-| `.webhook-secret` | **Yo'q** | bot nomidan so'rov yuborish mumkin |
-| `apps/maktab-panel/.env.production` | **Ha** | faqat publishable kalit — u brauzerga baribir chiqadi |
-
-Tekshirish:
-
-```bash
-npm run check:secrets
-```
-
-Skript `git` ning o'zidan "nimani qo'shasan" deb so'raydi va o'sha
-fayllarni tekshiradi. Har bir build'da CI ham shuni ishlatadi.
+GitHub va Supabase hisoblariga **2FA yoqing**. Hisobni qo'lga
+kiritgan odamni hech qanday RLS to'sib turolmaydi.
 
 ---
 
@@ -185,8 +162,9 @@ fayllarni tekshiradi. Har bir build'da CI ham shuni ishlatadi.
 
 ```bash
 npm run check:secrets                             # maxfiy kalit yo'q
+npm run audit:security                            # xavfsizlik invariantlari
 npm run build                                     # TypeScript va build
-npm run test:db                                   # baza mantiqi
+npm run test:db                                   # baza mantiqi + xavfsizlik
 node scripts/smoke-test.mjs direktor@namuna.uz    # har bir so'rov
 git push
 ```

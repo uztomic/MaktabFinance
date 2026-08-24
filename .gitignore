@@ -27,3 +27,6 @@ npm-debug.log*
 yarn-error.log*
 *.log
 .webhook-secret
+
+# TypeScript build keshi — mashinaga bogliq, repoga kerak emas
+*.tsbuildinfo

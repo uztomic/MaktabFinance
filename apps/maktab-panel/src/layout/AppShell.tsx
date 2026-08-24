@@ -16,6 +16,7 @@ import { useT } from '@/i18n';
 import { BranchSwitcher, LangSwitcher, ThemeToggle } from './Controls';
 import { Badge, Button } from '@/ui';
 import { CommandPalette } from '@/ui/CommandPalette';
+import { IdleGuard } from '@/auth/IdleGuard';
 
 interface NavItem {
   to: string;
@@ -299,6 +300,7 @@ export default function AppShell() {
           </main>
 
           <CommandPalette />
+          <IdleGuard />
         </div>
       </div>
     </div>

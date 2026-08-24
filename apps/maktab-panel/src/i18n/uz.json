@@ -828,5 +828,9 @@
   "auth.passwordMismatch": "Parollar bir xil emas",
   "auth.passwordChanged": "Parol o'zgartirildi. Tizimga kirdingiz.",
   "auth.linkExpired": "Havola eskirgan yoki allaqachon ishlatilgan. Kirish sahifasidan qaytadan so'rang.",
-  "auth.backToLogin": "Kirish sahifasiga"
+  "auth.backToLogin": "Kirish sahifasiga",
+  "idle.title": "Sessiya tugayapti",
+  "idle.stay": "Ishni davom ettirish",
+  "idle.message": "Uzoq vaqt harakat bo'lmadi. Sessiya avtomatik yopiladi:",
+  "idle.why": "Bu ochiq qolgan kompyuterdan begona odam foydalanishining oldini oladi."
 }
