@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Android maskable ikonka: ilova ikonkasini kesib ko'rsatadi,
+       shuning uchun belgi markazdagi xavfsiz 80% maydonda turadi. -->
+  <rect width="512" height="512" fill="#1E2B3D"/>
+  <g transform="translate(256,256) scale(0.78) translate(-260,-288)">
+    <rect x="216" y="388" width="24" height="36" fill="#6E8E5E"/>
+    <rect x="248" y="364" width="24" height="60" fill="#7FA36C"/>
+    <rect x="280" y="340" width="24" height="84" fill="#8FAE80"/>
+    <rect x="68" y="152" width="56" height="272" fill="#FFFFFF"/>
+    <path d="M 68 152 L 124 152 L 240 262 L 306 152 L 362 152 L 256 330 Z"
+          fill="#FFFFFF"/>
+    <path d="M 306 152 H 362 V 424 H 306 Z" fill="#7FA36C"/>
+    <path d="M 306 152 H 452 L 416 208 H 306 Z" fill="#7FA36C"/>
+    <path d="M 306 254 H 412 L 376 310 H 306 Z" fill="#7FA36C"/>
+  </g>
+</svg>

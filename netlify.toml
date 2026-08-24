@@ -1,0 +1,25 @@
+# Netlify uchun sozlama. Vercel o'rniga shuni ishlatsa ham bo'ladi —
+# ikkalasi ham bepul va bir xil natija beradi.
+
+[build]
+  command = "npm run build --workspace=maktab-panel"
+  publish = "apps/maktab-panel/dist"
+
+# SPA: mavjud bo'lmagan yo'l index.html ga. Netlify avval haqiqiy
+# faylni qidiradi, shuning uchun assetlar buzilmaydi.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"

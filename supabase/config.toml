@@ -1,0 +1,74 @@
+# =====================================================================
+#  Maktab Moliya CRM — Supabase loyihasi
+#  Migratsiyalar: supabase/migrations/   Edge Functions: supabase/functions/
+# =====================================================================
+
+project_id = "uvoqkqzosfyvdbwranjf"
+
+[db]
+port = 54322
+major_version = 17
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+# Bitta so'rovda qaytadigan qatorlar chegarasi. Hisobotlar server tomonda
+# jamlanadi, shuning uchun mijozga katta ro'yxat kerak emas.
+max_rows = 1000
+
+[auth]
+enabled = true
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+# Ro'yxatdan o'tish YO'Q. Hisoblarni faqat super admin yoki direktor
+# yaratadi (TZ 4.13.3) — ochiq signup moliyaviy tizimda teshik.
+enable_signup = false
+enable_anonymous_sign_ins = false
+# Navbatchi va o'qituvchi telefon bilan kiradi; ularga uzun parol qiyin.
+minimum_password_length = 8
+
+[auth.email]
+enable_signup = false
+# Telefon bilan kirganlarga sintetik pochta beriladi (998...@maktab.local)
+# va unga haqiqiy xat bormaydi. Tasdiqlash yoqilsa ular kira olmaydi.
+enable_confirmations = false
+double_confirm_changes = true
+secure_password_change = true
+
+[storage]
+enabled = true
+# Chek rasmi siqilgandan keyin ~200 KB bo'ladi; 10 MB asl fayl uchun zaxira.
+file_size_limit = "10MiB"
+
+[functions.telegram-webhook]
+# Telegram JWT yubormaydi — himoya `X-Telegram-Bot-Api-Secret-Token`
+# sarlavhasi orqali (TZ 5.4.17), funksiya ichida tekshiriladi.
+verify_jwt = false
+
+[functions.queue-sender]
+# pg_cron chaqiradi, service_role kaliti bilan.
+verify_jwt = false
+
+[functions.cleanup]
+verify_jwt = false
+
+[functions.invoice-generate]
+verify_jwt = true
+
+[functions.payroll-calc]
+verify_jwt = true
+
+[functions.statement-import]
+verify_jwt = true
+
+[functions.impersonate-school]
+verify_jwt = true
+
+[functions.school-user-ops]
+verify_jwt = true
+

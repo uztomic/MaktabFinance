@@ -1,0 +1,572 @@
+// =====================================================================
+//  Boshqaruv paneli — to'liq moliyaviy manzara.
+//
+//  TZ 1.2 dagi asosiy muammo: "Direktor moliyaviy natijani oy tugagandan
+//  5–7 kun keyin biladi." Bu ekran shu savollarga BIR QARASHDA javob
+//  beradi:
+//
+//    · qancha hisoblangan (kutilgan tushum)
+//    · qancha yig'ilgan va YANA QANCHA YIG'ILISHI KERAK
+//    · yig'ish foizi — reja qanchalik bajarilgan
+//    · xarajat: XODIMLAR OYLIGI alohida, qolgani alohida
+//    · foyda: xarajatsiz, oyliksiz va sof
+//    · naqd holat — kassada haqiqatda qancha qoldi
+//    · sinf kesimi — qaysi sinfdan qancha yig'ilgan
+//    · 12 oylik dinamika — o'sish bormi
+// =====================================================================
+
+import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/auth/AuthProvider';
+import { useI18n, useT } from '@/i18n';
+import { isoDate, money, periodLabel } from '@/lib/format';
+import {
+  Badge, Button, Card, EmptyState, ErrorState, Loading, Money, Notice,
+  PageHeader, Table, Td, Th, Tr,
+} from '@/ui';
+
+/** Oy boshidan oy oxirigacha — oylik xarajat davr oxiriga yoziladi,
+ *  shuning uchun "bugungacha" emas, TO'LIQ OY olinadi. Aks holda
+ *  xodimlar oyligi hisobga tushmay qoladi. */
+function monthRange(d = new Date()) {
+  return {
+    from: isoDate(new Date(d.getFullYear(), d.getMonth(), 1)),
+    to: isoDate(new Date(d.getFullYear(), d.getMonth() + 1, 0)),
+    period: isoDate(new Date(d.getFullYear(), d.getMonth(), 1)),
+  };
+}
+
+export default function Dashboard() {
+  const t = useT();
+  const { lang } = useI18n();
+  const { branchId, can, profile } = useAuth();
+  const [offset, setOffset] = useState(0);
+
+  const base = new Date();
+  base.setMonth(base.getMonth() + offset);
+  const { from, to, period } = monthRange(base);
+
+  const canSeeFinance = can('reports.view');
+  const branch = branchId ?? undefined;
+
+  // --- Umumiy moliyaviy jamlanma -----------------------------------
+  const summary = useQuery({
+    queryKey: ['fin-summary', from, to, branchId],
+    enabled: canSeeFinance,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('report_financial_summary', {
+        p_from: from, p_to: to, p_branch_id: branch,
+      });
+      if (error) throw error;
+      return data?.[0] ?? null;
+    },
+  });
+
+  // --- O'tgan oy (taqqoslash uchun) --------------------------------
+  const prev = useQuery({
+    queryKey: ['fin-summary-prev', from, branchId],
+    enabled: canSeeFinance,
+    queryFn: async () => {
+      const p = new Date(base);
+      p.setMonth(p.getMonth() - 1);
+      const r = monthRange(p);
+      const { data, error } = await supabase.rpc('report_financial_summary', {
+        p_from: r.from, p_to: r.to, p_branch_id: branch,
+      });
+      if (error) throw error;
+      return data?.[0] ?? null;
+    },
+  });
+
+  // --- Sinf kesimi --------------------------------------------------
+  const classes = useQuery({
+    queryKey: ['dash-classes', from, to, branchId],
+    enabled: canSeeFinance,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('report_by_class', {
+        p_from: from, p_to: to, p_branch_id: branch,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  // --- 12 oylik dinamika --------------------------------------------
+  const trend = useQuery({
+    queryKey: ['trend', branchId],
+    enabled: canSeeFinance,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('report_monthly_trend', {
+        p_months: 12, p_branch_id: branch,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  // --- Ogohlantirishlar ----------------------------------------------
+  const gaps = useQuery({
+    queryKey: ['absence-gaps', branchId],
+    enabled: can('absences.mark') || canSeeFinance,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('pending_absence_warnings', {
+        p_branch_id: branch, p_days_back: 14,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const proofs = useQuery({
+    queryKey: ['pending-proofs', branchId],
+    enabled: can('payments.create'),
+    queryFn: async () => {
+      let q = supabase.from('payment_proofs')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'pending');
+      if (branchId) q = q.eq('branch_id', branchId);
+      const { count, error } = await q;
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+
+  const students = useQuery({
+    queryKey: ['students-count', branchId],
+    queryFn: async () => {
+      let q = supabase.from('students')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'active').is('deleted_at', null);
+      if (branchId) q = q.eq('branch_id', branchId);
+      const { count, error } = await q;
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+
+  if (summary.isLoading && students.isLoading) return <Loading />;
+  if (summary.error) {
+    return <ErrorState message={(summary.error as Error).message}
+                       onRetry={() => summary.refetch()} />;
+  }
+
+  const s = summary.data;
+  const p = prev.data;
+  const N = (v: unknown) => Number(v ?? 0);
+
+  /** O'tgan oyga nisbatan o'zgarish foizi. */
+  const delta = (cur: unknown, old: unknown) => {
+    const c = N(cur), o = N(old);
+    if (!o) return null;
+    return Math.round(((c - o) / Math.abs(o)) * 100);
+  };
+
+  return (
+    <>
+      <PageHeader
+        title={t('dashboard.title')}
+        subtitle={`${profile?.school_name} · ${periodLabel(period, lang)}`}
+        actions={
+          <>
+            <Button size="sm" onClick={() => setOffset((o) => o - 1)}>←</Button>
+            {offset !== 0 && (
+              <Button size="sm" onClick={() => setOffset(0)}>
+                {t('rep.quick.month')}
+              </Button>
+            )}
+            <Button size="sm" disabled={offset >= 0}
+                    onClick={() => setOffset((o) => o + 1)}>→</Button>
+          </>
+        }
+      />
+
+      {/* --- Ogohlantirishlar ------------------------------------- */}
+      <div className="mb-4 space-y-2">
+        {(gaps.data?.length ?? 0) > 0 && (
+          <Notice tone="warn">
+            <strong>{t('dashboard.absenceWarning')}: </strong>
+            {t('dashboard.absenceWarningHint', { count: gaps.data!.length })}{' '}
+            <Link to="/yoqlik" className="font-medium underline">
+              {t('nav.absences')}
+            </Link>
+          </Notice>
+        )}
+        {(proofs.data ?? 0) > 0 && (
+          <Notice tone="neutral">
+            <strong>{t('dashboard.pendingProofs')}: </strong>{proofs.data}{' '}
+            <Link to="/tolovlar" className="font-medium underline">
+              {t('nav.payments')}
+            </Link>
+          </Notice>
+        )}
+      </div>
+
+      {!canSeeFinance
+        ? (
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <Stat label={t('dashboard.students')} value={String(students.data ?? '—')} />
+          </div>
+        )
+        : !s
+        ? <EmptyState />
+        : (
+          <>
+            {/* ============ TUSHUM ============ */}
+            <section className="mb-4">
+              <SectionTitle>{t('rep.charged')} / {t('rep.collected')}</SectionTitle>
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <Stat
+                  label={t('cls.charged')}
+                  value={money(s.charged, lang)}
+                  hint={t('dashboard.thisMonth')}
+                  delta={delta(s.charged, p?.charged)}
+                />
+                <Stat
+                  label={t('cls.collected')}
+                  value={money(s.collected, lang)}
+                  tone="ok"
+                  delta={delta(s.collected, p?.collected)}
+                />
+                <Stat
+                  label={t('cls.debt')}
+                  value={money(s.remaining, lang)}
+                  tone="danger"
+                  hint={`${t('debt.title')}: ${money(s.total_debt, lang)}`}
+                />
+                <ProgressStat
+                  label={t('cls.avg')}
+                  rate={N(s.collection_rate)}
+                  paid={N(s.paid_students)}
+                  total={N(s.students)}
+                />
+              </div>
+            </section>
+
+            {/* ============ XARAJAT ============ */}
+            <section className="mb-4">
+              <SectionTitle>{t('rep.expenses')}</SectionTitle>
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <Stat
+                  label={t('nav.payroll')}
+                  value={money(s.payroll, lang)}
+                  hint={t('exp.auto')}
+                  delta={delta(s.payroll, p?.payroll)}
+                  invertDelta
+                />
+                <Stat
+                  label={t('exp.title')}
+                  value={money(s.other_expenses, lang)}
+                  delta={delta(s.other_expenses, p?.other_expenses)}
+                  invertDelta
+                />
+                <Stat
+                  label={t('common.total')}
+                  value={money(s.total_expenses, lang)}
+                  tone="danger"
+                />
+                <Stat
+                  label={t('dashboard.students')}
+                  value={String(s.students)}
+                  hint={`${s.paid_students} — ${t('students.settled').toLowerCase()}`}
+                />
+              </div>
+            </section>
+
+            {/* ============ FOYDA ============ */}
+            <section className="mb-4">
+              <SectionTitle>{t('fin.netProfit')}</SectionTitle>
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <Stat
+                  label={`${t('rep.profit')} — ${t('exp.title').toLowerCase()}siz`}
+                  value={money(s.profit_before_expenses, lang)}
+                  tone="ok"
+                />
+                <Stat
+                  label={`${t('rep.profit')} — ${t('nav.payroll').toLowerCase()}siz`}
+                  value={money(s.profit_before_payroll, lang)}
+                  tone={N(s.profit_before_payroll) >= 0 ? 'ok' : 'danger'}
+                />
+                <Stat
+                  label={t('fin.netProfit')}
+                  value={money(s.profit_net, lang)}
+                  tone={N(s.profit_net) >= 0 ? 'ok' : 'danger'}
+                  big
+                  delta={delta(s.profit_net, p?.profit_net)}
+                />
+                <Stat
+                  label={t('rep.cash')}
+                  value={money(s.cash_position, lang)}
+                  tone={N(s.cash_position) >= 0 ? 'ok' : 'danger'}
+                  hint={`${t('cls.collected')} − ${t('rep.expenses').toLowerCase()}`}
+                />
+              </div>
+            </section>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              {/* --- Sinf kesimi --------------------------------- */}
+              <Card
+                title={t('fin.topClasses')}
+                action={
+                  <Link to="/sinflar"
+                        className="text-[13px] text-brand-600 hover:underline">
+                    {t('cls.title')}
+                  </Link>
+                }
+                padded={false}
+              >
+                {(classes.data?.length ?? 0) === 0 ? <EmptyState hint="" /> : (
+                  <Table>
+                    <thead>
+                      <tr>
+                        <Th>{t('students.class')}</Th>
+                        <Th align="right">{t('cls.charged')}</Th>
+                        <Th align="right">{t('cls.collected')}</Th>
+                        <Th align="right">{t('cls.debt')}</Th>
+                        <Th align="right">%</Th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {classes.data!.map((c) => (
+                        <Tr key={c.class_id}>
+                          <Td>
+                            <Link to={`/sinflar/${c.class_id}`}
+                                  className="font-medium hover:underline">
+                              {c.class_name}
+                            </Link>
+                            <span className="ml-1.5 text-[11px]
+                              text-[var(--text-faint)]">
+                              {c.students}
+                            </span>
+                          </Td>
+                          <Td align="right" mono>{money(c.charged, lang)}</Td>
+                          <Td align="right" mono className="text-[var(--ok)]">
+                            {money(c.collected, lang)}
+                          </Td>
+                          <Td align="right" mono>
+                            <Money value={c.remaining} colored />
+                          </Td>
+                          <Td align="right">
+                            <Badge tone={N(c.collection_rate) >= 80 ? 'ok'
+                              : N(c.collection_rate) >= 50 ? 'warn' : 'danger'}>
+                              {c.collection_rate}%
+                            </Badge>
+                          </Td>
+                        </Tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                )}
+              </Card>
+
+              {/* --- 12 oylik dinamika --------------------------- */}
+              <Card title={t('fin.trend')} padded={false}>
+                <TrendChart rows={trend.data ?? []} />
+              </Card>
+            </div>
+          </>
+        )}
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider
+      text-[var(--text-faint)]">
+      {children}
+    </h2>
+  );
+}
+
+function Stat({
+  label, value, tone = 'neutral', hint, delta, invertDelta, big,
+}: {
+  label: string;
+  value: string;
+  tone?: 'neutral' | 'ok' | 'danger';
+  hint?: string;
+  /** O'tgan oyga nisbatan foiz. null — taqqoslash yo'q. */
+  delta?: number | null;
+  /** Xarajat uchun: o'sish YOMON, shuning uchun rang teskari. */
+  invertDelta?: boolean;
+  big?: boolean;
+}) {
+  const color = tone === 'ok'
+    ? 'text-[var(--ok)]'
+    : tone === 'danger'
+    ? 'text-[var(--danger)]'
+    : 'text-[var(--text)]';
+
+  const good = delta === null || delta === undefined
+    ? null
+    : invertDelta ? delta <= 0 : delta >= 0;
+
+  return (
+    <div className={`rounded-lg border bg-[var(--bg)] px-4 py-3
+      ${big ? 'ring-1 ring-brand-200' : ''}`}>
+      <div className="text-[11px] font-medium uppercase tracking-wide
+        text-[var(--text-muted)]">
+        {label}
+      </div>
+      <div className={`num mt-1 font-semibold tracking-tight
+        ${big ? 'text-2xl' : 'text-xl'} ${color}`}>
+        {value}
+      </div>
+      <div className="mt-0.5 flex items-center gap-1.5">
+        {delta !== null && delta !== undefined && (
+          <span className={`num text-[11px] font-medium
+            ${good ? 'text-[var(--ok)]' : 'text-[var(--danger)]'}`}>
+            {delta > 0 ? '↑' : delta < 0 ? '↓' : ''} {Math.abs(delta)}%
+          </span>
+        )}
+        {hint && (
+          <span className="text-[11px] text-[var(--text-faint)]">{hint}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Yig'ish foizi — chiziq bilan, chunki foiz raqamdan ko'ra ko'rinishli. */
+function ProgressStat({
+  label, rate, paid, total,
+}: {
+  label: string;
+  rate: number;
+  paid: number;
+  total: number;
+}) {
+  const t = useT();
+  const tone = rate >= 80 ? 'ok' : rate >= 50 ? 'warn' : 'danger';
+  const bar = tone === 'ok'
+    ? 'bg-[var(--ok)]'
+    : tone === 'warn'
+    ? 'bg-[var(--warn)]'
+    : 'bg-[var(--danger)]';
+
+  return (
+    <div className="rounded-lg border bg-[var(--bg)] px-4 py-3">
+      <div className="text-[11px] font-medium uppercase tracking-wide
+        text-[var(--text-muted)]">
+        {t('cls.collected')} %
+      </div>
+      <div className="num mt-1 text-xl font-semibold tracking-tight">
+        {rate}%
+      </div>
+      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full
+        bg-[var(--bg-inset)]">
+        <div className={`h-full ${bar}`}
+             style={{ width: `${Math.min(100, Math.max(0, rate))}%` }} />
+      </div>
+      <div className="mt-1 text-[11px] text-[var(--text-faint)]">
+        {paid}/{total} — {label.toLowerCase()}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 12 oylik dinamika — ustunli diagramma.
+ * Kutubxonasiz: har bir oy ikkita ustun (hisoblangan / xarajat) va
+ * sof foyda chizig'i rangda ko'rsatiladi.
+ */
+function TrendChart({
+  // deno-lint-ignore no-explicit-any
+  rows,
+}: {
+  // deno-lint-ignore no-explicit-any
+  rows: any[];
+}) {
+  const t = useT();
+  const { lang } = useI18n();
+
+  const data = useMemo(() =>
+    rows.map((r) => {
+      const charged = Number(r.charged ?? 0);
+      const expenses = Number(r.payroll ?? 0) + Number(r.other_expenses ?? 0);
+      return {
+        period: String(r.period),
+        charged,
+        collected: Number(r.collected ?? 0),
+        expenses,
+        profit: charged - expenses,
+      };
+    }), [rows]);
+
+  const max = Math.max(1, ...data.map((d) => Math.max(d.charged, d.expenses)));
+
+  if (data.length === 0) return <EmptyState hint="" />;
+
+  return (
+    <div className="p-4">
+      <p className="mb-3 text-[12px] text-[var(--text-muted)]">
+        {t('fin.trendHint')}
+      </p>
+
+      <div className="flex items-end gap-1.5" style={{ height: 140 }}>
+        {data.map((d) => (
+          <div key={d.period} className="group relative flex flex-1 flex-col
+            items-center justify-end gap-0.5" style={{ height: '100%' }}>
+            {/* Tushum */}
+            <div
+              className="w-full rounded-t bg-brand-500"
+              style={{ height: `${(d.charged / max) * 100}%`, minHeight: 2 }}
+            />
+            {/* Xarajat — ustidan yupqa qatlam */}
+            <div
+              className="w-full rounded-t bg-[var(--danger)] opacity-70"
+              style={{ height: `${(d.expenses / max) * 100}%`, minHeight: 2 }}
+            />
+
+            {/* Sichqoncha ustiga kelganda tafsilot */}
+            <div className="pointer-events-none absolute bottom-full z-10 mb-1
+              hidden w-40 rounded-md border bg-[var(--bg)] p-2 text-[11px]
+              shadow-lg group-hover:block">
+              <div className="font-medium">{periodLabel(d.period, lang)}</div>
+              <Row label={t('cls.charged')} value={money(d.charged, lang)} />
+              <Row label={t('cls.collected')} value={money(d.collected, lang)} />
+              <Row label={t('rep.expenses')} value={money(d.expenses, lang)} />
+              <div className="mt-1 flex justify-between border-t pt-1 font-medium">
+                <span>{t('fin.netProfit')}</span>
+                <span className={`num ${d.profit >= 0
+                  ? 'text-[var(--ok)]' : 'text-[var(--danger)]'}`}>
+                  {money(d.profit, lang)}
+                </span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-2 flex justify-between text-[10px]
+        text-[var(--text-faint)]">
+        <span>{periodLabel(data[0].period, lang)}</span>
+        <span>{periodLabel(data[data.length - 1].period, lang)}</span>
+      </div>
+
+      <div className="mt-3 flex gap-4 text-[11px]">
+        <span className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-sm bg-brand-500" />
+          {t('cls.charged')}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-sm bg-[var(--danger)] opacity-70" />
+          {t('rep.expenses')}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between gap-2">
+      <span className="text-[var(--text-muted)]">{label}</span>
+      <span className="num">{value}</span>
+    </div>
+  );
+}

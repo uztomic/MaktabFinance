@@ -1,0 +1,29 @@
+# Maxfiy kalitlar — HECH QACHON repo'ga tushmaydi
+.env
+.env.*
+!.env.example
+# Ishlab chiqarish uchun OCHIQ kalitlar — himoya RLS da, sir emas.
+!apps/maktab-panel/.env.production
+
+# Bog'liqliklar va build
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Supabase CLI ish fayllari
+.supabase/
+supabase/.temp/
+supabase/.branches/
+
+# Muharrir
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+
+# Loglar
+npm-debug.log*
+yarn-error.log*
+*.log
+.webhook-secret
