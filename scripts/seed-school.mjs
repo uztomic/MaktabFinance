@@ -960,7 +960,8 @@ declare
   v_parent uuid;
 begin
   for v_inv in
-    select t.invoice_id, t.student_id, t.total, t.due_date, s.branch_id
+    select t.invoice_id, t.student_id, t.total, t.due_date, s.branch_id,
+           s.enrolled_on
       from public.v_invoice_totals t
       join public.students s on s.id = t.student_id
      where t.period = ${d(p)} and t.status <> 'cancelled'
@@ -991,6 +992,11 @@ begin
     -- Davrdan chiqib ketmasin.
     if v_paid < ${d(p)} then v_paid := ${d(p)}; end if;
     if v_paid > current_date then v_paid := current_date; end if;
+
+    -- QABUL SANASIDAN OLDIN bo'lmasin. Muddat oyning 5-sanasi, bola
+    -- esa 12-sanada kelgan bo'lsa, "muddatgacha to'lash" hisobi
+    -- to'lovni bola hali maktabda yo'q kunga qo'yib yuborardi.
+    if v_paid < v_inv.enrolled_on then v_paid := v_inv.enrolled_on; end if;
 
     v_chan := random();
 

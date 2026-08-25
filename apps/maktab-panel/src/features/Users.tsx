@@ -395,11 +395,11 @@ function AddUserModal({
 
         <Field
           label={t('auth.login')}
-          hint="Email kiritsangiz parol tiklash havolasi ishlaydi. Telefon kiritsangiz parolni siz tiklaysiz."
+          hint={t('users.loginHint')}
           required
         >
           <Input value={login} onChange={(e) => setLogin(e.target.value)}
-                 placeholder="direktor@maktab.uz yoki 998901234567" required />
+                 placeholder={t('users.loginPlaceholder')} required />
         </Field>
 
         <Field label={t('users.role')} required>
@@ -411,9 +411,9 @@ function AddUserModal({
         </Field>
 
         <Field label={t('auth.password')}
-               hint="Bo'sh qoldirsangiz tizim o'zi yaratadi">
+               hint={t('users.passwordHint')}>
           <Input value={password} onChange={(e) => setPassword(e.target.value)}
-                 minLength={8} placeholder="kamida 8 belgi" />
+                 minLength={12} placeholder={t('users.passwordPlaceholder')} />
         </Field>
 
         {branches.length > 1 && (
@@ -503,8 +503,8 @@ function ResetPasswordModal({
           <Input
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            minLength={8}
-            placeholder="kamida 8 belgi"
+            minLength={12}
+            placeholder={t('users.passwordPlaceholder')}
             autoFocus
           />
         </Field>

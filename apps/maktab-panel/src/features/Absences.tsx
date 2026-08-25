@@ -242,7 +242,7 @@ export default function Absences() {
             </Select>
           </Field>
           <Field label={t('absences.reason')}
-                 hint="Belgilanganlarga qo'llaniladi">
+                 hint={t('absences.reasonHint')}>
             <Select value={reasonId} onChange={(e) => setReasonId(e.target.value)}>
               <option value="">—</option>
               {(reasons.data ?? []).map((r) => (

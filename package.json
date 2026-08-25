@@ -24,7 +24,10 @@
     "check:secrets": "node scripts/check-secrets.mjs",
     "audit:security": "node scripts/db.mjs file scripts/audit-security.sql",
     "harden:auth": "node scripts/harden-auth.mjs",
-    "seed": "node scripts/seed-school.mjs"
+    "seed": "node scripts/seed-school.mjs",
+    "audit:code": "node scripts/audit-code.mjs",
+    "audit:data": "node scripts/db.mjs file scripts/audit-data.sql",
+    "audit": "npm run audit:code && npm run audit:security && npm run audit:data && npm run check:secrets && npm run i18n:check"
   },
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",

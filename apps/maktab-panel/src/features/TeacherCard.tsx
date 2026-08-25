@@ -533,7 +533,7 @@ function AllowanceModal({
         )}
 
         <Field label={t('services.validFrom')} required
-               hint="Shu davrdan boshlab oylik hisobiga kiradi.">
+               hint={t('teachers.allowanceFromHint')}>
           <Input type="date" value={startsOn}
                  onChange={(e) => setStartsOn(e.target.value)} required />
         </Field>
@@ -588,7 +588,7 @@ function AdvanceModal({
         className="space-y-3"
       >
         <Field label={t('adv.period')} required
-               hint="Oyning 1-sanasi. Shu oy oyligidan ushlab qolinadi.">
+               hint={t('teachers.advanceHint')}>
           <Input type="month"
                  value={f.period.slice(0, 7)}
                  onChange={(e) => set('period', `${e.target.value}-01`)}

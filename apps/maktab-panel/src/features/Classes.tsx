@@ -486,7 +486,7 @@ function ClassModal({
             <Input value={f.name} onChange={(e) => set('name', e.target.value)}
                    placeholder="5-A" autoFocus required />
           </Field>
-          <Field label={t('cls.grade')} hint="Yillik ko'chirish uchun kerak">
+          <Field label={t('cls.grade')} hint={t('cls.gradeHint')}>
             <Input type="number" min={0} max={12} value={f.grade_level}
                    onChange={(e) => set('grade_level', e.target.value)} />
           </Field>

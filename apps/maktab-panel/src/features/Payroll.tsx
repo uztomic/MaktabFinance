@@ -145,7 +145,7 @@ export default function Payroll() {
         {data.length === 0
           ? (
             <EmptyState
-              hint="Bu davr uchun oylik hali hisoblanmagan."
+              hint={t('payroll.notCalculated')}
               action={mayWrite('payroll.manage') && (
                 <Button onClick={() => calcAll.mutate()}>
                   {t('payroll.calculateAll')}

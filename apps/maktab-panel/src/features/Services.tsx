@@ -374,7 +374,7 @@ function ServiceModal({
         </Field>
 
         <Field label={t('services.code')}
-               hint="Filiallar bo'yicha jamlash uchun. Bo'sh qoldirsangiz nomdan olinadi.">
+               hint={t('services.codeHint')}>
           <Input value={code} onChange={(e) => setCode(e.target.value)}
                  placeholder="meals, transport..." />
         </Field>
@@ -467,7 +467,7 @@ function PriceModal({
                       autoFocus required />
         </Field>
         <Field label={t('services.validFrom')} required
-               hint="Shu sanadan oldingi davrlar o'zgarmaydi.">
+               hint={t('services.validFromHint')}>
           <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)}
                  required />
         </Field>

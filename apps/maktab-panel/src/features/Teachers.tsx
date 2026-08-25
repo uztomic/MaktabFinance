@@ -364,7 +364,7 @@ function TeacherModal({
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label={t('teachers.rateFactor')} hint="1 = to'liq, 0.5 = yarim">
+          <Field label={t('teachers.rateFactor')} hint={t('teachers.rateFactorHint')}>
             <Input type="number" step="0.05" min="0.05" max="3"
                    value={f.rate_factor}
                    onChange={(e) => set('rate_factor', e.target.value)} />
@@ -376,7 +376,7 @@ function TeacherModal({
         </div>
 
         <Field label={t('teachers.baseSalary')}
-               hint="Formula 'qat'iy oylik' bo'lganda ishlatiladi">
+               hint={t('teachers.baseSalaryHint')}>
           <MoneyInput value={f.base_salary}
                       onChange={(e) => set('base_salary', e.target.value)} />
         </Field>
@@ -477,7 +477,7 @@ function AddLessonModal({
           <Field
             label={t('lessons.reason')}
             required
-            hint="Sozlamadagi qoida shu sabab bo'yicha to'lovni belgilaydi: holiday, quarantine, teacher_absent"
+            hint={t('lessons.reasonHint')}
           >
             <Input value={f.reason} onChange={(e) => set('reason', e.target.value)}
                    placeholder="holiday / quarantine / teacher_absent" required />

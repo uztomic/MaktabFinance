@@ -184,7 +184,7 @@ export function ContractModal({
             <Input type="date" value={f.starts_on}
                    onChange={(e) => set('starts_on', e.target.value)} required />
           </Field>
-          <Field label={t('contracts.endsOn')} hint="Bo'sh = muddatsiz">
+          <Field label={t('contracts.endsOn')} hint={t('contracts.endsOnHint')}>
             <Input type="date" value={f.ends_on}
                    onChange={(e) => set('ends_on', e.target.value)} />
           </Field>
@@ -196,7 +196,7 @@ export function ContractModal({
                         onChange={(e) => set('tuition', e.target.value)} required />
           </Field>
           <Field label={t('contracts.dueDay')} required
-                 hint="Oyning nechanchi sanasi">
+                 hint={t('contracts.dueDayHint')}>
             <Input type="number" min={1} max={28} value={f.due_day}
                    onChange={(e) => set('due_day', e.target.value)} required />
           </Field>
@@ -691,7 +691,7 @@ export function StudentEditModal({
         </Field>
 
         {f.status === 'expelled' && (
-          <Field label={t('students.leftOn')} hint="Bo'sh = bugun">
+          <Field label={t('students.leftOn')} hint={t('common.emptyMeansToday')}>
             <Input type="date" value={f.left_on}
                    onChange={(e) => set('left_on', e.target.value)} />
           </Field>

@@ -152,7 +152,7 @@ export function CalendarSettings({ editable }: { editable: boolean }) {
           ? (
             <EmptyState
               title={t('common.empty')}
-              hint="Bu oyda istisno kun belgilanmagan — dushanba-juma ish kuni hisoblanadi."
+              hint={t('cal.noExceptions')}
             />
           )
           : (
@@ -269,7 +269,7 @@ function CalendarModal({
             <Input type="date" value={f.from}
                    onChange={(e) => set('from', e.target.value)} autoFocus required />
           </Field>
-          <Field label={t('cal.to')} hint="Bo'sh = bitta kun">
+          <Field label={t('cal.to')} hint={t('cal.toHint')}>
             <Input type="date" value={f.to} min={f.from}
                    onChange={(e) => set('to', e.target.value)} />
           </Field>
@@ -285,7 +285,7 @@ function CalendarModal({
           </Select>
         </Field>
 
-        <Field label={t('cal.name')} hint="Masalan: Navro'z, Qish ta'tili">
+        <Field label={t('cal.name')} hint={t('cal.nameHint')}>
           <Input value={f.name} onChange={(e) => set('name', e.target.value)} />
         </Field>
 

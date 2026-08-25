@@ -84,7 +84,7 @@ export default function MyPayroll() {
         ? (
           <EmptyState
             title={t('common.empty')}
-            hint="Bu davr uchun oylik hali hisoblanmagan."
+            hint={t('payroll.notCalculated')}
           />
         )
         : (

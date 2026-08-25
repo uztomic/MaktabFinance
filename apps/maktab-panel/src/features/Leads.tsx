@@ -393,7 +393,7 @@ function LeadModal({
         className="space-y-3"
       >
         <Field label={t('common.fullName')} required
-               hint="Ota-onaning yoki bolaning ismi">
+               hint={t('lead.nameHint')}>
           <Input value={f.full_name} onChange={(e) => set('full_name', e.target.value)}
                  autoFocus required />
         </Field>
