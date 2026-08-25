@@ -881,5 +881,6 @@
   "users.loginHint": "Email kiritsangiz parol tiklash havolasi ishlaydi. Telefon kiritsangiz — parolni administrator tiklaydi.",
   "users.passwordPlaceholder": "kamida 12 belgi",
   "users.loginPlaceholder": "pochta yoki telefon raqami",
-  "absences.notBillable": "kunlik xizmatda emas — pulga ta'sir qilmaydi"
+  "absences.notBillable": "kunlik xizmatda emas — pulga ta'sir qilmaydi",
+  "auth.invalidHint": "Katta-kichik harflarni tekshiring. Parolni ko'rish uchun ko'z belgisini bosing."
 }

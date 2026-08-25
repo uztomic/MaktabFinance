@@ -25,6 +25,19 @@ export function PasswordInput(
       <Input
         {...props}
         type={shown ? 'text' : 'password'}
+        // MOBIL KLAVIATURA JILOVI — busiz telefonda kirish buziladi.
+        //
+        // `type="password"` da telefon o'zi to'g'ri ishlaydi, lekin
+        // "ko'rsatish" bosilganda maydon `text` ga aylanadi va
+        // klaviatura odatiy matn kabi muomala qiladi: birinchi harfni
+        // KATTA qiladi va so'z tugaganda oxiriga BO'SH JOY qo'shadi.
+        //
+        // O'lchandi: ikkala holat ham serverdan "login yoki parol
+        // xato" javobini beradi. Kompyuterda esa ishlaydi — shuning
+        // uchun sabab uzoq vaqt ko'rinmay qoladi.
+        autoCapitalize="none"
+        autoCorrect="off"
+        spellCheck={false}
         className={`pr-11 ${props.className ?? ''}`}
       />
       <button

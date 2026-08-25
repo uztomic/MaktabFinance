@@ -413,7 +413,8 @@ function AddUserModal({
         <Field label={t('auth.password')}
                hint={t('users.passwordHint')}>
           <Input value={password} onChange={(e) => setPassword(e.target.value)}
-                 minLength={12} placeholder={t('users.passwordPlaceholder')} />
+                 minLength={12} placeholder={t('users.passwordPlaceholder')}
+                 autoCapitalize="none" autoCorrect="off" spellCheck={false} />
         </Field>
 
         {branches.length > 1 && (
@@ -505,6 +506,9 @@ function ResetPasswordModal({
             onChange={(e) => setPassword(e.target.value)}
             minLength={12}
             placeholder={t('users.passwordPlaceholder')}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             autoFocus
           />
         </Field>

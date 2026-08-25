@@ -32,9 +32,15 @@ export default function LoginPage() {
     setBusy(true);
 
     const email = isPhone ? phoneToEmail(login) : login.trim();
+
+    // Parol chetidagi bo'sh joy OLIB TASHLANADI. Odam ataylab
+    // parolni bo'sh joy bilan boshlamaydi yoki tugatmaydi — bu
+    // deyarli har doim mobil klaviaturaning ishi (so'z taklifidan
+    // keyin avtomatik qo'shiladi) yoki nusxa ko'chirishdagi ortiqcha
+    // belgi. Tizim yaratadigan parollarda ham bo'sh joy yo'q.
     const { error: err } = await supabase.auth.signInWithPassword({
       email,
-      password,
+      password: password.trim(),
     });
 
     setBusy(false);
@@ -103,6 +109,9 @@ export default function LoginPage() {
                   onChange={(e) => setLogin(e.target.value)}
                   autoComplete="username"
                   inputMode={isPhone ? 'tel' : 'email'}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   autoFocus
                   required
                 />
@@ -119,8 +128,15 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div className="mt-3">
+              <div className="mt-3 space-y-2">
                 <Notice tone="danger">{error}</Notice>
+                {/* Qaysi maydon xato ekani AYTILMAYDI — bu hujumchiga
+                    "bunday login bor" degan ma'lumot berardi. Lekin
+                    eng ko'p uchraydigan sababni eslatib qo'yish
+                    hech narsani oshkor qilmaydi va yordam beradi. */}
+                <p className="text-[12px] text-[var(--text-muted)]">
+                  {t('auth.invalidHint')}
+                </p>
               </div>
             )}
             {info && (
