@@ -880,5 +880,6 @@
   "users.passwordHint": "Bo'sh qoldirsangiz tizim o'zi mustahkam parol yaratadi",
   "users.loginHint": "Email kiritsangiz parol tiklash havolasi ishlaydi. Telefon kiritsangiz — parolni administrator tiklaydi.",
   "users.passwordPlaceholder": "kamida 12 belgi",
-  "users.loginPlaceholder": "pochta yoki telefon raqami"
+  "users.loginPlaceholder": "pochta yoki telefon raqami",
+  "absences.notBillable": "kunlik xizmatda emas — pulga ta'sir qilmaydi"
 }

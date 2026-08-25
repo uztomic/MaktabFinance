@@ -40,24 +40,54 @@ export default function Absences() {
   const activeBranch = branchId ?? branches[0]?.id ?? null;
   const canMark = mayWrite('absences.mark');
 
-  // --- Kunlik xizmatga yozilgan o'quvchilar (TZ 4.5.1) --------------
+  // --- Sinfdagi BARCHA faol o'quvchi ---------------------------------
+  //
+  //  ILGARI bu yerda faqat KUNLIK XIZMATGA yozilganlar ko'rsatilardi
+  //  (TZ 4.5.1 — moliyaviy nuqtai nazardan faqat ular muhim).
+  //
+  //  Lekin sinf rahbari o'z ekranida BUTUN sinfni belgilaydi. Natijada
+  //  ikkita ekran bir-biriga zid javob berardi: o'qituvchi 3 tani
+  //  belgilagan, navbatchi esa 1 tasini ko'rardi — chunki qolgan
+  //  ikkitasida ovqatlanish xizmati yo'q edi. 144 o'quvchidan 34 tasi
+  //  aynan shunday.
+  //
+  //  Endi hamma ko'rinadi, kunlik xizmatlilari esa ALOHIDA belgilanadi
+  //  — ya'ni "bu yo'qlik pulga ta'sir qiladi" degani ko'rinib turadi.
+  //  TZ ning moliyaviy maqsadi saqlanadi, ikkita ekran esa mos keladi.
   const roster = useQuery({
     queryKey: ['absence-roster', activeBranch, day],
     enabled: !!activeBranch,
     queryFn: async () => {
       const { data, error } = await supabase
+        .from('students')
+        .select('id, full_name, class_name')
+        .eq('branch_id', activeBranch!)
+        .eq('status', 'active')
+        .is('deleted_at', null)
+        .lte('enrolled_on', day)
+        .order('class_name')
+        .order('full_name');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  // Kimning yo'qligi PULGA ta'sir qiladi — kunlik xizmatga yozilganlar.
+  const billable = useQuery({
+    queryKey: ['absence-billable', activeBranch, day],
+    enabled: !!activeBranch,
+    queryFn: async () => {
+      const { data, error } = await supabase
         .from('student_services')
-        .select('student_id, starts_on, ends_on, services!inner(id, name, billing_type, branch_id, is_active), students!inner(id, full_name, class_name, branch_id, status, deleted_at)',
-        )
+        .select('student_id, ends_on, services!inner(billing_type, is_active), students!inner(branch_id)')
         .eq('services.billing_type', 'daily')
         .eq('services.is_active', true)
         .eq('students.branch_id', activeBranch!)
-        .eq('students.status', 'active')
         .lte('starts_on', day);
       if (error) throw error;
-
-      // Muddati tugagan yozilishlarni chiqarib tashlaymiz.
-      return (data ?? []).filter((r) => !r.ends_on || r.ends_on >= day);
+      return new Set((data ?? [])
+        .filter((r) => !r.ends_on || r.ends_on >= day)
+        .map((r) => r.student_id));
     },
   });
 
@@ -107,27 +137,20 @@ export default function Absences() {
   // Sinflar ro'yxati
   const classes = useMemo(() => {
     const set = new Set<string>();
-    for (const r of roster.data ?? []) {
-      // deno-lint-ignore no-explicit-any
-      const cn = (r as any).students?.class_name;
-      if (cn) set.add(cn);
-    }
+    for (const r of roster.data ?? []) if (r.class_name) set.add(r.class_name);
     return [...set].sort();
   }, [roster.data]);
 
-  // Tanlangan sinfning o'quvchilari (takrorlanmasin — bir o'quvchi
-  // bir nechta kunlik xizmatga yozilgan bo'lishi mumkin).
-  const students = useMemo(() => {
-    const map = new Map<string, { id: string; name: string }>();
-    for (const r of roster.data ?? []) {
-      // deno-lint-ignore no-explicit-any
-      const st = (r as any).students;
-      if (!st) continue;
-      if (className && st.class_name !== className) continue;
-      if (!map.has(st.id)) map.set(st.id, { id: st.id, name: st.full_name });
-    }
-    return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
-  }, [roster.data, className]);
+  const students = useMemo(() =>
+    (roster.data ?? [])
+      .filter((r) => !className || r.class_name === className)
+      .map((r) => ({
+        id: r.id,
+        name: r.full_name,
+        // Yo'qligi hisoblanmaga ta'sir qiladimi.
+        billable: billable.data?.has(r.id) ?? false,
+      })),
+    [roster.data, billable.data, className]);
 
   // Bazadagi holatni tanlovga birlashtiramiz
   const effectiveMarked = useMemo(() => {
@@ -298,8 +321,22 @@ export default function Absences() {
                               : 'hover:bg-[var(--bg-subtle)]'}
                             disabled:cursor-not-allowed`}
                         >
-                          <span className={`text-sm ${absent ? 'font-medium' : ''}`}>
-                            {s.name}
+                          <span className="min-w-0">
+                            <span className={`block truncate text-sm ${
+                              absent ? 'font-medium' : ''}`}>
+                              {s.name}
+                            </span>
+                            {/* Kunlik xizmatga yozilmagan o'quvchining
+                                yo'qligi hisoblanmaga TA'SIR QILMAYDI.
+                                Buni ko'rsatib qo'yish kerak, aks holda
+                                buxgalter "nega bu bola uchun pul
+                                qaytmadi" deb qidiradi. */}
+                            {!s.billable && (
+                              <span className="block text-[11px]
+                                text-[var(--text-faint)]">
+                                {t('absences.notBillable')}
+                              </span>
+                            )}
                           </span>
                           <span
                             className={`shrink-0 rounded px-2 py-1 text-xs font-medium

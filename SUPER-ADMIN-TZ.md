@@ -327,16 +327,196 @@ Filtr: admin, maktab, amal turi, sana.
 **O'chirib bo'lmaydi.** Jadvallarda `DELETE` siyosati yo'q va
 bo'lmasligi kerak.
 
-### E7. Platforma ko'rsatkichlari
+### E7. To'lovlarni tasdiqlash — kundalik ish
 
-- maktablar: jami, faol, sinovda, cheklangan;
-- oylik daromad va uning dinamikasi;
+Super adminning eng ko'p ochadigan ekrani.
+
+Ro'yxat: **kutayotgan cheklar** — maktab, summa, sana, chek rasmi.
+Bir bosishda rasm ochiladi, yonida ikkita tugma: **Tasdiqlash** va
+**Rad etish** (sabab bilan).
+
+Tasdiqlangan zahoti maktab ochiladi — qo'lda "bloklashni yechish"
+tugmasi **yo'q** va bo'lmasligi kerak. Unutilib qolish ehtimolini
+kod darajasida yo'q qilamiz.
+
+Yon ustunda: bu oy tasdiqlangan summa, kutayotganlar soni, muddati
+o'tgan maktablar.
+
+### E8. Muloqot
+
+Mavzular ro'yxati: maktab, mavzu, oxirgi xabar, javob kutayotganlar
+**tepada**. Ichida oddiy yozishma, fayl biriktirish bilan.
+
+**Bloklangan maktab ham yoza oladi** — mijoz bog'lana olmasa to'lay
+ham olmaydi.
+
+### E9. Platforma ko'rsatkichlari
+
+- maktablar: jami, faol, sinovda, cheklangan, bloklangan;
+- **oylik daromad** (MRR) va uning dinamikasi;
+- **yig'ilmagan** summa va uning yoshi;
 - yangi maktablar (oylar bo'yicha);
 - chiqib ketganlar;
 - tizim yuki: jami o'quvchi, jami to'lov, baza hajmi;
 - yuborilmagan xabarlar, xatolik bergan cron ishlari.
 
-## 2.4. Bazada nima qo'shish kerak
+## 2.4. Tariflash va to'lov — mijoz shartlari
+
+### Narxlar
+
+| Nima | Summa |
+|---|---|
+| **Ulanish to'lovi** (bir marta) | **600 000 so'm** |
+| **Asosiy oylik** | **500 000 so'm** |
+| Har **qo'shimcha filial** | **+450 000 so'm/oy** |
+| O'quvchi chegarasidan oshgani | har **50 o'quvchi** uchun **+50 000 so'm/oy** |
+
+**Bitta filialga 250 o'quvchi kiradi.** Ya'ni o'quvchi chegarasi =
+`filiallar soni × 250`.
+
+### Hisoblash formulasi
+
+```
+oylik = 500 000
+      + (filiallar − 1) × 450 000
+      + ceil(max(0, o'quvchilar − filiallar × 250) / 50) × 50 000
+```
+
+**Namunalar:**
+
+| Maktab | Filial | O'quvchi | Hisob | Oylik |
+|---|---:|---:|---|---:|
+| Kichik | 1 | 180 | 500 000 | **500 000** |
+| Chegarada | 1 | 250 | 500 000 | **500 000** |
+| Oshgan | 1 | 340 | 500 000 + ⌈90/50⌉×50 000 | **600 000** |
+| Ikki bino | 2 | 400 | 500 000 + 450 000 | **950 000** |
+| Ikki bino, ko'p bola | 2 | 610 | 500 000 + 450 000 + ⌈110/50⌉×50 000 | **1 100 000** |
+
+> **Yaxlitlash yuqoriga.** 51 ta ortiqcha o'quvchi ham, 100 tasi ham
+> ikkita "50 lik" hisoblanadi. Buni mijozga oldindan aytish kerak,
+> aks holda bahs chiqadi.
+
+### O'quvchi soni qaysi paytda o'lchanadi
+
+**Oy boshida, faqat `active` o'quvchilar.** Akademik ta'tildagilar
+va chiqib ketganlar sanalmaydi.
+
+Sabab: oy o'rtasida bola qo'shilib, keyin chiqib ketsa, summa ikki
+marta o'zgarardi va mijoz nima uchun to'layotganini tushunmasdi.
+Bir marta o'lchanadi va oy davomida o'zgarmaydi.
+
+Har oyning 1-sanasida cron o'lchaydi va `subscription_invoices` ga
+yozadi — shunda "o'sha oyda 340 ta bola bor edi" degani hujjatda
+qoladi va keyinchalik bahslashib bo'lmaydi.
+
+### To'lov muddati va bloklash
+
+```
+1-kun          hisob-kitob yaratiladi, to'lov muddati qo'yiladi
++15 kun        eslatma (birinchi)
++30 kun        eslatma (ikkinchi), holat: grace
++45 kun        AVTOMATIK BLOKLASH — holat: restricted
+```
+
+**45 kun = bir yarim oy.** Shundan keyin maktab tizimga **kira
+olmaydi**.
+
+> **MUHIM — bloklash MA'LUMOTNI O'CHIRMAYDI.**
+>
+> `restricted` holatida `app.school_is_writable()` `false`
+> qaytaradi — bu allaqachon qurilgan. To'lovdan keyin holat
+> `active` ga qaytariladi va hamma narsa **joyida** bo'ladi:
+> o'quvchilar, hisoblanmalar, to'lovlar, tarix.
+>
+> Ma'lumotni o'chirish faqat mijoz **yozma** so'rovi bilan.
+
+**Kirish darajasi.** Hozirgi `school_is_writable()` faqat yozishni
+to'sadi, o'qish ochiq qoladi. Mijoz "umuman kira olmasin" dedi —
+demak kirishning o'zini to'sish kerak. Buni **AuthProvider**
+darajasida qilish tavsiya etiladi: maktab `restricted` bo'lsa
+panel o'rniga **to'lov ekrani** ko'rsatiladi.
+
+Nega bazada emas: RLS ni yopib qo'yish direktorni ham, to'lovni
+yuborish imkoniyatidan ham mahrum qiladi. To'lov ekrani ochiq
+qolishi SHART — aks holda mijoz to'lay olmaydi va tugab qoladi.
+
+Ko'rinadigan yagona narsa: qarzdorlik summasi, to'lov rekvizitlari,
+chek yuborish tugmasi va super admin bilan muloqot.
+
+### To'lov oqimi — chek orqali
+
+1. Direktor **to'lov ekranida** hisob-kitobni ko'radi;
+2. Bankdan to'laydi va **chek rasmini yuklaydi** (Supabase Storage);
+3. Chek `subscription_payments` ga `pending` holatida tushadi;
+4. Super adminga bildirishnoma boradi;
+5. Super admin chekni ochib ko'radi va **tasdiqlaydi** yoki **rad
+   etadi** (sabab bilan);
+6. Tasdiqlanganda: `last_paid_at`, `next_payment_date` yangilanadi,
+   holat `active` ga qaytadi, maktab darhol ochiladi;
+7. Rad etilganda: direktor sababni ko'radi va qayta yuboradi.
+
+**Chek rasmi yopiq bucket'da** — `subscription-receipts`. Faqat
+o'sha maktab va super admin ko'radi (mavjud `receipts` bucket'i
+bilan bir xil naqsh).
+
+### Muloqot — super admin bilan yozishma
+
+Maktab ↔ super admin o'rtasida oddiy xabar almashinuvi:
+
+- **Mavzu** (thread) — bitta savol yoki muammo;
+- direktor yozadi, super admin javob beradi;
+- fayl biriktirish (chek, skrinshot);
+- **o'qilmagan** belgisi ikkala tomonda ham;
+- maktab bloklangan bo'lsa ham **ishlaydi** — aks holda mijoz
+  bog'lana olmaydi.
+
+Bu Telegram bot emas, panel ichidagi yozishma. Sabab: to'lov bahsi
+yozma va **izlanadigan** bo'lishi kerak.
+
+---
+
+## 2.5. Maktab panelida nima o'zgaradi
+
+Super admin alohida ilova, lekin **mavjud panelga ham** ikkita
+qo'shimcha kerak — to'lovni maktab tomonidan yuborish uchun.
+
+### P1. To'lov ekrani
+
+Yangi sahifa `/obuna` — faqat **direktor** ko'radi:
+
+- joriy tarif va uning tafsiloti (`calc_subscription` natijasi);
+- hisob-kitoblar tarixi va ularning holati;
+- **chek yuklash** — rasm tanlash va yuborish;
+- yuborilgan cheklar holati (kutilmoqda / tasdiqlangan / rad etilgan
+  sabab bilan).
+
+### P2. Bloklangan holat ekrani
+
+Maktab `restricted` bo'lsa `AppShell` o'rniga shu ekran
+ko'rsatiladi:
+
+- qarzdorlik summasi va necha kundan beri;
+- to'lov rekvizitlari;
+- chek yuklash tugmasi;
+- super admin bilan muloqot.
+
+**Boshqa hech narsa ochilmaydi.** Menyu, hisobotlar, o'quvchilar —
+hammasi yopiq. Lekin **ma'lumot joyida turadi** va to'lovdan keyin
+darhol qaytadi.
+
+> Buni `AuthProvider` da qilish kerak, RLS da emas. RLS ni yopib
+> qo'ysangiz direktor to'lov ekranini ham ko'ra olmaydi va tizim
+> boshi berk ko'chaga kiradi.
+
+### P3. Bildirishnoma
+
+Muddat yaqinlashganda direktorga panel ichida ogohlantirish:
+15 kun qolganda — kulrang, 5 kun qolganda — sariq, muddat
+o'tganda — qizil va **har sahifada**.
+
+---
+
+## 2.6. Bazada nima qo'shish kerak
 
 ### M1. Impersonation RPC lari
 
@@ -412,14 +592,120 @@ public.platform_schools()  returns table (...)
 **Faqat jamlangan raqamlar** — o'quvchi ismi, to'lov summasi kabi
 mazmun qaytmasin.
 
-### M5. Super admin hisobini yaratish
+### M5. Tariflash dvigateli
+
+**Raqamlar KODDA emas, BAZADA.** Bu tizimda allaqachon shunday
+naqsh bor: oylik formulasi `payroll_settings` da yashaydi
+(TZ 4.11.10). Narx o'zgarganda migratsiya yozish kerak emas.
+
+```sql
+create table public.pricing_settings (
+  key        text primary key,
+  value      jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+-- Boshlang'ich qiymatlar
+--   setup_fee            600000
+--   monthly_base         500000
+--   branch_price         450000
+--   students_per_branch  250
+--   student_block_size   50
+--   student_block_price  50000
+--   grace_days           30
+--   block_days           45
+```
+
+```sql
+public.calc_subscription(p_school_id uuid, p_period date)
+  returns jsonb
+```
+
+Qaytaradi: `branches`, `students`, `included_students`,
+`extra_blocks`, `base`, `branch_amount`, `student_amount`,
+`total`. **Tafsilot bilan** — mijoz "nega shuncha" deb so'raganda
+javob tayyor bo'lsin.
+
+```sql
+public.generate_subscription_invoices(p_period date) returns jsonb
+```
+
+Har oyning 1-sanasida cron chaqiradi. Har bir faol maktab uchun
+`subscription_invoices` ga qator qo'yadi. **Idempotent** —
+takror chaqirilsa dublikat yaratmaydi (mavjud
+`generate_invoices` bilan bir xil naqsh).
+
+### M6. To'lov va chek
+
+```sql
+create table public.subscription_invoices (
+  id, school_id, period, amount, breakdown jsonb,
+  due_date, status, created_at
+);
+
+create table public.subscription_payments (
+  id, school_id, invoice_id, amount, paid_on,
+  file_path,                       -- chek rasmi
+  status,                          -- pending / confirmed / rejected
+  submitted_by, submitted_at,
+  reviewed_by, reviewed_at, reject_reason
+);
+```
+
+```sql
+public.submit_subscription_payment(p_invoice_id, p_amount, p_file_path)
+public.confirm_subscription_payment(p_payment_id, p_months default 1)
+public.reject_subscription_payment(p_payment_id, p_reason)
+```
+
+Birinchisini **direktor** chaqiradi, qolgan ikkitasini **faqat super
+admin**. Hammasi `platform_log` ga.
+
+### M7. Avtomatik bloklash
+
+```sql
+public.enforce_subscription_status() returns jsonb
+```
+
+Kuniga bir marta cron:
+
+- muddati **30 kundan** oshgan → `grace`;
+- muddati **45 kundan** oshgan → `restricted`;
+- to'lovi tasdiqlangan → `active`.
+
+Har bir o'zgarish `platform_log` ga **sababi bilan** yoziladi.
+
+> **Bloklash avtomatik, ochish ham avtomatik.** Super admin chekni
+> tasdiqlashi bilan maktab ochiladi — qo'lda "ochish" tugmasini
+> bosish kerak emas. Unutilib qolish ehtimoli yo'q.
+
+### M8. Muloqot
+
+```sql
+create table public.support_threads (
+  id, school_id, subject, status,        -- open / answered / closed
+  created_by, created_at, last_message_at
+);
+
+create table public.support_messages (
+  id, thread_id, school_id,
+  author_user_id,        -- maktab xodimi
+  author_admin_id,       -- yoki super admin
+  body, file_path, created_at, read_at
+);
+```
+
+RLS: maktab o'z mavzularini ko'radi, super admin hammasini.
+**Bloklangan maktab ham yoza oladi** — bu qoidadan istisno.
+
+### M9. Super admin hisobini yaratish
 
 `scripts/new-platform-admin.mjs`:
 
 Admin API orqali `auth.users` → `platform_admins` ga yozuv →
 login/parol chiqarish. Parol `scripts/password.mjs` dan.
 
-## 2.5. Qat'iy talablar
+## 2.7. Qat'iy talablar
 
 | # | Talab |
 |---|---|
@@ -433,8 +719,13 @@ login/parol chiqarish. Parol `scripts/password.mjs` dan.
 | 8 | Barcha matn i18n orqali (`npm run audit:code` tekshiradi) |
 | 9 | Yangi RPC da `search_path = ''` va `revoke ... from anon` |
 | 10 | Siyosatlarda funksiya chaqiruvi `(select ...)` ichida |
+| 11 | **Bloklash ma'lumotni o'chirmaydi** — faqat kirishni to'sadi |
+| 12 | **Bloklangan maktab to'lov ekrani va muloqotni ko'radi** |
+| 13 | Narxlar **bazada**, kodda emas (`pricing_settings`) |
+| 14 | Chek tasdiqlangach maktab **avtomatik** ochiladi |
+| 15 | Har bir hisob-kitobda **tafsilot** saqlanadi (nega shuncha) |
 
-## 2.6. Tekshirish
+## 2.8. Tekshirish
 
 ```bash
 npm run audit                          # to'rtala audit
@@ -455,8 +746,19 @@ Qo'shimcha sinovlar yozilsin (`scripts/test-platform.sql`):
 | `restricted` maktabda yozish | rad etiladi |
 | Super admin boshqa maktab jurnalini ko'rsa | ko'rinadi (bu normal) |
 | Impersonation yozuvi `audit_log` da `impersonated_by` bilan | bor |
+| 1 filial, 250 o'quvchi | 500 000 |
+| 1 filial, 251 o'quvchi | 550 000 |
+| 1 filial, 340 o'quvchi | 600 000 |
+| 2 filial, 610 o'quvchi | 1 100 000 |
+| Muddatdan 46 kun o'tgan maktab | `restricted` |
+| Bloklangan maktabda o'quvchi qo'shish | rad etiladi |
+| Bloklangan maktabda chek yuborish | **ishlaydi** |
+| Bloklangan maktabda xabar yozish | **ishlaydi** |
+| Chek tasdiqlangandan keyin holat | `active` |
+| To'lovdan keyin ma'lumot | **joyida** |
+| Direktor `confirm_subscription_payment` chaqirsa | `42501` |
 
-## 2.7. Tavsiya etilgan tartib
+## 2.9. Tavsiya etilgan tartib
 
 1. **M1–M3 migratsiyalari** — RPC lar va sinovlar. Baza tayyor
    bo'lmaguncha interfeys yozmang.
@@ -466,7 +768,12 @@ Qo'shimcha sinovlar yozilsin (`scripts/test-platform.sql`):
 4. **E1 va E2** — maktablar ro'yxati va kartochka.
 5. **E5** — impersonation. Eng nozik qism, alohida sinang.
 6. **E3, E4** — ulash va obuna.
-7. **E6, E7** — jurnal va ko'rsatkichlar.
+7. **M5–M7** — tariflash, to'lov, avtomatik bloklash. Sinovlarni
+   AVVAL yozing: pul bilan bog'liq mantiqni keyin tekshirish qimmat.
+8. **P1, P2** — maktab panelidagi to'lov ekranlari.
+9. **E7** — cheklarni tasdiqlash.
+10. **M8 va E8** — muloqot.
+11. **E6, E9** — jurnal va ko'rsatkichlar.
 
 ---
 
