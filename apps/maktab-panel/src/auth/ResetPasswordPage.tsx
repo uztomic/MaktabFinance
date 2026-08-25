@@ -16,11 +16,17 @@ import { type FormEvent, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useT } from '@/i18n';
-import { Button, Field, Input, Notice, Spinner } from '@/ui';
+import { Button, Field, Notice, Spinner } from '@/ui';
+import { PasswordInput } from '@/ui/PasswordInput';
 import { LangSwitcher, ThemeToggle } from '@/layout/Controls';
 
-/** Supabase minimal 8 ta belgini talab qiladi. */
-const MIN_LENGTH = 8;
+/**
+ * Parol siyosati bilan MOS bo'lishi shart (scripts/harden-auth.mjs).
+ * Bu yerda 8 turgan edi, siyosat esa 12 ga ko'tarilgan — foydalanuvchi
+ * 10 belgi yozib "davom etish" bosardi va serverdan tushunarsiz xato
+ * olardi. Endi xato darhol va o'zbekcha chiqadi.
+ */
+const MIN_LENGTH = 12;
 
 export default function ResetPasswordPage() {
   const t = useT();
@@ -93,7 +99,7 @@ export default function ResetPasswordPage() {
             <img src="/logo-mark.svg" alt="" className="h-16 w-16"
                  width={64} height={64} />
             <h1 className="mt-3 text-lg font-semibold tracking-tight">
-              <span className="text-brand-900 dark:text-brand-100">Maktab</span>
+              <span className="text-[var(--brand-text)]">Maktab</span>
               <span className="text-accent-600">Finance</span>
             </h1>
           </div>
@@ -129,8 +135,7 @@ export default function ResetPasswordPage() {
                   </p>
 
                   <Field label={t('auth.newPassword')} required>
-                    <Input
-                      type="password"
+                    <PasswordInput
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       autoComplete="new-password"
@@ -140,8 +145,7 @@ export default function ResetPasswordPage() {
                   </Field>
 
                   <Field label={t('auth.repeatPassword')} required>
-                    <Input
-                      type="password"
+                    <PasswordInput
                       value={repeat}
                       onChange={(e) => setRepeat(e.target.value)}
                       autoComplete="new-password"

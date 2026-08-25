@@ -265,7 +265,7 @@ export default function PayrollFormula({ editable }: { editable: boolean }) {
                 onClick={() => set('base_type', bt)}
                 className={`rounded-lg border p-3 text-left transition-colors
                   ${active
-                    ? 'border-brand-600 bg-brand-50 ring-1 ring-brand-600'
+                    ? 'border-[var(--sel-border)] bg-[var(--sel-bg)] ring-1 ring-[var(--sel-border)]'
                     : 'hover:bg-[var(--bg-subtle)]'}
                   disabled:cursor-not-allowed`}
               >
@@ -280,7 +280,7 @@ export default function PayrollFormula({ editable }: { editable: boolean }) {
                     )}
                   </span>
                   <span className={`text-sm font-medium
-                    ${active ? 'text-brand-900' : ''}`}>
+                    ${active ? 'text-[var(--sel-text)]' : ''}`}>
                     {t(`pf.base.${bt}`)}
                   </span>
                 </div>

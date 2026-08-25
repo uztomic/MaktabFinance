@@ -15,38 +15,25 @@
 //    · 12 oylik dinamika — o'sish bormi
 // =====================================================================
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/auth/AuthProvider';
 import { useI18n, useT } from '@/i18n';
-import { isoDate, money, periodLabel } from '@/lib/format';
+import { date, isoDate, money, periodLabel } from '@/lib/format';
 import {
-  Badge, Button, Card, EmptyState, ErrorState, Loading, Money, Notice,
+  Badge, Card, EmptyState, ErrorState, Loading, Money, Notice,
   PageHeader, Table, Td, Th, Tr,
 } from '@/ui';
-
-/** Oy boshidan oy oxirigacha — oylik xarajat davr oxiriga yoziladi,
- *  shuning uchun "bugungacha" emas, TO'LIQ OY olinadi. Aks holda
- *  xodimlar oyligi hisobga tushmay qoladi. */
-function monthRange(d = new Date()) {
-  return {
-    from: isoDate(new Date(d.getFullYear(), d.getMonth(), 1)),
-    to: isoDate(new Date(d.getFullYear(), d.getMonth() + 1, 0)),
-    period: isoDate(new Date(d.getFullYear(), d.getMonth(), 1)),
-  };
-}
+import { DateRangePicker, useDateRange } from '@/ui/DateRange';
 
 export default function Dashboard() {
   const t = useT();
   const { lang } = useI18n();
   const { branchId, can, profile } = useAuth();
-  const [offset, setOffset] = useState(0);
-
-  const base = new Date();
-  base.setMonth(base.getMonth() + offset);
-  const { from, to, period } = monthRange(base);
+  const { range, setPreset, setCustom } = useDateRange();
+  const { from, to } = range;
 
   const canSeeFinance = can('reports.view');
   const branch = branchId ?? undefined;
@@ -69,11 +56,18 @@ export default function Dashboard() {
     queryKey: ['fin-summary-prev', from, branchId],
     enabled: canSeeFinance,
     queryFn: async () => {
-      const p = new Date(base);
-      p.setMonth(p.getMonth() - 1);
-      const r = monthRange(p);
+      // Taqqoslash uchun — AYNAN SHUNCHA uzunlikdagi oldingi oraliq.
+      // Oy bilan cheklanib bo'lmaydi: foydalanuvchi chorak yoki
+      // o'quv yilini tanlagan bo'lishi mumkin, o'shanda "o'tgan oy"
+      // bilan solishtirish ma'nosiz.
+      const a = new Date(from);
+      const b = new Date(to);
+      const days = Math.max(1, Math.round((+b - +a) / 86400000) + 1);
+      const prevTo = new Date(+a - 86400000);
+      const prevFrom = new Date(+prevTo - (days - 1) * 86400000);
+
       const { data, error } = await supabase.rpc('report_financial_summary', {
-        p_from: r.from, p_to: r.to, p_branch_id: branch,
+        p_from: isoDate(prevFrom), p_to: isoDate(prevTo), p_branch_id: branch,
       });
       if (error) throw error;
       return data?.[0] ?? null;
@@ -167,20 +161,15 @@ export default function Dashboard() {
     <>
       <PageHeader
         title={t('dashboard.title')}
-        subtitle={`${profile?.school_name} · ${periodLabel(period, lang)}`}
-        actions={
-          <>
-            <Button size="sm" onClick={() => setOffset((o) => o - 1)}>←</Button>
-            {offset !== 0 && (
-              <Button size="sm" onClick={() => setOffset(0)}>
-                {t('rep.quick.month')}
-              </Button>
-            )}
-            <Button size="sm" disabled={offset >= 0}
-                    onClick={() => setOffset((o) => o + 1)}>→</Button>
-          </>
-        }
+        subtitle={`${profile?.school_name} · ${date(from, lang)} — ${date(to, lang)}`}
       />
+
+      {/* Butun panel shu oraliq bo'yicha. Tanlov saqlanadi va boshqa
+          sahifalarga ham o'tadi — buxgalter uni bir marta qo'yadi. */}
+      <Card className="mb-4">
+        <DateRangePicker range={range} onPreset={setPreset} onCustom={setCustom}
+                         compact />
+      </Card>
 
       {/* --- Ogohlantirishlar ------------------------------------- */}
       <div className="mb-4 space-y-2">

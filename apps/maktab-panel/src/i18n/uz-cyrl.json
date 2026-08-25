@@ -849,5 +849,15 @@
   "att.hint": "КЕЛМАГАНЛАРНИ белгиланг. Белгиланмаган ўқувчи келган ҳисобланади.",
   "att.confirmAllPresent": "Ҳаммаси келди — тасдиқлаш",
   "att.confirmN": "{count} та келмади — тасдиқлаш",
-  "att.saved": "Давомат олинди — {count} та келмаган"
+  "att.saved": "Давомат олинди — {count} та келмаган",
+  "auth.showPassword": "Паролни кўрсатиш",
+  "auth.hidePassword": "Паролни яшириш",
+  "range.month": "Шу ой",
+  "range.prevMonth": "Ўтган ой",
+  "range.quarter": "3 ой",
+  "range.halfYear": "6 ой",
+  "range.academicYear": "Ўқув йили",
+  "range.year": "Йил",
+  "range.all": "Бутун давр",
+  "range.custom": "Қўлда"
 }

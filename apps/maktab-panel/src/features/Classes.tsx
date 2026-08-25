@@ -24,13 +24,7 @@ import {
   Modal, Money, Notice, PageHeader, Select, Table, Td, Th, Tr,
 } from '@/ui';
 import { useConfirm, useSort, useToast } from '@/ui/Feedback';
-
-function monthRange(d = new Date()) {
-  return {
-    from: isoDate(new Date(d.getFullYear(), d.getMonth(), 1)),
-    to: isoDate(new Date(d.getFullYear(), d.getMonth() + 1, 0)),
-  };
-}
+import { DateRangePicker, rangeLabel, useDateRange } from '@/ui/DateRange';
 
 type SortKey =
   | 'class_name' | 'students' | 'charged' | 'collected'
@@ -51,7 +45,8 @@ export default function Classes() {
     useState<{ id: string; name: string; branch_id: string } | null>(null);
   const [promoting, setPromoting] = useState(false);
 
-  const { from, to } = monthRange();
+  const { range, setPreset, setCustom } = useDateRange();
+  const { from, to } = range;
   const sort = useSort<SortKey>('class_name');
 
   const rows = useQuery({
@@ -218,7 +213,7 @@ export default function Classes() {
     <>
       <PageHeader
         title={t('cls.title')}
-        subtitle={t('common.showing', { count: list.length })}
+        subtitle={`${t('common.showing', { count: list.length })} · ${rangeLabel(range, lang)}`}
         actions={
           <>
             <Button
@@ -254,6 +249,13 @@ export default function Classes() {
           </>
         }
       />
+
+      {/* Moliyaviy ustunlar shu oraliq bo'yicha hisoblanadi.
+          O'quvchilar soni esa BUGUNGI holat — u sanaga bog'liq emas. */}
+      <Card className="mb-3">
+        <DateRangePicker range={range} onPreset={setPreset} onCustom={setCustom}
+                         compact />
+      </Card>
 
       <Card padded={false}>
         {list.length === 0

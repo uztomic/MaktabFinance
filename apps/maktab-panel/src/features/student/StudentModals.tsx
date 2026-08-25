@@ -217,11 +217,11 @@ export function ContractModal({
                   onClick={() => set('months_mode', mode)}
                   className={`rounded-lg border p-2.5 text-left transition-colors
                     ${active
-                      ? 'border-brand-600 bg-brand-50 ring-1 ring-brand-600'
+                      ? 'border-[var(--sel-border)] bg-[var(--sel-bg)] ring-1 ring-[var(--sel-border)]'
                       : 'hover:bg-[var(--bg-subtle)]'}`}
                 >
                   <div className={`text-[13px] font-medium
-                    ${active ? 'text-brand-900' : ''}`}>
+                    ${active ? 'text-[var(--sel-text)]' : ''}`}>
                     {t(`contracts.months${mode === 'other' ? 'Other' : mode}`)}
                   </div>
                   <div className={`mt-0.5 text-[11px]

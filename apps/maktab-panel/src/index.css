@@ -1,6 +1,32 @@
 @import 'tailwindcss';
 
 /* =====================================================================
+   `dark:` VARIANTI — ilova mavzusiga bog'lanadi.
+
+   Tailwind standart holatda `dark:` ni FAQAT operatsion tizim
+   sozlamasiga (`prefers-color-scheme`) qarab qo'llaydi. Bizda esa
+   mavzu tugmasi bor va u `data-theme` atributini qo'yadi.
+
+   Ikkisi bir-biriga bog'lanmagani XATOGA olib kelardi: kompyuteri
+   tungi rejimda turgan foydalanuvchi ilovada OQ mavzuni tanlasa,
+   fon oqarardi, lekin `dark:text-...` sinflari baribir ishlab
+   OCHIQ RANGLI matn berardi — oq fonda oq yozuv, ya'ni ko'rinmas
+   matn.
+
+   Quyidagi ta'rif aynan CSS o'zgaruvchilari bilan bir xil mantiqda
+   ishlaydi: aniq tanlangan tungi mavzu YOKI tizim tungi (va ilovada
+   oq majburlanmagan).
+   ===================================================================== */
+@custom-variant dark {
+  &:where([data-theme='dark'], [data-theme='dark'] *) { @slot; }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme='light']), :root:not([data-theme='light']) *) {
+      @slot;
+    }
+  }
+}
+
+/* =====================================================================
    DIZAYN TIZIMI — MaktabFinance
 
    Brend ranglari logotipdan olingan:
@@ -53,6 +79,18 @@
   --text-muted:  #5b6b7d;
   --text-faint:  #8695a5;
 
+  /* Logotipdagi "Maktab" so'zi. Mavzuga qarab o'zgaradi — shuning
+     uchun `dark:` sinfi kerak emas. */
+  --brand-text:  #1E2B3D;
+
+  /* TANLANGAN holat: faol chip, tanlangan qator, tanlangan kartochka.
+     Fon va MATN birga o'zgaradi. Ilgari bu yerlarda `bg-brand-50`
+     turardi — u mavzudan qat'i nazar oqish rangda qolardi va tungi
+     rejimda ochiq matn ochiq fonga tushib, yozuv ko'rinmay qolardi. */
+  --sel-bg:      #eaf0f6;
+  --sel-text:    #1E2B3D;
+  --sel-border:  #486a8a;
+
   --ok:      #2f7d4f;
   --ok-bg:   #eaf5ee;
   --warn:    #a16207;
@@ -72,6 +110,10 @@
   --text:        #e6ecf3;
   --text-muted:  #9aa9b9;
   --text-faint:  #6f7f90;
+  --brand-text:  #e3e9ef;
+  --sel-bg:      #1d2b3b;
+  --sel-text:    #dce6f0;
+  --sel-border:  #5b83ab;
 
   --ok:      #6ac08b;
   --ok-bg:   #17301f;
@@ -93,6 +135,10 @@
     --text:        #e6ecf3;
     --text-muted:  #9aa9b9;
     --text-faint:  #6f7f90;
+    --brand-text:  #e3e9ef;
+    --sel-bg:      #1d2b3b;
+    --sel-text:    #dce6f0;
+    --sel-border:  #5b83ab;
 
     --ok:      #6ac08b;
     --ok-bg:   #17301f;

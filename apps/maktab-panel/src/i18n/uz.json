@@ -849,5 +849,15 @@
   "att.hint": "KELMAGANLARNI belgilang. Belgilanmagan o'quvchi kelgan hisoblanadi.",
   "att.confirmAllPresent": "Hammasi keldi — tasdiqlash",
   "att.confirmN": "{count} ta kelmadi — tasdiqlash",
-  "att.saved": "Davomat olindi — {count} ta kelmagan"
+  "att.saved": "Davomat olindi — {count} ta kelmagan",
+  "auth.showPassword": "Parolni ko'rsatish",
+  "auth.hidePassword": "Parolni yashirish",
+  "range.month": "Shu oy",
+  "range.prevMonth": "O'tgan oy",
+  "range.quarter": "3 oy",
+  "range.halfYear": "6 oy",
+  "range.academicYear": "O'quv yili",
+  "range.year": "Yil",
+  "range.all": "Butun davr",
+  "range.custom": "Qo'lda"
 }

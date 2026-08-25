@@ -279,7 +279,7 @@ export function FilterChips<T extends string>({
   const chip = (active: boolean) =>
     `rounded-full border px-2.5 py-1 text-[12px] font-medium transition-colors ${
       active
-        ? 'border-brand-600 bg-brand-50 text-brand-900'
+        ? 'border-[var(--sel-border)] bg-[var(--sel-bg)] text-[var(--sel-text)]'
         : 'text-[var(--text-muted)] hover:bg-[var(--bg-inset)]'
     }`;
 

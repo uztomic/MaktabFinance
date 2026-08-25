@@ -268,7 +268,7 @@ export function CommandPalette() {
   return (
     <div
       className="no-print fixed inset-0 z-[90] flex items-start justify-center
-        bg-black/40 px-4 pt-[10vh]"
+        overflow-y-auto bg-black/40 px-3 pb-6 pt-[6dvh] sm:px-4 sm:pt-[10dvh]"
       onClick={() => setOpen(false)}
       role="dialog"
       aria-modal="true"
@@ -296,7 +296,7 @@ export function CommandPalette() {
           </kbd>
         </div>
 
-        <div ref={listRef} className="max-h-[60vh] overflow-y-auto p-1.5">
+        <div ref={listRef} className="max-h-[62dvh] overflow-y-auto p-1.5">
           {all.length === 0
             ? (
               <p className="px-3 py-6 text-center text-[13px]
@@ -321,28 +321,36 @@ export function CommandPalette() {
                     className={`flex w-full items-center gap-2.5 rounded-md px-2.5
                       py-1.5 text-left text-[13px] ${
                         index === active
-                          ? 'bg-brand-50 text-brand-900'
+                          ? 'bg-[var(--sel-bg)] text-[var(--sel-text)]'
                           : 'text-[var(--text)] hover:bg-[var(--bg-subtle)]'
                       }`}
                   >
                     <span className="w-4 shrink-0 text-center">{hit.icon}</span>
-                    <span className="min-w-0 flex-1 truncate font-medium">
-                      {hit.title}
-                    </span>
-                    {hit.subtitle && (
-                      <span className="shrink-0 truncate text-[12px]
-                        text-[var(--text-muted)]">
-                        {hit.subtitle}
+
+                    {/* Telefonda tagma-tag, kengroq ekranda yonma-yon.
+                        Ilgari izoh `shrink-0` edi — uzun izoh ("Kichik
+                        guruh · ZM-0153") qisqara olmay qatorni chetga
+                        chiqarib yuborardi. */}
+                    <span className="flex min-w-0 flex-1 flex-col gap-0
+                      sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
+                      <span className="min-w-0 truncate font-medium">
+                        {hit.title}
                       </span>
-                    )}
+                      {hit.subtitle && (
+                        <span className="min-w-0 truncate text-[11px]
+                          text-[var(--text-muted)] sm:text-[12px]">
+                          {hit.subtitle}
+                        </span>
+                      )}
+                    </span>
                   </button>
                 ))}
               </div>
             ))}
         </div>
 
-        <div className="flex items-center gap-3 border-t px-3 py-1.5
-          text-[11px] text-[var(--text-faint)]">
+        <div className="hidden items-center gap-3 border-t px-3 py-1.5
+          text-[11px] text-[var(--text-faint)] sm:flex">
           <Key>↑↓</Key> {t('search.navigate')}
           <Key>↵</Key> {t('search.openHint')}
           <span className="ml-auto"><Key>Ctrl</Key> + <Key>K</Key></span>

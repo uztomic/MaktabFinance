@@ -849,5 +849,15 @@
   "att.hint": "Отмечайте ОТСУТСТВУЮЩИХ. Неотмеченный ученик считается пришедшим.",
   "att.confirmAllPresent": "Все пришли — подтвердить",
   "att.confirmN": "Отсутствует {count} — подтвердить",
-  "att.saved": "Посещаемость отмечена — отсутствует {count}"
+  "att.saved": "Посещаемость отмечена — отсутствует {count}",
+  "auth.showPassword": "Показать пароль",
+  "auth.hidePassword": "Скрыть пароль",
+  "range.month": "Этот месяц",
+  "range.prevMonth": "Прошлый месяц",
+  "range.quarter": "3 месяца",
+  "range.halfYear": "6 месяцев",
+  "range.academicYear": "Учебный год",
+  "range.year": "Год",
+  "range.all": "Весь период",
+  "range.custom": "Вручную"
 }

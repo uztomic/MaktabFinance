@@ -16,20 +16,14 @@ import { Link, useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useI18n, useT } from '@/i18n';
 import { useAuth } from '@/auth/AuthProvider';
-import { date, isoDate, money } from '@/lib/format';
+import { date, money } from '@/lib/format';
 import { exportTable } from '@/lib/export';
 import {
   Badge, Button, Card, EmptyState, ErrorState, Input, Loading, Money,
   Notice, PageHeader, Table, Td, Th, Tr,
 } from '@/ui';
 import { useSort } from '@/ui/Feedback';
-
-function monthRange(offset = 0) {
-  const now = new Date();
-  const from = new Date(now.getFullYear(), now.getMonth() + offset, 1);
-  const to = new Date(now.getFullYear(), now.getMonth() + offset + 1, 0);
-  return { from: isoDate(from), to: isoDate(to) };
-}
+import { DateRangePicker, useDateRange } from '@/ui/DateRange';
 
 type SortKey = 'full_name' | 'payment_code' | 'charged' | 'paid' | 'balance';
 
@@ -39,12 +33,12 @@ export default function ClassCard() {
   const { lang } = useI18n();
   const { can } = useAuth();
 
-  const [offset, setOffset] = useState(0);
+  const { range, setPreset, setCustom } = useDateRange();
   const [search, setSearch] = useState('');
   const [onlyDebt, setOnlyDebt] = useState(false);
   const sort = useSort<SortKey>('full_name');
 
-  const { from, to } = monthRange(offset);
+  const { from, to } = range;
 
   // --- sinf va rahbari ----------------------------------------------
   const cls = useQuery({
@@ -226,20 +220,14 @@ export default function ClassCard() {
         </div>
       )}
 
-      {/* --- Davr tanlash ---------------------------------------- */}
-      <div className="mb-3 flex items-center gap-2">
-        <Button size="sm" onClick={() => setOffset((o) => o - 1)}>←</Button>
-        <span className="text-sm font-medium">
-          {date(from, lang)} — {date(to, lang)}
-        </span>
-        <Button size="sm" disabled={offset >= 0}
-                onClick={() => setOffset((o) => Math.min(0, o + 1))}>→</Button>
-        {offset !== 0 && (
-          <Button size="sm" variant="ghost" onClick={() => setOffset(0)}>
-            {t('dashboard.thisMonth')}
-          </Button>
-        )}
-      </div>
+      {/* --- Davr tanlash ----------------------------------------
+          Moliyaviy ko'rsatkichlar va yo'qlik shu oraliq bo'yicha.
+          O'quvchilar ro'yxati esa bugungi holat — u sanaga bog'liq
+          emas, chunki sinf tarkibi tarixi saqlanmaydi. --- */}
+      <Card className="mb-3">
+        <DateRangePicker range={range} onPreset={setPreset} onCustom={setCustom}
+                         compact />
+      </Card>
 
       {/* --- Moliyaviy jamlanma ---------------------------------- */}
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

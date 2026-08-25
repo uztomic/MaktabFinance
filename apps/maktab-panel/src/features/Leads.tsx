@@ -218,7 +218,7 @@ export default function Leads() {
           className={`flex items-center gap-1.5 rounded-md border px-3 py-1.5
             text-[13px] font-medium transition-colors
             ${todayOnly
-              ? 'border-brand-600 bg-brand-50 text-brand-900'
+              ? 'border-[var(--sel-border)] bg-[var(--sel-bg)] text-[var(--sel-text)]'
               : 'hover:bg-[var(--bg-inset)]'}`}
         >
           {t('lead.today')}

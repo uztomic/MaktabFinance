@@ -1443,7 +1443,7 @@ function MatchModal({
                 border-[var(--border-soft)] px-3 py-2 text-left text-[13px]
                 last:border-0
                 ${picked === s.id
-                  ? 'bg-brand-50 font-medium'
+                  ? 'bg-[var(--sel-bg)] font-medium text-[var(--sel-text)]'
                   : 'hover:bg-[var(--bg-subtle)]'}`}
             >
               <span>

@@ -12,6 +12,7 @@ import { type FormEvent, useState } from 'react';
 import { looksLikePhone, phoneToEmail, supabase } from '@/lib/supabase';
 import { useT } from '@/i18n';
 import { Button, Field, Input, Notice, Spinner } from '@/ui';
+import { PasswordInput } from '@/ui/PasswordInput';
 import { LangSwitcher, ThemeToggle } from '@/layout/Controls';
 
 export default function LoginPage() {
@@ -78,7 +79,7 @@ export default function LoginPage() {
               height={64}
             />
             <h1 className="mt-3 text-lg font-semibold tracking-tight">
-              <span className="text-brand-900 dark:text-brand-100">Maktab</span>
+              <span className="text-[var(--brand-text)]">Maktab</span>
               <span className="text-accent-600">Finance</span>
             </h1>
             <p className="mt-0.5 text-[13px] text-[var(--text-muted)]">
@@ -108,8 +109,7 @@ export default function LoginPage() {
               </Field>
 
               <Field label={t('auth.password')} required>
-                <Input
-                  type="password"
+                <PasswordInput
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="current-password"
