@@ -98,7 +98,7 @@ npm run dev          # http://localhost:5173
 
 ```
 ├─ supabase/
-│  ├─ migrations/        26 ta migratsiya — bazaning yagona manbasi
+│  ├─ migrations/        36 ta migratsiya — bazaning yagona manbasi
 │  └─ functions/
 │     ├─ _shared/        umumiy modullar (bot xavfsizligi shu yerda)
 │     ├─ telegram-webhook/
@@ -106,8 +106,25 @@ npm run dev          # http://localhost:5173
 │     └─ school-user-ops/
 ├─ apps/
 │  └─ maktab-panel/      Vite + React + TypeScript + Tailwind, PWA
-└─ scripts/              baza, platforma va joylashtirish asboblari
+├─ scripts/              baza, sinov va joylashtirish asboblari
+└─ .github/workflows/    push → build → GitHub Pages
 ```
+
+### Asboblar (`scripts/`)
+
+| Fayl | Nima qiladi |
+|---|---|
+| `db.mjs` | migratsiya va SQL — DB paroli kerak emas |
+| `seed-school.mjs` | 24 oylik namuna maktab (bazani tozalaydi) |
+| `new-school.mjs` | haqiqiy mijozga toza maktab |
+| `smoke-test.mjs` | panelning har bir so'rovi jonli token bilan |
+| `audit-security.sql` | 10 turdagi zaiflik — bo'sh natija = toza |
+| `check-secrets.mjs` | repo'da maxfiy kalit yo'qligi |
+| `harden-auth.mjs` | parol siyosati, sessiya, ruxsat etilgan manzillar |
+| `gen-types.mjs` | bazadan TypeScript turlari |
+| `i18n-check.mjs` | yetishmayotgan tarjima kalitlari |
+| `make-cyrillic.mjs` | `uz.json` → `uz-cyrl.json` |
+| `test-*.sql` | moliya, sinflar, izolyatsiya, xavfsizlik sinovlari |
 
 **Kod bazalari soni: 2** (TZ 5.1). Super admin paneli alohida ilova
 sifatida `apps/super-admin/` ga qo'shiladi — maktab bundle'iga super
