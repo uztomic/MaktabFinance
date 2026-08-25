@@ -832,5 +832,22 @@
   "idle.title": "Sessiya tugayapti",
   "idle.stay": "Ishni davom ettirish",
   "idle.message": "Uzoq vaqt harakat bo'lmadi. Sessiya avtomatik yopiladi:",
-  "idle.why": "Bu ochiq qolgan kompyuterdan begona odam foydalanishining oldini oladi."
+  "idle.why": "Bu ochiq qolgan kompyuterdan begona odam foydalanishining oldini oladi.",
+  "nav.myAttendance": "Bugungi davomat",
+  "att.title": "Bugungi davomat",
+  "att.today": "Bugun",
+  "att.students": "o'quvchi",
+  "att.total": "Jami",
+  "att.present": "Keldi",
+  "att.absent": "Kelmadi",
+  "att.noStudents": "Bu sinfda o'quvchi yo'q",
+  "att.noClass": "Sizga sinf biriktirilmagan",
+  "att.noClassHint": "Davomatni sinf rahbari oladi. Agar siz sinf rahbari bo'lsangiz, direktorga ayting — sizni sinfga biriktirsin.",
+  "att.notWorkday": "Bu kun ish kuni emas — davomat olinmaydi.",
+  "att.alreadyMarked": "Bugungi davomat olingan: {time}, {count} ta kelmagan. O'zgartirsangiz eskisi almashtiriladi.",
+  "att.noDeduct": "pulga ta'sir qilmaydi",
+  "att.hint": "KELMAGANLARNI belgilang. Belgilanmagan o'quvchi kelgan hisoblanadi.",
+  "att.confirmAllPresent": "Hammasi keldi — tasdiqlash",
+  "att.confirmN": "{count} ta kelmadi — tasdiqlash",
+  "att.saved": "Davomat olindi — {count} ta kelmagan"
 }

@@ -40,6 +40,7 @@ const Branches    = lazy(() => import('@/features/Branches'));
 const Users       = lazy(() => import('@/features/Users'));
 const Audit       = lazy(() => import('@/features/Audit'));
 const Settings    = lazy(() => import('@/features/Settings'));
+const MyAttendance = lazy(() => import('@/features/teacher/MyAttendance'));
 const MyLoad      = lazy(() => import('@/features/teacher/MyLoad'));
 const MyPayroll   = lazy(() => import('@/features/teacher/MyPayroll'));
 
@@ -108,6 +109,7 @@ export default function App() {
           <Route path="foydalanuvchilar" element={<Users />} />
           <Route path="jurnal" element={<Audit />} />
           <Route path="sozlamalar" element={<Settings />} />
+          <Route path="davomat" element={<MyAttendance />} />
           <Route path="yuklamam" element={<MyLoad />} />
           <Route path="oyligim" element={<MyPayroll />} />
           <Route path="*" element={<Navigate to="/" replace />} />

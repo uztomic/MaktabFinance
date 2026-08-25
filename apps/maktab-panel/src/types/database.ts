@@ -3294,9 +3294,26 @@ export type Database = {
         Args: { p_branch_id?: string; p_note?: string; p_period: string }
         Returns: Json
       }
+      mark_class_attendance: {
+        Args: { p_absent?: Json; p_class_id: string; p_day: string }
+        Returns: Json
+      }
       match_statement_row: {
         Args: { p_row_id: string; p_student_id: string }
         Returns: Json
+      }
+      my_classes: {
+        Args: { p_day?: string }
+        Returns: {
+          absent_count: number
+          academic_year: string
+          branch_id: string
+          class_id: string
+          class_name: string
+          is_workday: boolean
+          marked_at: string
+          students: number
+        }[]
       }
       notify_invoices: {
         Args: { p_branch_id: string; p_final?: boolean; p_period: string }

@@ -111,6 +111,7 @@ const GROUPS: NavGroup[] = [
 /** O'qituvchi uchun alohida, qisqa menyu (PWA, telefon). */
 const TEACHER_NAV: NavItem[] = [
   { to: '/', labelKey: 'nav.dashboard', permission: null, icon: <Icon d={I.home} /> },
+  { to: '/davomat', labelKey: 'nav.myAttendance', permission: null, icon: <Icon d={I.calendar} /> },
   { to: '/yuklamam', labelKey: 'nav.myLoad', permission: null, icon: <Icon d={I.teacher} /> },
   { to: '/oyligim', labelKey: 'nav.myPayroll', permission: null, icon: <Icon d={I.cash} /> },
 ];
