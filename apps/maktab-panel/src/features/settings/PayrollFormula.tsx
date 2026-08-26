@@ -254,6 +254,12 @@ export default function PayrollFormula({ editable }: { editable: boolean }) {
 
       {/* ============ 1. ASOSIY HAQ TURI ============ */}
       <Card title={t('pf.base.title')}>
+        {/*  Bu MAKTAB uchun standart. Har bir xodimga alohida tur
+             belgilash mumkin — aks holda soatbay ishlaydigan to'garak
+             rahbari ham qat'iy oylik oladigan bo'lib qolardi. */}
+        <p className="mb-3 text-[13px] text-[var(--text-muted)]">
+          {t('pf.base.schoolDefault')}
+        </p>
         <div className="grid gap-2 sm:grid-cols-2">
           {BASE_TYPES.map((bt) => {
             const active = form.base_type === bt;
@@ -380,7 +386,7 @@ export default function PayrollFormula({ editable }: { editable: boolean }) {
       {/* ============ 5. USTAMALAR ============ */}
       <Card title={t('pf.allowances')}>
         <p className="mb-3 text-[12px] text-[var(--text-muted)]">
-          {t('pf.allowances.hint')}
+          {t('pf.allowances.hint')} {t('pf.allowances.free')}
         </p>
         <NamedRows
           rows={form.allowances}
@@ -651,6 +657,36 @@ function KeyValueRows({
 //  Nomlangan qatorlar (ustamalar, ushlanmalar)
 // ---------------------------------------------------------------------
 
+/**
+ *  Nomdan ichki kod yasaydi: "Ish staji uchun" → "ish_staji_uchun".
+ *
+ *  NEGA KERAK. Ilgari foydalanuvchi kodni QO'LDA yozardi va jadvalda
+ *  alohida "KOD" ustuni turardi. Direktor uchun bu tushunarsiz: u
+ *  ustama nomini biladi, ichki belgini emas. Natijada yangi ustama
+ *  qo'shish o'rniga mavjudini o'zgartirib yuborish yoki umuman
+ *  qo'shmaslik holatlari kelib chiqardi.
+ *
+ *  Endi kod ko'rinmaydi va o'zi yasaladi. Lotin harfi bo'lmagan
+ *  nomlar uchun (masalan kirillcha) zaxira sifatida tartib raqami
+ *  ishlatiladi — kod baribir ichki belgi, uni odam o'qimaydi.
+ */
+function makeCode(name: string, taken: string[]): string {
+  const base = name
+    .toLowerCase()
+    .replace(/['''`]/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 28);
+
+  let code = base || 'ustama';
+  let n = 2;
+  while (taken.includes(code)) {
+    code = `${base || 'ustama'}_${n}`;
+    n += 1;
+  }
+  return code;
+}
+
 function NamedRows({
   rows, editable, onChange,
 }: {
@@ -672,7 +708,6 @@ function NamedRows({
       {rows.length > 0 && (
         <div className="hidden gap-2 px-1 text-[11px] font-medium uppercase
           tracking-wide text-[var(--text-muted)] lg:flex">
-          <span className="w-36">{t('pf.row.code')}</span>
           <span className="flex-1">{t('pf.row.name')}</span>
           <span className="w-40">{t('pf.row.type')}</span>
           <span className="w-36">{t('pf.row.value')}</span>
@@ -683,19 +718,26 @@ function NamedRows({
       {rows.map((r, i) => (
         <div key={i} className="flex flex-wrap items-center gap-2">
           <Input
-            value={r.code}
-            disabled={!editable}
-            placeholder="class_teacher"
-            onChange={(e) =>
-              update(i, { code: e.target.value.replace(/\s+/g, '_').toLowerCase() })}
-            className="w-36"
-          />
-          <Input
             value={r.name}
             disabled={!editable}
-            placeholder="Sinf rahbarligi"
-            onChange={(e) => update(i, { name: e.target.value })}
-            className="min-w-[10rem] flex-1"
+            placeholder={t('pf.row.namePlaceholder')}
+            onChange={(e) => {
+              const name = e.target.value;
+              //  Kod FAQAT yangi qatorda yasaladi. Mavjud ustamaning
+              //  kodi o'zgarsa, unga biriktirilgan o'qituvchilar
+              //  bilan bog'lanish uziladi va ustama jim yo'qoladi.
+              const patch = r.code
+                ? { name }
+                : {
+                  name,
+                  code: makeCode(
+                    name,
+                    rows.filter((_, idx) => idx !== i).map((x) => x.code),
+                  ),
+                };
+              update(i, patch);
+            }}
+            className="min-w-[12rem] flex-1"
           />
           <Select
             value={r.type}

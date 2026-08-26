@@ -389,7 +389,6 @@ export function DiscountSettings({ editable }: { editable: boolean }) {
             <thead>
               <tr>
                 <Th>{t('common.name')}</Th>
-                <Th>{t('pf.row.code')}</Th>
                 <Th align="right">{t('pf.row.value')}</Th>
                 <Th>{t('common.status')}</Th>
               </tr>
@@ -398,7 +397,6 @@ export function DiscountSettings({ editable }: { editable: boolean }) {
               {rows.data!.map((d) => (
                 <Tr key={d.id}>
                   <Td className="font-medium">{d.name}</Td>
-                  <Td mono className="text-[var(--text-muted)]">{d.code}</Td>
                   <Td align="right" mono>
                     {d.kind === 'percent'
                       ? `${d.value}%`
@@ -586,7 +584,6 @@ export function ReasonSettings({ editable }: { editable: boolean }) {
             <thead>
               <tr>
                 <Th>{t('common.name')}</Th>
-                <Th>{t('pf.row.code')}</Th>
                 <Th>{t('reason.deducts')}</Th>
               </tr>
             </thead>
@@ -594,7 +591,6 @@ export function ReasonSettings({ editable }: { editable: boolean }) {
               {rows.data!.map((r) => (
                 <Tr key={r.id}>
                   <Td className="font-medium">{r.name}</Td>
-                  <Td mono className="text-[var(--text-muted)]">{r.code}</Td>
                   <Td>
                     {editable
                       ? (

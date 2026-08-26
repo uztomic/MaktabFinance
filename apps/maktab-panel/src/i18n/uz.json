@@ -1053,5 +1053,22 @@
   "field.name": "Nomi",
   "field.deleted_at": "O'chirilgan sana",
   "field.confirmed_at": "Tasdiqlangan vaqt",
-  "field.approved_at": "Tasdiqlangan vaqt"
+  "field.approved_at": "Tasdiqlangan vaqt",
+  "teachers.classTeacher": "Sinf rahbarligi",
+  "teachers.classTeacherHint": "Ixtiyoriy. Tanlansa shu sinfning rahbari bo'ladi va sinf rahbarligi ustamasi hisoblanadi. Fan o'qituvchisi uchun bo'sh qoldiriladi.",
+  "teachers.editHint": "O'qituvchi ma'lumotlari va oyligi",
+  "settings.proofRetention": "Tasdiqlanmagan chek qancha saqlansin (kun)",
+  "settings.staleProof": "Kutayotgan chek haqida ogohlantirish (kun)",
+  "settings.academicYearStart.hint": "Yangi o'quv yili boshlanadigan oy raqami: 9 = sentyabr. Bu shartnomada \"9 oy to'lov\" tanlangan o'quvchilar uchun kerak — tizim shu oydan boshlab 9 oyni hisoblaydi, ya'ni sentyabrdan mayga qadar. Yil bo'yi (12 oy) to'laydiganlarga ta'sir qilmaydi.",
+  "settings.dailyDiffMethod.hint": "Ovqatlanish kabi KUNLIK xizmatlar oy boshida taxminan hisoblanadi, oy oxirida esa haqiqiy kelgan kunlar bo'yicha qayta hisoblanadi. Farq chiqadi. Shu farq qayerga ketishini tanlaysiz: o'sha oyning hisoblanmasi tuzatilsinmi, yoki keyingi oyga o'tkazilsinmi. Oy allaqachon yopilgan bo'lsa ikkinchi variant xavfsizroq.",
+  "settings.proofRetention.hint": "Ota-ona yuborgan chek rasmi shuncha kundan keyin serverdan o'chiriladi — faqat TASDIQLANMAGAN va RAD ETILGANLARI. Tasdiqlangan chek hech qachon o'chirilmaydi, chunki u to'lovning dalili. Bu sozlama serverda joy tejash uchun.",
+  "settings.staleProof.hint": "Ota-ona chek yuborgan, lekin buxgalter uni hali ko'rmagan. Shuncha kun o'tsa tizim buxgalterga eslatadi. Maqsad — chek unutilib, ota-ona \"men to'laganman\" deb kelib qolmasin.",
+  "settings.reminderDays.hint": "To'lov muddatidan necha kun oldin ota-onaga Telegram orqali eslatma yuborilsin. 0 = eslatma yuborilmaydi.",
+  "settings.quietHours.hint": "Kechqurun va tunda xabar yuborilmaydigan vaqt. Masalan 20 dan 8 gacha qo'yilsa, kechki 20:00 dan ertalabki 8:00 gacha hech qanday xabar bormaydi — navbatda turadi va ertalab yuboriladi.",
+  "pf.row.namePlaceholder": "Masalan: Ish staji uchun",
+  "pf.allowances.free": "Istalgan ustama qo'shishingiz mumkin — nomini yozing va miqdorini tanlang. Foiz bo'lsa jami hisoblangan summadan olinadi.",
+  "teachers.baseType": "Oyligi qanday hisoblanadi",
+  "teachers.baseTypeDefault": "Maktab sozlamasi bo'yicha",
+  "teachers.baseTypeHint": "Shu xodim uchun alohida tanlash mumkin. Masalan sinf rahbari qat'iy oylik oladi, to'garak rahbari esa soatbay. Tanlanmasa maktabning umumiy sozlamasi ishlaydi.",
+  "pf.base.schoolDefault": "Bu — MAKTAB uchun standart tanlov. Har bir o'qituvchiga alohida boshqa tur belgilash mumkin: o'qituvchi kartochkasi → \"Oyligi qanday hisoblanadi\"."
 }

@@ -49,12 +49,14 @@ export function usePayrollSettings() {
 }
 
 export function SalaryPreview({
-  baseSalary, rateFactor, weeklyHours, category,
+  baseSalary, rateFactor, weeklyHours, category, baseType,
 }: {
   baseSalary: string;
   rateFactor: string;
   weeklyHours: string;
   category: string;
+  /** Xodimning o'z turi. Bo'sh bo'lsa maktab sozlamasi. */
+  baseType?: string;
 }) {
   const t = useT();
   const { lang } = useI18n();
@@ -63,7 +65,10 @@ export function SalaryPreview({
   if (settings.isLoading) return null;
 
   const s = settings.data ?? {};
-  const baseType = (s.base_type as string) ?? 'fixed';
+  //  Xodimga tur tanlangan bo'lsa u ustun turadi — hisob aynan
+  //  `calc_payroll` dagidek bo'lsin, aks holda oldindan ko'rsatilgan
+  //  raqam haqiqiy oylikdan farq qiladi va ishonchni yo'qotadi.
+  const effectiveType = baseType || (s.base_type as string) || 'fixed';
   const hourPrice = Number(s.hour_price ?? 0);
   const hoursPerRate = Number(s.hours_per_rate ?? 0);
   const factors = (s.category_factors ?? {}) as Record<string, number>;
@@ -79,14 +84,14 @@ export function SalaryPreview({
   let base = 0;
   let formula = '';
 
-  if (baseType === 'fixed') {
+  if (effectiveType === 'fixed') {
     base = salary * rate;
     formula = `${money(salary, lang)} × ${rate}`;
-  } else if (baseType === 'rate') {
+  } else if (effectiveType === 'rate') {
     base = hoursPerRate * rate * hourPrice * factor;
     formula = `${hoursPerRate} × ${rate} × ${money(hourPrice, lang)}`
       + (factor !== 1 ? ` × ${factor}` : '');
-  } else if (baseType === 'hourly') {
+  } else if (effectiveType === 'hourly') {
     // Oyda o'rtacha 4.33 hafta. Haqiqiy soat dars jurnalidan olinadi.
     base = hours * 4.33 * hourPrice * factor;
     formula = `${hours} × 4.33 × ${money(hourPrice, lang)}`
@@ -137,7 +142,7 @@ export function SalaryPreview({
           {t('salary.preview')}
         </span>
         <span className="text-[11px] text-[var(--text-faint)]">
-          {t(`payroll.baseType.${baseType}`)}
+          {t(`payroll.baseType.${effectiveType}`)}
         </span>
       </div>
 

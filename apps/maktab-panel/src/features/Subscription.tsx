@@ -148,7 +148,17 @@ export default function Subscription() {
             </div>
             <div className="flex justify-between border-b py-1.5">
               <span className="text-[var(--text-muted)]">{t('sub.monthly')}</span>
-              <Money value={sub.data?.monthly_amount ?? 0} bold />
+              {/*  JORIY hisob ko'rsatiladi, saqlangan qiymat emas.
+                   Ilgari bu yerda `monthly_amount` turardi — u maktab
+                   yaratilganda bir marta yozilgan va keyin hech qachon
+                   yangilanmagan. Natijada yon ustunda "Oylik jami
+                   500 000" turganda bu yerda 900 000 ko'rinardi.
+                   To'lov masalasida ikki xil raqam — yo'l qo'yib
+                   bo'lmaydigan hol. */}
+              <Money
+                value={Number(p?.monthly_total ?? sub.data?.monthly_amount ?? 0)}
+                bold
+              />
             </div>
             <div className="flex justify-between border-b py-1.5">
               <span className="text-[var(--text-muted)]">{t('sub.nextPayment')}</span>

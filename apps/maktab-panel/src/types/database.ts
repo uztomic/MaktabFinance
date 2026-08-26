@@ -3298,6 +3298,7 @@ export type Database = {
       teachers: {
         Row: {
           base_salary: number
+          base_type: string | null
           category: string | null
           created_at: string
           deleted_at: string | null
@@ -3315,6 +3316,7 @@ export type Database = {
         }
         Insert: {
           base_salary?: number
+          base_type?: string | null
           category?: string | null
           created_at?: string
           deleted_at?: string | null
@@ -3332,6 +3334,7 @@ export type Database = {
         }
         Update: {
           base_salary?: number
+          base_type?: string | null
           category?: string | null
           created_at?: string
           deleted_at?: string | null

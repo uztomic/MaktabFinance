@@ -83,7 +83,8 @@ export default function Settings() {
 interface SettingDef {
   key: string;
   labelKey: string;
-  hint?: string;
+  /** Izoh matnining tarjima kaliti. */
+  hintKey: string;
   kind: 'number' | 'select' | 'json';
   options?: Array<{ value: string; labelKey: string }>;
   min?: number;
@@ -94,13 +95,13 @@ const FINANCE: SettingDef[] = [
   {
     key: 'academic_year_start_month',
     labelKey: 'settings.academicYearStart',
-    hint: '9 = sentyabr. Shartnomada billing_months < 12 bo\'lganda ishlatiladi (TZ 12.2.1).',
+    hintKey: 'settings.academicYearStart.hint',
     kind: 'number', min: 1, max: 12,
   },
   {
     key: 'billing.daily_diff_method',
     labelKey: 'settings.dailyDiffMethod',
-    hint: 'Oy oxirida kunlik xizmat qayta hisoblanganda farq qayerga ketadi (TZ 4.6.1.3).',
+    hintKey: 'settings.dailyDiffMethod.hint',
     kind: 'select',
     options: [
       { value: 'recalculate', labelKey: 'settings.dailyDiffMethod.recalculate' },
@@ -109,14 +110,14 @@ const FINANCE: SettingDef[] = [
   },
   {
     key: 'files.proof_retention_days',
-    labelKey: 'Tasdiqlanmagan chek saqlash muddati (kun)',
-    hint: 'TZ 4.7.4 — shu muddatdan keyin fayl o\'chiriladi. Tasdiqlangan chek HECH QACHON o\'chirilmaydi.',
+    labelKey: 'settings.proofRetention',
+    hintKey: 'settings.proofRetention.hint',
     kind: 'number', min: 7, max: 3650,
   },
   {
     key: 'files.stale_proof_days',
-    labelKey: 'Chek kutish ogohlantirishi (kun)',
-    hint: 'TZ 4.7.3.6 — chek shuncha kun kutilsa buxgalterga ogohlantirish.',
+    labelKey: 'settings.staleProof',
+    hintKey: 'settings.staleProof.hint',
     kind: 'number', min: 1, max: 365,
   },
 ];
@@ -125,13 +126,13 @@ const MESSAGING: SettingDef[] = [
   {
     key: 'messaging.reminder_days_before',
     labelKey: 'settings.reminderDays',
-    hint: 'TZ 4.9 — to\'lov muddatidan necha kun oldin eslatma yuboriladi.',
+    hintKey: 'settings.reminderDays.hint',
     kind: 'number', min: 0, max: 30,
   },
   {
     key: 'messaging.quiet_hours',
     labelKey: 'settings.quietHours',
-    hint: 'TZ 4.9.3 — bu oraliqda xabar yuborilmaydi. Masalan: {"from":20,"to":8}',
+    hintKey: 'settings.quietHours.hint',
     kind: 'json',
   },
 ];
@@ -231,15 +232,12 @@ function SettingRow({
     }
   }
 
-  // labelKey tarjima kaliti bo'lmasa — o'zi matn sifatida ishlatiladi.
-  const label = def.labelKey.includes('.') && !def.labelKey.includes(' ')
-    ? t(def.labelKey)
-    : def.labelKey;
+  const label = t(def.labelKey);
 
   return (
     <div className="flex flex-wrap items-end gap-3">
       <div className="min-w-[16rem] flex-1">
-        <Field label={label} hint={def.hint} error={err ?? undefined}>
+        <Field label={label} hint={t(def.hintKey)} error={err ?? undefined}>
           {def.kind === 'select'
             ? (
               <Select value={value} onChange={(e) => setValue(e.target.value)}

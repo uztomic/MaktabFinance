@@ -15,11 +15,9 @@ import { useI18n, useT } from '@/i18n';
 import { currentPeriod, isoDate, money, num, periodLabel, shiftPeriod } from '@/lib/format';
 import {
   Badge, Button, Card, EmptyState, ErrorState, Field, Input, Loading,
-  Modal, MoneyInput, Notice, PageHeader, Select, Table, Td, Th, Tr,
+  Modal, Notice, PageHeader, Select, Table, Td, Th, Tr,
 } from '@/ui';
-import { useToast } from '@/ui/Feedback';
-import { CatalogSelect } from '@/ui/CatalogSelect';
-import { SalaryPreview } from './teacher/SalaryPreview';
+import { TeacherModal, useSaveTeacher } from './teacher/TeacherForm';
 
 export default function Teachers() {
   const t = useT();
@@ -27,7 +25,6 @@ export default function Teachers() {
   const qc = useQueryClient();
   const { branches, mayWrite, can, profile } = useAuth();
 
-  const toast = useToast();
   const [adding, setAdding] = useState(false);
   // deno-lint-ignore no-explicit-any
   const [editing, setEditing] = useState<any>(null);
@@ -41,7 +38,7 @@ export default function Teachers() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('teachers')
-        .select('id, full_name, phone, category, rate_factor, base_salary, weekly_hours, is_active, user_id, teacher_branches(branch_id, load_share, branches(name))')
+        .select('id, full_name, phone, category, rate_factor, base_salary, weekly_hours, is_active, user_id, teacher_branches(branch_id, load_share, branches(name)), classes(id, name, is_active)')
         .is('deleted_at', null)
         .order('full_name');
       if (error) throw error;
@@ -77,56 +74,9 @@ export default function Teachers() {
     },
   });
 
-  const save = useMutation({
-    // deno-lint-ignore no-explicit-any
-    mutationFn: async (f: any) => {
-      // --- TAHRIRLASH ------------------------------------------
-      // Filial ulushi (`teacher_branches.load_share`) bu yerda emas,
-      // o'qituvchi kartochkasida boshqariladi: u yerda bir nechta
-      // filial va ularning ulushi ko'rinadi (TZ 4.11.4).
-      if (f.id) {
-        const { error } = await supabase.from('teachers').update({
-          full_name: f.full_name.trim(),
-          phone: f.phone.trim() || null,
-          category: f.category.trim() || null,
-          rate_factor: Number(f.rate_factor || 1),
-          base_salary: Number(f.base_salary || 0),
-          weekly_hours: Number(f.weekly_hours || 0),
-          is_active: f.is_active,
-        }).eq('id', f.id);
-        if (error) throw error;
-        return { id: f.id };
-      }
-
-      const { data: te, error } = await supabase.from('teachers').insert({
-        school_id: profile!.school_id,
-        full_name: f.full_name.trim(),
-        phone: f.phone.trim() || null,
-        category: f.category.trim() || null,
-        rate_factor: Number(f.rate_factor || 1),
-        base_salary: Number(f.base_salary || 0),
-        weekly_hours: Number(f.weekly_hours || 0),
-        hired_on: isoDate(),
-      }).select('id').single();
-      if (error) throw error;
-
-      // TZ 4.11.4 — filial biriktirilmagan xodim uchun oylik xarajati
-      // taqsimlanmaydi, shuning uchun kamida bitta filial majburiy.
-      const { error: bErr } = await supabase.from('teacher_branches').insert({
-        teacher_id: te.id,
-        branch_id: f.branch_id,
-        load_share: 1.0,
-      });
-      if (bErr) throw bErr;
-      return te;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['teachers'] });
-      toast.ok(t('ux.saved'));
-      setAdding(false);
-      setEditing(null);
-    },
-    onError: (e) => toast.error((e as Error).message),
+  const save = useSaveTeacher(() => {
+    setAdding(false);
+    setEditing(null);
   });
 
   const addLesson = useMutation({
@@ -298,134 +248,6 @@ export default function Teachers() {
 }
 
 // ---------------------------------------------------------------------
-
-function TeacherModal({
-  existing, onClose, branches, onSubmit, busy, error,
-}: {
-  // deno-lint-ignore no-explicit-any
-  existing: any;
-  onClose: () => void;
-  branches: Array<{ id: string; name: string }>;
-  // deno-lint-ignore no-explicit-any
-  onSubmit: (f: any) => void;
-  busy: boolean;
-  error: string | null;
-}) {
-  const t = useT();
-  const [f, setF] = useState({
-    id: existing?.id as string | undefined,
-    full_name: existing?.full_name ?? '',
-    phone: existing?.phone ?? '',
-    category: existing?.category ?? '',
-    rate_factor: String(existing?.rate_factor ?? '1'),
-    base_salary: existing ? String(existing.base_salary ?? '') : '',
-    weekly_hours: existing ? String(existing.weekly_hours ?? '') : '',
-    branch_id: branches[0]?.id ?? '',
-    is_active: existing?.is_active ?? true,
-  });
-
-  const set = (k: string, v: string | boolean) =>
-    setF((p) => ({ ...p, [k]: v }));
-
-  return (
-    <Modal
-      open title={existing ? t('teachers.edit') : t('teachers.add')} onClose={onClose}
-      footer={
-        <>
-          <Button onClick={onClose}>{t('common.cancel')}</Button>
-          <Button variant="primary" form="teacher-form" type="submit"
-                  disabled={busy || !f.full_name}>
-            {busy ? t('common.saving') : t('common.save')}
-          </Button>
-        </>
-      }
-    >
-      <form
-        id="teacher-form"
-        onSubmit={(e: FormEvent) => { e.preventDefault(); onSubmit(f); }}
-        className="space-y-3"
-      >
-        <Field label={t('common.fullName')} required>
-          <Input value={f.full_name} onChange={(e) => set('full_name', e.target.value)}
-                 autoFocus required />
-        </Field>
-
-        <div className="grid grid-cols-2 gap-3">
-          <Field label={t('common.phone')}>
-            <Input value={f.phone} onChange={(e) => set('phone', e.target.value)}
-                   inputMode="tel" placeholder="998901234567" />
-          </Field>
-          <CatalogSelect
-            kind="teacher_category"
-            label={t('teachers.category')}
-            hint={t('teachers.categoryHint')}
-            value={f.category}
-            onChange={(v) => set('category', v)}
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <Field label={t('teachers.rateFactor')} hint={t('teachers.rateFactorHint')}>
-            <Input type="number" step="0.05" min="0.05" max="3"
-                   value={f.rate_factor}
-                   onChange={(e) => set('rate_factor', e.target.value)} />
-          </Field>
-          <Field label={t('teachers.weeklyHours')}>
-            <Input type="number" step="0.5" min="0" value={f.weekly_hours}
-                   onChange={(e) => set('weekly_hours', e.target.value)} />
-          </Field>
-        </div>
-
-        <Field label={t('teachers.baseSalary')}
-               hint={t('teachers.baseSalaryHint')}>
-          <MoneyInput value={f.base_salary}
-                      onChange={(e) => set('base_salary', e.target.value)} />
-        </Field>
-
-        {/* Kiritilgan raqamlardan oxirida qancha chiqishi DARHOL
-            ko'rinadi — aks holda buni faqat oy oxirida bilib olinadi. */}
-        <SalaryPreview
-          baseSalary={f.base_salary}
-          rateFactor={f.rate_factor}
-          weeklyHours={f.weekly_hours}
-          category={f.category}
-        />
-
-        {!existing && (
-          <Field label={t('common.branch')} required
-                 hint={t('teachers.branchHint')}>
-            <Select value={f.branch_id}
-                    onChange={(e) => set('branch_id', e.target.value)}>
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>{b.name}</option>
-              ))}
-            </Select>
-          </Field>
-        )}
-
-        {existing && (
-          <>
-            <label className="flex items-center gap-2 text-[13px]">
-              <input
-                type="checkbox"
-                checked={f.is_active}
-                onChange={(e) => set('is_active', e.target.checked)}
-                className="h-4 w-4"
-              />
-              {t('common.active')}
-            </label>
-            {!f.is_active && (
-              <Notice tone="warn">{t('teachers.deactivateHint')}</Notice>
-            )}
-            <Notice tone="neutral">{t('teachers.branchesInCard')}</Notice>
-          </>
-        )}
-
-        {error && <Notice tone="danger">{error}</Notice>}
-      </form>
-    </Modal>
-  );
-}
 
 function AddLessonModal({
   target, onClose, branches, onSubmit, busy, error,

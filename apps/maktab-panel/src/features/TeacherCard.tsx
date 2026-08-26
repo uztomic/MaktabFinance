@@ -21,6 +21,7 @@ import {
   Badge, Button, Card, EmptyState, ErrorState, Field, Input, Loading,
   Modal, MoneyInput, Notice, PageHeader, Select, Table, Td, Th, Tr,
 } from '@/ui';
+import { TeacherModal, useSaveTeacher } from './teacher/TeacherForm';
 
 interface CatalogRow {
   code: string;
@@ -36,6 +37,8 @@ export default function TeacherCard() {
   const qc = useQueryClient();
   const { branches, mayWrite, profile } = useAuth();
 
+  const [editOpen, setEditOpen] = useState(false);
+  const saveTeacher = useSaveTeacher(() => setEditOpen(false));
   const [allowanceOpen, setAllowanceOpen] = useState(false);
   const [advanceOpen, setAdvanceOpen] = useState(false);
 
@@ -45,7 +48,7 @@ export default function TeacherCard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('teachers')
-        .select('*, teacher_branches(branch_id, load_share, branches(name))')
+        .select('*, teacher_branches(branch_id, load_share, branches(name)), classes(id, name, is_active)')
         .eq('id', id!)
         .single();
       if (error) throw error;
@@ -220,9 +223,19 @@ export default function TeacherCard() {
           te.phone,
         ].filter(Boolean).join(' · ')}
         actions={
-          <Badge tone={te.is_active ? 'ok' : 'neutral'}>
-            {te.is_active ? t('common.active') : t('common.inactive')}
-          </Badge>
+          <>
+            <Badge tone={te.is_active ? 'ok' : 'neutral'}>
+              {te.is_active ? t('common.active') : t('common.inactive')}
+            </Badge>
+            {/*  Ilgari tahrirlash FAQAT ro'yxat sahifasida edi:
+                 kartochkaga kirgan odam orqaga qaytib, ro'yxatdan
+                 qidirib, o'sha qatordagi tugmani bosishi kerak bo'lardi. */}
+            {mayWrite('teachers.manage') && (
+              <Button onClick={() => setEditOpen(true)}>
+                {t('common.edit')}
+              </Button>
+            )}
+          </>
         }
       />
 
@@ -422,6 +435,17 @@ export default function TeacherCard() {
           </Table>
         )}
       </Card>
+
+      {editOpen && (
+        <TeacherModal
+          existing={te}
+          branches={branches}
+          onClose={() => setEditOpen(false)}
+          onSubmit={(f) => saveTeacher.mutate(f)}
+          busy={saveTeacher.isPending}
+          error={saveTeacher.error ? (saveTeacher.error as Error).message : null}
+        />
+      )}
 
       <AllowanceModal
         open={allowanceOpen}
