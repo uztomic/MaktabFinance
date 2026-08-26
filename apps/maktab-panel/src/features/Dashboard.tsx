@@ -11,6 +11,7 @@
 //    · xarajat: XODIMLAR OYLIGI alohida, qolgani alohida
 //    · foyda: xarajatsiz, oyliksiz va sof
 //    · naqd holat — kassada haqiqatda qancha qoldi
+//    · to'lov usuli — naqd, karta, Click… qaysi biridan qancha
 //    · sinf kesimi — qaysi sinfdan qancha yig'ilgan
 //    · 12 oylik dinamika — o'sish bormi
 // =====================================================================
@@ -21,7 +22,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/auth/AuthProvider';
 import { useI18n, useT } from '@/i18n';
-import { date, isoDate, money, periodLabel } from '@/lib/format';
+import { date, isoDate, type Lang, money, periodLabel } from '@/lib/format';
 import {
   Badge, Card, EmptyState, ErrorState, Loading, Money, Notice,
   PageHeader, Table, Td, Th, Tr,
@@ -101,6 +102,22 @@ export default function Dashboard() {
   });
 
   // --- Ogohlantirishlar ----------------------------------------------
+  // --- To'lov usullari kesimi --------------------------------------
+  //  "Bankdagi pul kassadagidan qancha ko'p" degan savol oyning har
+  //  kunida chiqadi. Ilgari javob yo'q edi: barcha to'lov bir xil
+  //  ko'rinardi va faqat kanal (kassa/bank/chek) saqlanardi.
+  const methods = useQuery({
+    queryKey: ['pay-methods-report', from, to, branchId],
+    enabled: canSeeFinance,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('report_payment_methods', {
+        p_from: from, p_to: to, p_branch_id: branch,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
   const gaps = useQuery({
     queryKey: ['absence-gaps', branchId],
     enabled: can('absences.mark') || canSeeFinance,
@@ -353,6 +370,13 @@ export default function Dashboard() {
               <Card title={t('fin.trend')} padded={false}>
                 <TrendChart rows={trend.data ?? []} />
               </Card>
+
+              {/* --- To'lov usullari ----------------------------- */}
+              <Card title={t('payMethod.breakdown')} padded={false}>
+                {(methods.data?.length ?? 0) === 0
+                  ? <EmptyState hint="" />
+                  : <MethodBreakdown rows={methods.data!} lang={lang} t={t} />}
+              </Card>
             </div>
           </>
         )}
@@ -361,6 +385,58 @@ export default function Dashboard() {
 }
 
 // ---------------------------------------------------------------------
+
+/**
+ *  To'lov usullari kesimi.
+ *
+ *  Diagramma emas, ULUSH CHIZIG'I bilan jadval: raqam ham, nisbat ham
+ *  bir vaqtda ko'rinadi va bosib chiqarishda ham qoladi.
+ */
+function MethodBreakdown({ rows, lang, t }: {
+  // deno-lint-ignore no-explicit-any
+  rows: any[];
+  lang: Lang;
+  t: (k: string) => string;
+}) {
+  return (
+    <Table>
+      <thead>
+        <tr>
+          <Th>{t('payMethod.label')}</Th>
+          <Th align="right">{t('pay.count')}</Th>
+          <Th align="right">{t('common.amount')}</Th>
+          <Th align="right">%</Th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((m) => (
+          <Tr key={m.method_id}>
+            <Td>
+              <span className="mr-1.5">{m.is_cash ? '💵' : '💳'}</span>
+              {m.method_name}
+            </Td>
+            <Td align="right" mono>{m.payments}</Td>
+            <Td align="right" mono>{money(m.amount, lang)}</Td>
+            <Td align="right">
+              <div className="flex items-center justify-end gap-1.5">
+                <span className="h-1.5 w-16 overflow-hidden rounded-full
+                  bg-[var(--bg-inset)]">
+                  <span
+                    className="block h-full rounded-full bg-brand-500"
+                    style={{ width: `${Math.min(100, Number(m.share))}%` }}
+                  />
+                </span>
+                <span className="num w-10 text-right text-[13px]">
+                  {m.share}%
+                </span>
+              </div>
+            </Td>
+          </Tr>
+        ))}
+      </tbody>
+    </Table>
+  );
+}
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (

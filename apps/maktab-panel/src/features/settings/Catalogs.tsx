@@ -674,8 +674,7 @@ function ReasonForm({
         <span>
           <strong>{t('reason.deducts')}</strong>
           <span className="block text-[12px] text-[var(--text-muted)]">
-            Belgilansa — bu sabab bilan yo'q kun uchun pul olinmaydi.
-            Belgilanmasa — kun hisoblanadi (masalan sababsiz).
+            {t('reason.deductsHint')}
           </span>
         </span>
       </label>

@@ -21,6 +21,11 @@ import {
   Modal, MoneyInput, Notice, PageHeader, Select, Table, Td, Th, Tr,
 } from '@/ui';
 import { useConfirm, useToast } from '@/ui/Feedback';
+import {
+  defaultMethodId,
+  PaymentMethodPicker,
+  usePaymentMethods,
+} from '@/ui/PaymentMethodPicker';
 
 export default function Expenses() {
   const t = useT();
@@ -60,7 +65,7 @@ export default function Expenses() {
     queryFn: async () => {
       let q = supabase
         .from('expenses')
-        .select('id, amount, spent_on, payment_method, note, payroll_run_id, category_id, branch_id, expense_categories(name, code), branches(name)')
+        .select('id, amount, spent_on, payment_method, method_id, note, payroll_run_id, category_id, branch_id, expense_categories(name, code), branches(name), payment_methods(name, is_cash)')
         .is('deleted_at', null)
         .gte('spent_on', from)
         .lte('spent_on', to)
@@ -92,7 +97,7 @@ export default function Expenses() {
         category_id: f.category_id,
         amount: Number(f.amount),
         spent_on: f.spent_on,
-        payment_method: f.payment_method as 'cash' | 'bank',
+        method_id: f.method_id || null,
         note: f.note.trim() || null,
       };
       if (f.id) {
@@ -206,7 +211,8 @@ export default function Expenses() {
                   { header: t('exp.category'), value: (e) => (e as any).expense_categories?.name },
                   // deno-lint-ignore no-explicit-any
                   { header: t('common.branch'), value: (e) => (e as any).branches?.name },
-                  { header: t('exp.method'), value: (e) => t(`exp.method.${e.payment_method}`) },
+                  // deno-lint-ignore no-explicit-any
+                  { header: t('exp.method'), value: (e) => (e as any).payment_methods?.name ?? t(`exp.method.${e.payment_method}`) },
                   { header: t('common.note'), value: (e) => e.note },
                   { header: t('common.amount'), value: (e) => e.amount, numeric: true },
                 ],
@@ -277,7 +283,9 @@ export default function Expenses() {
                       </Td>
                       <Td className="text-[var(--text-muted)]">
                         {e.payment_method === 'cash' ? '💵' : '🏦'}{' '}
-                        {t(`exp.method.${e.payment_method}`)}
+                        {/* deno-lint-ignore no-explicit-any */}
+                        {(e as any).payment_methods?.name
+                          ?? t(`exp.method.${e.payment_method}`)}
                       </Td>
                       <Td className="max-w-xs truncate text-[13px]
                         text-[var(--text-muted)]">{e.note ?? '—'}</Td>
@@ -435,11 +443,16 @@ function ExpenseModal({
     category_id: existing?.category_id ?? '',
     amount: existing ? String(existing.amount) : '',
     spent_on: existing?.spent_on ?? isoDate(),
-    payment_method: existing?.payment_method ?? 'cash',
+    method_id: existing?.method_id ?? '',
     note: existing?.note ?? '',
     branch_id: existing?.branch_id ?? defaultBranch,
   });
   const set = (k: string, v: string) => setF((p) => ({ ...p, [k]: v }));
+
+  //  Daromad va xarajat BIR XIL ma'lumotnomani ishlatadi — shundagina
+  //  "naqd qancha kirdi, naqd qancha chiqdi" bitta o'lchovda chiqadi.
+  const methods = usePaymentMethods();
+  const method = f.method_id || defaultMethodId(methods.data);
 
   return (
     <Modal
@@ -481,12 +494,8 @@ function ExpenseModal({
           </Field>
         </div>
 
-        <Field label={t('exp.method')} required>
-          <Select value={f.payment_method}
-                  onChange={(e) => set('payment_method', e.target.value)}>
-            <option value="cash">{t('exp.method.cash')}</option>
-            <option value="bank">{t('exp.method.bank')}</option>
-          </Select>
+        <Field label={t('exp.method')} hint={t('payMethod.expenseHint')} required>
+          <PaymentMethodPicker value={method} onChange={(v) => set('method_id', v)} />
         </Field>
 
         <Field label={t('common.note')}>

@@ -312,8 +312,7 @@ export default function Users() {
       >
         <div className="space-y-3">
           <Notice tone="warn">
-            Parol faqat HOZIR ko'rsatiladi. Uni xodimga yetkazing va
-            saqlab qo'ying — keyin ko'rib bo'lmaydi.
+            {t('users.passwordOnce')}
           </Notice>
           <div className="rounded-md bg-[var(--bg-inset)] px-3 py-2">
             <div className="text-[11px] uppercase text-[var(--text-muted)]">

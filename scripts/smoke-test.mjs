@@ -375,6 +375,18 @@ await rest('sinf tanlagich',
   'classes?select=id,name,grade_level,academic_year,capacity,branch_id&is_active=eq.true&deleted_at=is.null');
 
 // =====================================================================
+console.log('\n── To\'lov usullari va oylik sozlamasi ──');
+await rest("to'lov usullari",
+  'payment_methods?select=id,code,name,is_cash,sort_order&is_active=eq.true&deleted_at=is.null&order=sort_order');
+await rpc('report_payment_methods', 'report_payment_methods',
+  { p_from: monthStart, p_to: today });
+await rest('usul biriktirilgan to\'lov',
+  'payments?select=id,amount,channel,payment_methods(name,is_cash)&method_id=not.is.null&limit=5');
+await rest('usul biriktirilgan xarajat',
+  'expenses?select=id,amount,payment_method,payment_methods(name,is_cash)&method_id=not.is.null&deleted_at=is.null&limit=5');
+await rpc('payroll_config_issues', 'payroll_config_issues', {});
+
+// =====================================================================
 console.log('\n' + '─'.repeat(64));
 if (failures.length === 0) {
   console.log(`  ✓ BARCHA ${pass} TA SO'ROV ISHLADI`);

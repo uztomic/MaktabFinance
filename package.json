@@ -19,7 +19,7 @@
     "new-school": "node scripts/new-school.mjs",
     "icons": "node scripts/make-icons.mjs",
     "i18n:cyrl": "node scripts/make-cyrillic.mjs",
-    "test:db": "node scripts/db.mjs file scripts/test-finance.sql && node scripts/db.mjs file scripts/test-finance2.sql && node scripts/db.mjs file scripts/test-classes.sql && node scripts/db.mjs file scripts/test-isolation.sql && node scripts/db.mjs file scripts/test-security.sql",
+    "test:db": "node scripts/db.mjs file scripts/test-finance.sql && node scripts/db.mjs file scripts/test-finance2.sql && node scripts/db.mjs file scripts/test-classes.sql && node scripts/db.mjs file scripts/test-isolation.sql && node scripts/db.mjs file scripts/test-security.sql && node scripts/db.mjs file scripts/test-payroll.sql",
     "i18n:check": "node scripts/i18n-check.mjs",
     "check:secrets": "node scripts/check-secrets.mjs",
     "audit:security": "node scripts/db.mjs file scripts/audit-security.sql",
@@ -27,7 +27,8 @@
     "seed": "node scripts/seed-school.mjs",
     "audit:code": "node scripts/audit-code.mjs",
     "audit:data": "node scripts/db.mjs file scripts/audit-data.sql",
-    "audit": "npm run audit:code && npm run audit:security && npm run audit:data && npm run check:secrets && npm run i18n:check"
+    "audit": "npm run audit:code && npm run audit:drift && npm run audit:security && npm run audit:data && npm run check:secrets && npm run i18n:check",
+    "audit:drift": "node scripts/audit-drift.mjs"
   },
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",

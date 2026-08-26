@@ -13,7 +13,7 @@ Texnik topshiriq: `TZ-maktab-moliya-tizimi.md` (v2.0).
 
 | Qatlam | Holat |
 |---|---|
-| **Ma'lumotlar bazasi** — 52 jadval, RLS, audit, davr qulfi | ✅ tayyor va sinovdan o'tgan |
+| **Ma'lumotlar bazasi** — 59 jadval, RLS, audit, davr qulfi | ✅ tayyor va sinovdan o'tgan |
 | **Moliyaviy dvigatel** — hisoblanma, to'lov, kassa, vypiska | ✅ server tomonda, sinovdan o'tgan |
 | **Oylik dvigateli** — 4 turdagi formula, parametrlari bazada | ✅ sinovdan o'tgan |
 | **Oylik formulasi muharriri** — buxgalter o'zi sozlaydi | ✅ tayyor |
@@ -98,7 +98,7 @@ npm run dev          # http://localhost:5173
 
 ```
 ├─ supabase/
-│  ├─ migrations/        36 ta migratsiya — bazaning yagona manbasi
+│  ├─ migrations/        41 ta migratsiya — bazaning yagona manbasi
 │  └─ functions/
 │     ├─ _shared/        umumiy modullar (bot xavfsizligi shu yerda)
 │     ├─ telegram-webhook/
@@ -119,12 +119,14 @@ npm run dev          # http://localhost:5173
 | `new-school.mjs` | haqiqiy mijozga toza maktab |
 | `smoke-test.mjs` | panelning har bir so'rovi jonli token bilan |
 | `audit-security.sql` | 10 turdagi zaiflik — bo'sh natija = toza |
+| `audit-drift.mjs` | baza va repo mos kelishi — migratsiya yozilmay qolmasin |
+| `audit-code.mjs` | qattiq yozilgan matn, uzilgan menyu, yo'q RPC |
 | `check-secrets.mjs` | repo'da maxfiy kalit yo'qligi |
 | `harden-auth.mjs` | parol siyosati, sessiya, ruxsat etilgan manzillar |
 | `gen-types.mjs` | bazadan TypeScript turlari |
 | `i18n-check.mjs` | yetishmayotgan tarjima kalitlari |
 | `make-cyrillic.mjs` | `uz.json` → `uz-cyrl.json` |
-| `test-*.sql` | moliya, sinflar, izolyatsiya, xavfsizlik sinovlari |
+| `test-*.sql` | moliya, sinflar, izolyatsiya, xavfsizlik, oylik sinovlari |
 
 **Kod bazalari soni: 2** (TZ 5.1). Super admin paneli alohida ilova
 sifatida `apps/super-admin/` ga qo'shiladi — maktab bundle'iga super
@@ -200,13 +202,14 @@ tezlik muammosi va sinf hisobotidagi bo'sh qatorlar topilgan.
 ## Sinovlar (TZ 8-bo'limi)
 
 ```bash
+npm run audit                                # BARCHA tekshiruvlar birdan
 npm run test:db                              # baza mantiqi + xavfsizlik
-npm run audit:security                       # bo'sh natija = toza
+npm run audit:drift                          # baza repodan oldinda emasmi
 npm run check:secrets                        # repo'da maxfiy kalit yo'q
 node scripts/smoke-test.mjs <email> [parol]  # panelning HAR BIR so'rovi
 ```
 
-`smoke-test` panel bajaradigan 86 ta so'rovni haqiqiy foydalanuvchi
+`smoke-test` panel bajaradigan 91 ta so'rovni haqiqiy foydalanuvchi
 tokeni bilan tekshiradi. Parol berilmasa u `service_role` kaliti bilan
 bir martalik havola yaratadi — parolni saqlash yoki so'rash kerak emas. `npm run build` faqat TypeScript xatolarini
 topadi; noto'g'ri ustun nomi yoki RLS to'sig'i esa faqat ishlash

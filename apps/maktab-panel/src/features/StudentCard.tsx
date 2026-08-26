@@ -27,6 +27,11 @@ import {
   ContractModal, type ParentLink, ParentModal, ServiceModal, StudentEditModal,
 } from './student/StudentModals';
 import { ReceiptModal, type ReceiptData } from './Receipt';
+import {
+  defaultMethodId,
+  PaymentMethodPicker,
+  usePaymentMethods,
+} from '@/ui/PaymentMethodPicker';
 
 /** Tug'ilgan sanadan yosh. */
 function ageFrom(birth: string | null | undefined): number | null {
@@ -215,15 +220,20 @@ export default function StudentCard() {
 
   // --- Kassa to'lovi (TZ 4.7.1) — server tomonda (TZ 5.4.6) --------
   const pay = useMutation({
-    mutationFn: async (v: { amount: number; paid_on: string; note: string }) => {
+    mutationFn: async (v: {
+      amount: number; paid_on: string; note: string; method_id: string;
+    }) => {
       const { data, error } = await supabase.rpc('register_cash_payment', {
         p_student_id: id!,
         p_amount: v.amount,
         p_paid_on: v.paid_on,
         p_note: v.note || undefined,
+        p_method_id: v.method_id || undefined,
       });
       if (error) throw error;
-      return data as { receipt_code: string; balance: number };
+      return data as {
+        receipt_code: string; balance: number; method_name: string;
+      };
     },
     onSuccess: (res, vars) => {
       qc.invalidateQueries({ queryKey: ['student-balance', id] });
@@ -243,6 +253,7 @@ export default function StudentCard() {
         school_name: profile?.school_name ?? '',
         // deno-lint-ignore no-explicit-any
         branch_name: (student.data as any)?.branches?.name,
+        method_name: res.method_name,
       });
     },
   });
@@ -1166,10 +1177,14 @@ function CashPaymentModal({
   onClose: () => void;
   studentName: string;
   suggested: number;
-  onSubmit: (v: { amount: number; paid_on: string; note: string }) => void;
+  onSubmit: (v: {
+    amount: number; paid_on: string; note: string; method_id: string;
+  }) => void;
   busy: boolean;
   error: string | null;
-  result: { receipt_code: string; balance: number } | null;
+  result: {
+    receipt_code: string; balance: number; method_name: string;
+  } | null;
   schoolName: string;
 }) {
   const t = useT();
@@ -1178,9 +1193,17 @@ function CashPaymentModal({
   const [paidOn, setPaidOn] = useState(isoDate());
   const [note, setNote] = useState('');
 
+  //  Standart tanlov — naqd. Kassaga kelgan to'lovlarning ko'pchiligi
+  //  shunday, ya'ni kassir odatda hech narsa bosmaydi.
+  const methods = usePaymentMethods();
+  const [methodId, setMethodId] = useState('');
+  const method = methodId || defaultMethodId(methods.data);
+
   function submit(e: FormEvent) {
     e.preventDefault();
-    onSubmit({ amount: Number(amount), paid_on: paidOn, note });
+    onSubmit({
+      amount: Number(amount), paid_on: paidOn, note, method_id: method,
+    });
   }
 
   // To'lovdan keyin kvitansiya ko'rsatiladi (TZ 4.7.1.2).
@@ -1193,6 +1216,11 @@ function CashPaymentModal({
           <div className="text-sm">{schoolName}</div>
           <div className="text-[13px] text-[var(--text-muted)]">{studentName}</div>
           <div className="num text-2xl font-semibold">{money(amount, lang)}</div>
+          {result.method_name && (
+            <div className="text-[13px] text-[var(--text-muted)]">
+              {result.method_name}
+            </div>
+          )}
           <div className="rounded-md bg-[var(--bg-inset)] px-3 py-2">
             <div className="text-[11px] uppercase text-[var(--text-muted)]">
               {t('pay.receipt')}
@@ -1227,6 +1255,9 @@ function CashPaymentModal({
         <Field label={t('common.amount')} required>
           <MoneyInput value={amount} onChange={(e) => setAmount(e.target.value)}
                       autoFocus required />
+        </Field>
+        <Field label={t('payMethod.label')} hint={t('payMethod.hint')} required>
+          <PaymentMethodPicker value={method} onChange={setMethodId} />
         </Field>
         <Field label={t('common.date')} required>
           <Input type="date" value={paidOn} onChange={(e) => setPaidOn(e.target.value)}

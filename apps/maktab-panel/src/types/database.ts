@@ -995,6 +995,7 @@ export type Database = {
           deleted_at: string | null
           document_path: string | null
           id: string
+          method_id: string | null
           note: string | null
           payment_method: string
           payroll_run_id: string | null
@@ -1011,6 +1012,7 @@ export type Database = {
           deleted_at?: string | null
           document_path?: string | null
           id?: string
+          method_id?: string | null
           note?: string | null
           payment_method?: string
           payroll_run_id?: string | null
@@ -1027,6 +1029,7 @@ export type Database = {
           deleted_at?: string | null
           document_path?: string | null
           id?: string
+          method_id?: string | null
           note?: string | null
           payment_method?: string
           payroll_run_id?: string | null
@@ -1054,6 +1057,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_method_id_fkey"
+            columns: ["method_id"]
+            isOneToOne: false
+            referencedRelation: "payment_methods"
             referencedColumns: ["id"]
           },
           {
@@ -1760,6 +1770,53 @@ export type Database = {
           },
         ]
       }
+      payment_methods: {
+        Row: {
+          code: string
+          created_at: string
+          deleted_at: string | null
+          id: string
+          is_active: boolean
+          is_cash: boolean
+          name: string
+          school_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          is_active?: boolean
+          is_cash?: boolean
+          name: string
+          school_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          is_active?: boolean
+          is_cash?: boolean
+          name?: string
+          school_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_methods_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_proofs: {
         Row: {
           amount_claimed: number | null
@@ -1878,6 +1935,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          method_id: string | null
           note: string | null
           paid_on: string
           school_id: string
@@ -1895,6 +1953,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          method_id?: string | null
           note?: string | null
           paid_on?: string
           school_id: string
@@ -1912,6 +1971,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          method_id?: string | null
           note?: string | null
           paid_on?: string
           school_id?: string
@@ -1939,6 +1999,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_method_id_fkey"
+            columns: ["method_id"]
+            isOneToOne: false
+            referencedRelation: "payment_methods"
             referencedColumns: ["id"]
           },
           {
@@ -3635,6 +3702,15 @@ export type Database = {
         }
         Returns: Json
       }
+      payroll_config_issues: {
+        Args: { p_period?: string }
+        Returns: {
+          code: string
+          hint: string
+          message: string
+          severity: string
+        }[]
+      }
       pending_absence_warnings: {
         Args: { p_branch_id?: string; p_days_back?: number }
         Returns: {
@@ -3747,6 +3823,7 @@ export type Database = {
       register_cash_payment: {
         Args: {
           p_amount: number
+          p_method_id?: string
           p_note?: string
           p_paid_on?: string
           p_student_id: string
@@ -3899,6 +3976,17 @@ export type Database = {
           period: string
           remaining: number
           students: number
+        }[]
+      }
+      report_payment_methods: {
+        Args: { p_branch_id?: string; p_from: string; p_to: string }
+        Returns: {
+          amount: number
+          is_cash: boolean
+          method_id: string
+          method_name: string
+          payments: number
+          share: number
         }[]
       }
       report_payroll: {

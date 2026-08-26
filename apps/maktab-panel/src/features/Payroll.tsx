@@ -54,6 +54,21 @@ export default function Payroll() {
     },
   });
 
+  //  Oylik hisobi "muvaffaqiyatli" tugab, natijasi noto'g'ri bo'lishi
+  //  mumkin: soat narxi 0 bo'lsa o'rniga kirilgan darslar to'lanmaydi,
+  //  ushlanmalar ro'yxati bo'sh bo'lsa soliq ushlanmaydi. Hisobning
+  //  o'zi buni aytolmaydi — shuning uchun alohida tekshiruv.
+  const issues = useQuery({
+    queryKey: ['payroll-issues', period],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('payroll_config_issues', {
+        p_period: period,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
   const calcAll = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.rpc('calc_payroll_batch', {
@@ -118,6 +133,25 @@ export default function Payroll() {
         }
       />
 
+      {(issues.data?.length ?? 0) > 0 && (
+        <div className="mb-3 space-y-2">
+          {issues.data!.map((i) => (
+            <Notice
+              key={i.code}
+              tone={i.severity === 'error' ? 'danger'
+                : i.severity === 'warning' ? 'warn' : 'neutral'}
+            >
+              {i.message}
+              {i.hint && (
+                <span className="ml-1.5 text-[var(--text-muted)]">
+                  → {i.hint}
+                </span>
+              )}
+            </Notice>
+          ))}
+        </div>
+      )}
+
       {calcAll.data && (
         <div className="mb-3">
           <Notice tone={calcAll.data.failed > 0 ? 'warn' : 'ok'}>
@@ -136,7 +170,7 @@ export default function Payroll() {
       {notCalculated.length > 0 && (
         <div className="mb-3">
           <Notice tone="neutral">
-            Hisoblanmagan o'qituvchilar: {notCalculated.map((x) => x.full_name).join(', ')}
+            {t('payroll.notCalcList')}: {notCalculated.map((x) => x.full_name).join(', ')}
           </Notice>
         </div>
       )}

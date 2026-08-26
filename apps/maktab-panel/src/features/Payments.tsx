@@ -21,6 +21,7 @@ import {
 } from '@/ui';
 import { FilterChips, useSort, useToast } from '@/ui/Feedback';
 import { ReceiptModal, type ReceiptData } from '@/features/Receipt';
+import { usePaymentMethods } from '@/ui/PaymentMethodPicker';
 
 type Tab = 'all' | 'proofs' | 'bank';
 
@@ -104,6 +105,11 @@ function AllPayments() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<PayStatus | ''>('');
   const [channel, setChannel] = useState<'cash' | 'bank' | 'proof' | ''>('');
+  //  Usul bo'yicha filtr: "bu oy Click orqali qancha tushdi" degan
+  //  savol kanal bo'yicha javob olmaydi — Click ham, Payme ham,
+  //  o'tkazma ham bitta 'bank' kanalida turadi.
+  const [methodId, setMethodId] = useState('');
+  const methods = usePaymentMethods();
 
   const [cancelling, setCancelling] = useState<{ id: string; label: string } | null>(null);
   // deno-lint-ignore no-explicit-any
@@ -117,7 +123,7 @@ function AllPayments() {
     queryFn: async () => {
       let q = supabase
         .from('payments')
-        .select('id, amount, channel, status, paid_on, note, student_id, branch_id, created_at, students(full_name, class_name, payment_code), cash_receipts(receipt_code, cancelled_at), branches(name)')
+        .select('id, amount, channel, method_id, status, paid_on, note, student_id, branch_id, created_at, students(full_name, class_name, payment_code), cash_receipts(receipt_code, cancelled_at), branches(name), payment_methods(name, is_cash)')
         .gte('paid_on', from)
         .lte('paid_on', to)
         .order('paid_on', { ascending: false })
@@ -198,6 +204,8 @@ function AllPayments() {
       cashier: profile?.full_name ?? null,
       school_name: profile?.school_name ?? '',
       branch_name: br?.name ?? null,
+      // deno-lint-ignore no-explicit-any
+      method_name: (p as any).payment_methods?.name ?? null,
     });
   }
 
@@ -218,6 +226,7 @@ function AllPayments() {
     }
     if (status) out = out.filter((p) => p.status === status);
     if (channel) out = out.filter((p) => p.channel === channel);
+    if (methodId) out = out.filter((p) => p.method_id === methodId);
     return sort.apply(out, (p, k) => {
       // deno-lint-ignore no-explicit-any
       const any = p as any;
@@ -226,7 +235,7 @@ function AllPayments() {
       if (k === 'amount') return Number(p.amount);
       return p.paid_on;
     });
-  }, [rows.data, search, status, channel, sort.apply]);
+  }, [rows.data, search, status, channel, methodId, sort.apply]);
 
   if (rows.isLoading) return <Loading />;
   if (rows.error) {
@@ -283,6 +292,8 @@ function AllPayments() {
               { header: t('common.status'), value: (p) => t(`pay.status.${p.status}`) },
               { header: t('pay.tab.all'), value: (p) => t(`pay.channel.${p.channel}`) },
               // deno-lint-ignore no-explicit-any
+              { header: t('payMethod.label'), value: (p) => (p as any).payment_methods?.name ?? '' },
+              // deno-lint-ignore no-explicit-any
               { header: t('pay.receipt'), value: (p) => (p as any).cash_receipts?.[0]?.receipt_code },
               { header: t('common.note'), value: (p) => p.note },
               { header: t('common.amount'), value: (p) => p.amount, numeric: true },
@@ -318,6 +329,15 @@ function AllPayments() {
             { value: 'proof', label: `📸 ${t('pay.channel.proof')}` },
           ]}
         />
+        <FilterChips<string>
+          value={methodId}
+          onChange={setMethodId}
+          options={(methods.data ?? []).map((m) => ({
+            value: m.id,
+            label: `${m.is_cash ? '💵' : '💳'} ${m.name}`,
+            count: all.filter((x) => x.method_id === m.id).length,
+          }))}
+        />
       </div>
 
       <Card padded={false}>
@@ -328,6 +348,7 @@ function AllPayments() {
                 <SortTh k="paid_on">{t('common.date')}</SortTh>
                 <SortTh k="full_name">{t('common.fullName')}</SortTh>
                 <Th>{t('pay.tab.all')}</Th>
+                <Th>{t('payMethod.label')}</Th>
                 <SortTh k="receipt">{t('pay.receipt')}</SortTh>
                 <Th>{t('common.status')}</Th>
                 <SortTh k="amount" align="right">{t('common.amount')}</SortTh>
@@ -363,6 +384,10 @@ function AllPayments() {
                       )}
                     </Td>
                     <Td>{CHANNEL_ICON[p.channel]} {t(`pay.channel.${p.channel}`)}</Td>
+                    <Td className="text-[var(--text-muted)]">
+                      {/* deno-lint-ignore no-explicit-any */}
+                      {(p as any).payment_methods?.name ?? '—'}
+                    </Td>
                     <Td mono className="text-[var(--text-muted)]">
                       {rc?.receipt_code
                         ? (

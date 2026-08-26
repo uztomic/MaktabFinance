@@ -24,6 +24,7 @@ export interface ReceiptData {
   payment_code?: string | null;
   balance?: number | string | null;
   cashier?: string | null;
+  method_name?: string | null;
   school_name: string;
   branch_name?: string | null;
 }
@@ -86,6 +87,9 @@ export function ReceiptModal({
               <Row label={t('students.paymentCode')} value={data.payment_code} mono />
             )}
             <Row label={t('receipt.for')} value={t('receipt.tuition')} />
+            {data.method_name && (
+              <Row label={t('payMethod.label')} value={data.method_name} />
+            )}
           </dl>
 
           <div className="my-3 border-t border-dashed" />

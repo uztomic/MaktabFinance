@@ -77,7 +77,9 @@ for (const f of files) {
       if (trimmed.includes('*/')) inBlockComment = false;
       return;
     }
-    if (trimmed.startsWith('/*')) {
+    //  `{/* … */}` — JSX ichidagi izoh. U ham bir necha qatorga
+    //  cho'zilishi mumkin va ichidagi o'zbekcha matn IZOH, kod emas.
+    if (trimmed.startsWith('/*') || trimmed.startsWith('{/*')) {
       if (!trimmed.includes('*/')) inBlockComment = true;
       return;
     }
@@ -99,6 +101,40 @@ for (const f of files) {
       if (isUzbekText(m[1])) {
         add('QATTIQ MATN', f, i + 1, `>${m[1].trim().slice(0, 55)}<`);
       }
+    }
+
+    //  ALOHIDA QATORDAGI JSX MATNI.
+    //
+    //  Yuqoridagi naqsh `>Matn<` ni qidiradi — ya'ni matn ochilish va
+    //  yopilish teglari bilan BIR QATORDA bo'lishini kutadi. Uzun
+    //  matnda esa teg oldingi qatorda qoladi:
+    //
+    //      <Notice tone="neutral">
+    //        Hisoblanmagan o'qituvchilar: {list.join(', ')}
+    //      </Notice>
+    //
+    //  Bunday qator birinchi tekshiruvdan bemalol o'tib ketardi va
+    //  ruscha interfeysda o'zbekcha so'z bo'lib chiqardi. Aynan shu
+    //  hol Payroll.tsx da topilgan.
+    if (!f.endsWith('.tsx')) return;
+
+    //  Kodni ajratuvchi belgilar. Apostrof BU RO'YXATDA YO'Q — u
+    //  o'zbek matnining eng ishonchli belgisi ("o'qituvchi"), uni
+    //  chiqarib tashlash tekshiruvni ko'r qilib qo'yadi.
+    if (/\?\?|\?\.|=>|\|\||&&|[=;]/.test(trimmed)) return;
+    if (/[,;]$/.test(trimmed)) return;
+
+    //  Kalit so'z bilan boshlangan qator — bu ko'rsatma, matn emas.
+    //  `case 'month':` kabi qatorlar aks holda "o'zbekcha matn" deb
+    //  belgilanardi: ular ham harf bilan boshlanadi va apostrof bor.
+    if (/^(case|return|const|let|var|if|else|for|while|do|switch|break|continue|import|export|default|function|type|interface|enum|class|new|throw|try|catch|finally|await|async|yield|typeof|delete|void|in|of|as|from|extends|implements)\b/
+      .test(trimmed)) return;
+
+    //  Matn qatori HARF bilan boshlanadi va `{` da yoki qator
+    //  oxirida tugaydi.
+    const jsx = trimmed.match(/^([A-Za-z][^<>{}"`()[\]]{9,}?)\s*(?:\{|$)/);
+    if (jsx && isUzbekText(jsx[1])) {
+      add('QATTIQ MATN', f, i + 1, jsx[1].trim().slice(0, 55));
     }
   });
 }

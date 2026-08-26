@@ -311,6 +311,15 @@ const SUBJECTS = [
   'Tarbiyachi', 'Tarbiyachi yordamchisi',
 ];
 
+// Toifa → oylik oralig'i (100 000 so'mda). Yuqori toifa ko'proq oladi.
+const TEACHER_CATEGORIES = [
+  { name: 'Oliy toifa',      min: 58, max: 68, factor: 1.2  },
+  { name: 'Birinchi toifa',  min: 50, max: 58, factor: 1.1  },
+  { name: 'Ikkinchi toifa',  min: 45, max: 51, factor: 1.05 },
+  { name: 'Toifasiz',        min: 40, max: 46, factor: 1    },
+  { name: 'Yosh mutaxassis', min: 36, max: 42, factor: 1    },
+];
+
 async function createTeachers(schoolId, branchId, staff) {
   const teacherStaff = staff.filter((s) => s.role === 'teacher');
   const rows = [];
@@ -327,10 +336,13 @@ async function createTeachers(schoolId, branchId, staff) {
     const linked = i < teacherStaff.length ? teacherStaff[i] : null;
     const fullName = linked ? linked.name : name;
 
-    const category = pick(['Oliy toifa', 'Birinchi toifa', 'Ikkinchi toifa',
-                           'Toifasiz', 'Yosh mutaxassis']);
+    const cat = pick(TEACHER_CATEGORIES);
+    const category = cat.name;
     const rate = pick([1, 1, 1, 1, 1.25, 1.5, 0.5, 0.75]);
-    const base = rint(38, 62) * 100_000;
+    // Oylik TOIFAGA bog'liq. Ilgari ikkalasi mustaqil tanlanardi va
+    // "Yosh mutaxassis" oliy toifadan ko'p oladigan holatlar chiqardi —
+    // hisobotga qaragan odam darhol ishonmay qolardi.
+    const base = rint(cat.min, cat.max) * 100_000;
     const hours = Math.round(rate * 18);
     const hired = iso(addDays(FIRST, -rint(0, 900)));
 
@@ -414,6 +426,88 @@ async function createClasses(schoolId, branchId, teachers) {
      where school_id = ${q(schoolId)} and academic_year = '2025/2026'
      order by grade_level, name;
   `);
+}
+
+// =====================================================================
+//  B4.5 — OYLIK SOZLAMASI VA USTAMALAR
+//
+//  `provision_school` oylik sozlamasini BO'SH qiymatlar bilan qoldiradi:
+//  soat narxi 0, ustamalar 0, ushlanmalar yo'q. Bu to'g'ri — bular pul
+//  va har maktabda boshqacha, dastur ularni o'ylab topmasligi kerak.
+//
+//  Lekin DEMO maktabda ular to'ldirilishi shart. Aks holda oylik
+//  sahifasi ochilganda hamma o'qituvchida ushlanma 0 turadi, sinf
+//  rahbarligi ustamasi ko'rinmaydi va o'rniga kirilgan darslar
+//  "3 soat × 0 so'm" bo'lib chiqadi.
+// =====================================================================
+
+async function configurePayroll(schoolId, teachers, classes) {
+  const factors = Object.fromEntries(
+    TEACHER_CATEGORIES.map((c) => [c.name, c.factor]),
+  );
+
+  const settings = [
+    // Bir dars soati. O'rniga kirilgan va o'tkazilmagan darslar shundan.
+    ['hour_price', 45_000],
+    ['category_factors', factors],
+    ['allowances', [
+      { code: 'class_teacher', name: 'Sinf rahbarligi',   type: 'percent', value: 15 },
+      { code: 'notebooks',     name: 'Daftar tekshirish', type: 'fixed',   value: 250_000 },
+      { code: 'club',          name: "To'garak",          type: 'fixed',   value: 300_000 },
+    ]],
+    ['deductions', [
+      { code: 'income_tax', name: "Daromad solig'i (JShDS)", type: 'percent', value: 12 },
+    ]],
+  ];
+
+  //  `effective_from` — sikl boshlangan oy. Shunda 24 oylik tarix
+  //  boshidan oxirigacha bir xil qoida bo'yicha hisoblanadi.
+  for (const [key, value] of settings) {
+    await sql(`
+      insert into public.payroll_settings (school_id, key, value, effective_from, note)
+      values (${q(schoolId)}, ${q(key)}, ${q(JSON.stringify(value))}::jsonb,
+              ${d(iso(FIRST))}, 'Demo maktab uchun sozlangan')
+      on conflict (school_id, key, effective_from)
+        do update set value = excluded.value;
+    `);
+  }
+
+  //  Ustama KIMGA tegishli ekani alohida jadvalda. Katalogda turgani
+  //  bilan hech kimga tushmaydi — eng ko'p uchraydigan "oyligim kam
+  //  chiqibdi" sababi shu.
+  const classTeacherIds = new Set(
+    (await sql(`
+      select distinct teacher_id from public.classes
+       where school_id = ${q(schoolId)} and teacher_id is not null;
+    `)).map((r) => r.teacher_id),
+  );
+
+  const rows = [];
+  let clubs = 0;
+
+  for (const t of teachers) {
+    if (classTeacherIds.has(t.id)) {
+      rows.push([t.id, 'class_teacher', null]);
+    } else {
+      // Sinf rahbari bo'lmagan fan o'qituvchisi daftar tekshiradi.
+      rows.push([t.id, 'notebooks', null]);
+    }
+    // To'garakni to'rt kishi olib boradi.
+    if (clubs < 4 && !classTeacherIds.has(t.id)) {
+      rows.push([t.id, 'club', null]);
+      clubs += 1;
+    }
+  }
+
+  await sql(`
+    insert into public.teacher_allowances
+      (school_id, teacher_id, code, value_override, starts_on)
+    values ${rows.map(([id, code]) =>
+      `(${q(schoolId)}, ${q(id)}, ${q(code)}, null, ${d(iso(FIRST))})`,
+    ).join(',\n           ')};
+  `);
+
+  return rows.length;
 }
 
 // =====================================================================
@@ -1294,6 +1388,10 @@ async function main() {
   // --- B4 ------------------------------------------------------------
   step(5, TOTAL_STEPS, `Sinflar (${CLASS_PLAN.length} × 2 o‘quv yili)…`);
   const classes = await createClasses(schoolId, branchId, teachers);
+
+  // --- B4.5 ----------------------------------------------------------
+  const allowanceCount = await configurePayroll(schoolId, teachers, classes);
+  console.log(`      oylik sozlandi, ${allowanceCount} ta ustama biriktirildi`);
 
   // --- B5 ------------------------------------------------------------
   step(6, TOTAL_STEPS, 'Xizmatlar va narx tarixi…');

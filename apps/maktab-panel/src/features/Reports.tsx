@@ -27,7 +27,7 @@ import {
 
 type ReportId =
   | 'summary' | 'classes' | 'pnl' | 'revenue' | 'expenses' | 'enrollment'
-  | 'cash' | 'usage' | 'payroll';
+  | 'cash' | 'methods' | 'usage' | 'payroll';
 
 export default function Reports() {
   const t = useT();
@@ -52,6 +52,7 @@ export default function Reports() {
     { id: 'revenue', label: t('rep.revenue') },
     { id: 'expenses', label: t('rep.expenses') },
     { id: 'cash', label: t('rep.cash') },
+    { id: 'methods', label: t('payMethod.breakdown') },
     { id: 'enrollment', label: t('rep.enrollment') },
     { id: 'usage', label: t('rep.usage') },
     { id: 'payroll', label: t('rep.payroll') },
@@ -164,6 +165,12 @@ function ReportBody({
       }
       if (id === 'pnl') {
         const { data, error } = await supabase.rpc('report_pnl',
+          { p_from: from, p_to: to, p_branch_id: branch });
+        if (error) throw error;
+        return data ?? [];
+      }
+      if (id === 'methods') {
+        const { data, error } = await supabase.rpc('report_payment_methods',
           { p_from: from, p_to: to, p_branch_id: branch });
         if (error) throw error;
         return data ?? [];
@@ -307,6 +314,22 @@ function ReportBody({
         { header: t('rep.cashOut'), value: (r) => r.cash_out, numeric: true, align: 'right', sumKey: 'cash_out', sumMoney: true, render: (r) => M(r.cash_out) },
         { header: t('common.total'), value: (r) => r.net, numeric: true, align: 'right', sumKey: 'net', sumMoney: true, render: (r) => M(r.net) },
         { header: t('rep.receipts'), value: (r) => r.receipts, numeric: true, align: 'right', sumKey: 'receipts', sumMoney: false, render: (r) => r.receipts },
+      ],
+    },
+    methods: {
+      filename: 'tolov-usullari',
+      title: t('payMethod.breakdown'),
+      columns: [
+        { header: t('payMethod.label'), value: (r) => r.method_name,
+          render: (r) => `${r.is_cash ? '💵' : '💳'} ${r.method_name}` },
+        { header: t('pay.count'), value: (r) => r.payments, numeric: true,
+          align: 'right', sumKey: 'payments', sumMoney: false,
+          render: (r) => r.payments },
+        { header: t('common.amount'), value: (r) => r.amount, numeric: true,
+          align: 'right', sumKey: 'amount', sumMoney: true,
+          render: (r) => M(r.amount) },
+        { header: '%', value: (r) => r.share, numeric: true, align: 'right',
+          render: (r) => `${r.share}%` },
       ],
     },
     usage: {

@@ -19,6 +19,7 @@ import {
 } from '@/ui';
 import { useToast } from '@/ui/Feedback';
 import { CatalogSelect } from '@/ui/CatalogSelect';
+import { SalaryPreview } from './teacher/SalaryPreview';
 
 export default function Teachers() {
   const t = useT();
@@ -380,6 +381,15 @@ function TeacherModal({
           <MoneyInput value={f.base_salary}
                       onChange={(e) => set('base_salary', e.target.value)} />
         </Field>
+
+        {/* Kiritilgan raqamlardan oxirida qancha chiqishi DARHOL
+            ko'rinadi — aks holda buni faqat oy oxirida bilib olinadi. */}
+        <SalaryPreview
+          baseSalary={f.base_salary}
+          rateFactor={f.rate_factor}
+          weeklyHours={f.weekly_hours}
+          category={f.category}
+        />
 
         {!existing && (
           <Field label={t('common.branch')} required
