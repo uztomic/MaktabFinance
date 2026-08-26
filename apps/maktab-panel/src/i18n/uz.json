@@ -1070,5 +1070,18 @@
   "teachers.baseType": "Oyligi qanday hisoblanadi",
   "teachers.baseTypeDefault": "Maktab sozlamasi bo'yicha",
   "teachers.baseTypeHint": "Shu xodim uchun alohida tanlash mumkin. Masalan sinf rahbari qat'iy oylik oladi, to'garak rahbari esa soatbay. Tanlanmasa maktabning umumiy sozlamasi ishlaydi.",
-  "pf.base.schoolDefault": "Bu — MAKTAB uchun standart tanlov. Har bir o'qituvchiga alohida boshqa tur belgilash mumkin: o'qituvchi kartochkasi → \"Oyligi qanday hisoblanadi\"."
+  "pf.base.schoolDefault": "Bu — MAKTAB uchun standart tanlov. Har bir o'qituvchiga alohida boshqa tur belgilash mumkin: o'qituvchi kartochkasi → \"Oyligi qanday hisoblanadi\".",
+  "rep.sources": "Odamlar qayerdan kelyapti",
+  "src.hint": "Qaysi kanal ko'proq mijoz keltiryapti va ulardan qancha pul yig'ilgan. Reklama byudjetini shu jadvalga qarab taqsimlang.",
+  "src.source": "Manba",
+  "src.leads": "Murojaat",
+  "src.accepted": "Qabul qilingan",
+  "src.rejected": "Rad etilgan",
+  "src.open": "Jarayonda",
+  "src.conversion": "Aylanish",
+  "src.activeStudents": "Hozir o'qiyapti",
+  "src.collected": "Yig'ilgan pul",
+  "src.direct": "Murojaatsiz qabul qilingan",
+  "src.directHint": "Bu o'quvchilar hech qanday murojaatga bog'lanmagan — manbasi yozilmagan. Bu qator katta bo'lsa, yuqoridagi foizlar to'liq manzarani ko'rsatmaydi: xodimlarga murojaat manbasini yozishni eslatish kerak.",
+  "rep.payrollPeriodNote": "Oylik hisoboti bir OY bo'yicha ko'rsatiladi: {period}. Boshqa oyni ko'rish uchun yuqoridagi boshlanish sanasini o'sha oyga qo'ying."
 }

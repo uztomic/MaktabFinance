@@ -3969,6 +3969,20 @@ export type Database = {
           total: number
         }[]
       }
+      report_lead_sources: {
+        Args: { p_branch_id?: string; p_from: string; p_to: string }
+        Returns: {
+          accepted: number
+          collected: number
+          conversion: number
+          is_direct: boolean
+          leads: number
+          open_count: number
+          rejected: number
+          source: string
+          students_active: number
+        }[]
+      }
       report_monthly_trend: {
         Args: { p_branch_id?: string; p_months?: number }
         Returns: {

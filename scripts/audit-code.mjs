@@ -132,7 +132,12 @@ for (const f of files) {
 
     //  Matn qatori HARF bilan boshlanadi va `{` da yoki qator
     //  oxirida tugaydi.
-    const jsx = trimmed.match(/^([A-Za-z][^<>{}"`()[\]]{9,}?)\s*(?:\{|$)/);
+    //  Qo'shtirnoq MATNDA uchraydi ("...sanasini qo'ying" kabi
+    //  jumlada tirnoq ichiga olingan so'z). Uni chiqarib tashlash
+    //  tekshiruvni ko'r qiladi: aynan shunday qator Reports.tsx da
+    //  topilmay qolgan edi. Atributdan ajratish uchun `=` allaqachon
+    //  yuqorida rad etilgan.
+    const jsx = trimmed.match(/^([A-Za-z][^<>{}`()[\]]{9,}?)\s*(?:\{|$)/);
     if (jsx && isUzbekText(jsx[1])) {
       add('QATTIQ MATN', f, i + 1, jsx[1].trim().slice(0, 55));
     }

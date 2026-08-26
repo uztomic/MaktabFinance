@@ -1,17 +1,27 @@
 // =====================================================================
-//  Excel eksporti (TZ 4.12.5).
+//  Jadvalni Excel ga chiqarish (TZ 4.12.5) va CSV o'qish (TZ 4.7.2.1).
 //
-//  Nega CSV: Excel CSV ni to'g'ridan-to'g'ri ochadi, kutubxona kerak
-//  emas va fayl yengil. Shart — ikkita tafsilot:
+//  CHIQARISH — .xlsx. Ilgari CSV edi va u ISHONCHSIZ:
 //
-//    · UTF-8 BOM — busiz Excel kirill va o'zbek harflarini buzadi
-//    · nuqtali vergul ajratgich — Excel ning ru/uz sozlamasida
-//      vergul o'nlik belgisi hisoblanadi, shuning uchun ustunlar
-//      aralashib ketadi
+//    · ajratgichni Excel FOYDALANUVCHI KOMPYUTERIDAGI til sozlamasi
+//      bo'yicha tanlaydi. Mos kelmasa butun jadval bitta ustunga
+//      tushib qoladi;
+//    · o'nlik belgi ham shunday. Mos kelmasa summalar son emas, MATN
+//      bo'lib qoladi va ular bo'yicha yig'indi chiqarib bo'lmaydi.
+//
+//  Ya'ni bitta fayl bir kompyuterda to'g'ri, boshqasida buzuq
+//  ochilardi — buni yuboruvchi tomondan boshqarib bo'lmasdi.
+//  `lib/xlsx.ts` ga qarang: xlsx da son son, matn matn bo'lib
+//  yoziladi va til sozlamasi hech narsaga ta'sir qilmaydi.
+//
+//  O'QISH — CSV bo'lib qoladi: bank vypiskalari aynan shu formatda
+//  keladi va uni biz tanlamaymiz.
 //
 //  TZ 4.12.7 — sarlavhalar tanlangan tilda shakllantiriladi,
 //  shuning uchun ustun nomlari chaqiruvchi tomonidan beriladi.
 // =====================================================================
+
+import { downloadXlsx, type SheetRow } from './xlsx';
 
 export interface Column<T> {
   /** Ustun sarlavhasi — allaqachon tarjima qilingan matn. */
@@ -22,25 +32,8 @@ export interface Column<T> {
   numeric?: boolean;
 }
 
-/** CSV katakchasini xavfsiz shaklga keltiradi. */
-function cell(raw: string | number | null | undefined, numeric = false): string {
-  if (raw === null || raw === undefined) return '';
-
-  if (numeric) {
-    const n = Number(raw);
-    if (!Number.isFinite(n)) return '';
-    // Excel ning ru/uz sozlamasi o'nlik belgi sifatida VERGULNI kutadi.
-    return String(n).replace('.', ',');
-  }
-
-  const s = String(raw);
-  // Ajratgich, qo'shtirnoq yoki satr ko'chirish bo'lsa qo'shtirnoqqa olamiz.
-  if (/[;"\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-  return s;
-}
-
 /**
- * Jadvalni CSV ga aylantirib brauzerdan yuklab beradi.
+ * Jadvalni Excel fayliga aylantirib brauzerdan yuklab beradi.
  *
  * @param filename  kengaytmasiz nom — sana o'zi qo'shiladi
  */
@@ -51,31 +44,38 @@ export function exportTable<T>(
   /** Ixtiyoriy sarlavha satrlari (davr, filial va h.k.). */
   meta: string[] = [],
 ): void {
-  const lines: string[] = [];
+  const sheet: SheetRow[] = [];
 
-  for (const m of meta) lines.push(cell(m));
-  if (meta.length) lines.push('');
+  for (const m of meta) sheet.push({ cells: [m], bold: true });
+  if (meta.length) sheet.push({ cells: [] });
 
-  lines.push(columns.map((c) => cell(c.header)).join(';'));
+  sheet.push({ cells: columns.map((c) => c.header), bold: true });
 
   for (const row of rows) {
-    lines.push(columns.map((c) => cell(c.value(row), c.numeric)).join(';'));
+    sheet.push({
+      cells: columns.map((c) => {
+        const raw = c.value(row);
+        if (raw === null || raw === undefined || raw === '') return null;
+
+        if (c.numeric) {
+          const n = Number(raw);
+          //  Son bo'lmasa matn bo'lib ketaveradi: "—" yoki bo'sh
+          //  katakni nolga aylantirish hisobotni buzadi.
+          return Number.isFinite(n) ? n : String(raw);
+        }
+        return String(raw);
+      }),
+    });
   }
 
-  // BOM — busiz Excel kirillni buzadi.
-  const blob = new Blob(['﻿' + lines.join('\r\n')], {
-    type: 'text/csv;charset=utf-8;',
+  //  Ustun kengligi: sarlavha va eng uzun qiymatga qarab.
+  const widths = columns.map((c, i) => {
+    const longest = sheet.reduce(
+      (m, r) => Math.max(m, String(r.cells[i] ?? '').length), c.header.length);
+    return Math.min(42, Math.max(10, longest + 2));
   });
 
-  const stamp = new Date().toISOString().slice(0, 10);
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${filename}-${stamp}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  downloadXlsx(filename, sheet, widths);
 }
 
 // =====================================================================

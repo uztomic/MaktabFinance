@@ -27,7 +27,7 @@ import {
 
 type ReportId =
   | 'summary' | 'classes' | 'pnl' | 'revenue' | 'expenses' | 'enrollment'
-  | 'cash' | 'methods' | 'usage' | 'payroll';
+  | 'cash' | 'methods' | 'sources' | 'usage' | 'payroll';
 
 export default function Reports() {
   const t = useT();
@@ -54,6 +54,7 @@ export default function Reports() {
     { id: 'cash', label: t('rep.cash') },
     { id: 'methods', label: t('payMethod.breakdown') },
     { id: 'enrollment', label: t('rep.enrollment') },
+    { id: 'sources', label: t('rep.sources') },
     { id: 'usage', label: t('rep.usage') },
     { id: 'payroll', label: t('rep.payroll') },
   ];
@@ -165,6 +166,12 @@ function ReportBody({
       }
       if (id === 'pnl') {
         const { data, error } = await supabase.rpc('report_pnl',
+          { p_from: from, p_to: to, p_branch_id: branch });
+        if (error) throw error;
+        return data ?? [];
+      }
+      if (id === 'sources') {
+        const { data, error } = await supabase.rpc('report_lead_sources',
           { p_from: from, p_to: to, p_branch_id: branch });
         if (error) throw error;
         return data ?? [];
@@ -316,6 +323,39 @@ function ReportBody({
         { header: t('rep.receipts'), value: (r) => r.receipts, numeric: true, align: 'right', sumKey: 'receipts', sumMoney: false, render: (r) => r.receipts },
       ],
     },
+    sources: {
+      filename: 'manbalar',
+      title: t('rep.sources'),
+      columns: [
+        {
+          header: t('src.source'),
+          value: (r) => r.source ?? t('src.direct'),
+          render: (r) => (
+            r.is_direct
+              ? <span className="text-[var(--text-muted)]">{t('src.direct')}</span>
+              : <span className="font-medium">{r.source}</span>
+          ),
+        },
+        { header: t('src.leads'), value: (r) => r.leads, numeric: true,
+          align: 'right', sumKey: 'leads', sumMoney: false,
+          render: (r) => (r.is_direct ? '—' : r.leads) },
+        { header: t('src.accepted'), value: (r) => r.accepted, numeric: true,
+          align: 'right', sumKey: 'accepted', sumMoney: false,
+          render: (r) => (r.is_direct ? '—' : r.accepted) },
+        { header: t('src.open'), value: (r) => r.open_count, numeric: true,
+          align: 'right',
+          render: (r) => (r.is_direct ? '—' : r.open_count) },
+        { header: t('src.conversion'), value: (r) => r.conversion,
+          numeric: true, align: 'right',
+          render: (r) => (r.is_direct ? '—' : `${r.conversion}%`) },
+        { header: t('src.activeStudents'), value: (r) => r.students_active,
+          numeric: true, align: 'right', sumKey: 'students_active',
+          sumMoney: false, render: (r) => r.students_active },
+        { header: t('src.collected'), value: (r) => r.collected, numeric: true,
+          align: 'right', sumKey: 'collected', sumMoney: true,
+          render: (r) => M(r.collected) },
+      ],
+    },
     methods: {
       filename: 'tolov-usullari',
       title: t('payMethod.breakdown'),
@@ -371,11 +411,21 @@ function ReportBody({
 
   return (
     <>
+      {id === 'sources' && (
+        <div className="mb-3 space-y-2">
+          <Notice tone="neutral">{t('src.hint')}</Notice>
+          {rows.some((r) => (r as { is_direct?: boolean }).is_direct) && (
+            <Notice tone="warn">{t('src.directHint')}</Notice>
+          )}
+        </div>
+      )}
+
       {id === 'payroll' && (
         <div className="mb-3">
           <Notice tone="neutral">
-            {t('rep.payroll')} — {periodLabel(currentPeriod(), lang)} davri bo'yicha.
-            Boshqa oy uchun "{t('common.from')}" sanasini o'sha oyga qo'ying.
+            {t('rep.payrollPeriodNote', {
+              period: periodLabel(currentPeriod(), lang),
+            })}
           </Notice>
         </div>
       )}

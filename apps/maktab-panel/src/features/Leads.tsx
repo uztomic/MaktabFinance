@@ -17,7 +17,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/auth/AuthProvider';
 import { useI18n, useT } from '@/i18n';
-import { date, isoDate } from '@/lib/format';
+import { date, isoDate, money } from '@/lib/format';
 import {
   Badge, Button, Card, EmptyState, ErrorState, Field, Input, Loading,
   Modal, Notice, PageHeader, Select, Table, Td, Th, Tr,
@@ -51,6 +51,24 @@ export default function Leads() {
   // deno-lint-ignore no-explicit-any
   const [editing, setEditing] = useState<any>(null);
   const [converting, setConverting] = useState<Record<string, unknown> | null>(null);
+
+  //  Qaysi kanal ishlayapti. Menejer har kuni shu sahifada ishlaydi,
+  //  shuning uchun jamlanma hisobotlar bo'limini kutmasdan shu yerda
+  //  ko'rinadi. Oraliq — oxirgi 12 oy: undan qisqasi mavsumiy
+  //  tebranishni ko'rsatadi, uzunrog'i esa eskirgan kanallarni ham
+  //  qo'shib yuboradi.
+  const sources = useQuery({
+    queryKey: ['lead-sources'],
+    queryFn: async () => {
+      const to = new Date();
+      const from = new Date(to.getFullYear() - 1, to.getMonth(), to.getDate());
+      const { data, error } = await supabase.rpc('report_lead_sources', {
+        p_from: isoDate(from), p_to: isoDate(to),
+      });
+      if (error) throw error;
+      return (data ?? []).filter((r) => !r.is_direct);
+    },
+  });
 
   const rows = useQuery({
     queryKey: ['leads', branchId, status],
@@ -225,6 +243,40 @@ export default function Leads() {
           {todayCount > 0 && <Badge tone="warn">{todayCount}</Badge>}
         </button>
       </div>
+
+      {(sources.data?.length ?? 0) > 0 && (
+        <Card title={t('rep.sources')} className="mb-4" padded={false}>
+          <Table>
+            <thead>
+              <tr>
+                <Th>{t('src.source')}</Th>
+                <Th align="right">{t('src.leads')}</Th>
+                <Th align="right">{t('src.accepted')}</Th>
+                <Th align="right">{t('src.conversion')}</Th>
+                <Th align="right">{t('src.collected')}</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {sources.data!.map((r) => (
+                <Tr key={r.source}>
+                  <Td className="font-medium">{r.source}</Td>
+                  <Td align="right" mono>{r.leads}</Td>
+                  <Td align="right" mono className="text-[var(--ok)]">
+                    {r.accepted}
+                  </Td>
+                  <Td align="right">
+                    <Badge tone={Number(r.conversion) >= 50 ? 'ok'
+                      : Number(r.conversion) >= 25 ? 'warn' : 'neutral'}>
+                      {r.conversion}%
+                    </Badge>
+                  </Td>
+                  <Td align="right" mono>{money(r.collected, lang)}</Td>
+                </Tr>
+              ))}
+            </tbody>
+          </Table>
+        </Card>
+      )}
 
       <Card padded={false}>
         {list.length === 0 ? <EmptyState /> : (
