@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.15"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -2289,6 +2289,30 @@ export type Database = {
           },
         ]
       }
+      platform_settings: {
+        Row: {
+          is_public: boolean
+          key: string
+          note: string | null
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          is_public?: boolean
+          key: string
+          note?: string | null
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          is_public?: boolean
+          key?: string
+          note?: string | null
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       role_permissions: {
         Row: {
           allowed: boolean
@@ -2776,6 +2800,272 @@ export type Database = {
           },
           {
             foreignKeyName: "students_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_invoices: {
+        Row: {
+          base_amount: number
+          branches_amount: number
+          branches_count: number
+          branches_extra: number
+          created_at: string
+          due_date: string
+          id: string
+          issued_on: string
+          note: string | null
+          paid_amount: number
+          period: string
+          school_id: string
+          setup_fee: number
+          status: Database["public"]["Enums"]["subscription_invoice_status"]
+          students_amount: number
+          students_count: number
+          students_extra_steps: number
+          students_included: number
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          base_amount?: number
+          branches_amount?: number
+          branches_count?: number
+          branches_extra?: number
+          created_at?: string
+          due_date: string
+          id?: string
+          issued_on?: string
+          note?: string | null
+          paid_amount?: number
+          period: string
+          school_id: string
+          setup_fee?: number
+          status?: Database["public"]["Enums"]["subscription_invoice_status"]
+          students_amount?: number
+          students_count?: number
+          students_extra_steps?: number
+          students_included?: number
+          total_amount: number
+          updated_at?: string
+        }
+        Update: {
+          base_amount?: number
+          branches_amount?: number
+          branches_count?: number
+          branches_extra?: number
+          created_at?: string
+          due_date?: string
+          id?: string
+          issued_on?: string
+          note?: string | null
+          paid_amount?: number
+          period?: string
+          school_id?: string
+          setup_fee?: number
+          status?: Database["public"]["Enums"]["subscription_invoice_status"]
+          students_amount?: number
+          students_count?: number
+          students_extra_steps?: number
+          students_included?: number
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_invoices_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          file_path: string | null
+          id: string
+          invoice_id: string | null
+          method: string
+          months: number
+          note: string | null
+          paid_on: string
+          reject_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          school_id: string
+          status: Database["public"]["Enums"]["subscription_payment_status"]
+          submitted_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          file_path?: string | null
+          id?: string
+          invoice_id?: string | null
+          method?: string
+          months?: number
+          note?: string | null
+          paid_on: string
+          reject_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          school_id: string
+          status?: Database["public"]["Enums"]["subscription_payment_status"]
+          submitted_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          file_path?: string | null
+          id?: string
+          invoice_id?: string | null
+          method?: string
+          months?: number
+          note?: string | null
+          paid_on?: string
+          reject_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          school_id?: string
+          status?: Database["public"]["Enums"]["subscription_payment_status"]
+          submitted_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_payments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_payments_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "platform_admins"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_payments_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_messages: {
+        Row: {
+          body: string
+          created_at: string
+          file_path: string | null
+          from_platform: boolean
+          id: number
+          is_system: boolean
+          school_id: string
+          sender_id: string | null
+          thread_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          file_path?: string | null
+          from_platform: boolean
+          id?: never
+          is_system?: boolean
+          school_id: string
+          sender_id?: string | null
+          thread_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          file_path?: string | null
+          from_platform?: boolean
+          id?: never
+          is_system?: boolean
+          school_id?: string
+          sender_id?: string | null
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "support_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_threads: {
+        Row: {
+          closed_at: string | null
+          created_at: string
+          id: string
+          last_message_at: string
+          opened_by: string | null
+          opened_by_platform: boolean
+          payment_id: string | null
+          platform_read_at: string | null
+          priority: Database["public"]["Enums"]["support_priority"]
+          school_id: string
+          school_read_at: string | null
+          status: Database["public"]["Enums"]["support_thread_status"]
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          closed_at?: string | null
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          opened_by?: string | null
+          opened_by_platform?: boolean
+          payment_id?: string | null
+          platform_read_at?: string | null
+          priority?: Database["public"]["Enums"]["support_priority"]
+          school_id: string
+          school_read_at?: string | null
+          status?: Database["public"]["Enums"]["support_thread_status"]
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          closed_at?: string | null
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          opened_by?: string | null
+          opened_by_platform?: boolean
+          payment_id?: string | null
+          platform_read_at?: string | null
+          priority?: Database["public"]["Enums"]["support_priority"]
+          school_id?: string
+          school_read_at?: string | null
+          status?: Database["public"]["Enums"]["support_thread_status"]
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_threads_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_threads_school_id_fkey"
             columns: ["school_id"]
             isOneToOne: false
             referencedRelation: "schools"
@@ -3278,6 +3568,7 @@ export type Database = {
         }
         Returns: Json
       }
+      end_impersonation: { Args: { p_session_id: string }; Returns: Json }
       finalize_invoices: {
         Args: { p_branch_id: string; p_period: string }
         Returns: Json
@@ -3290,14 +3581,29 @@ export type Database = {
         Args: { p_rows: Json; p_statement_id: string }
         Returns: Json
       }
+      issue_subscription_invoice: {
+        Args: { p_period?: string; p_school_id: string }
+        Returns: Json
+      }
       lock_period: {
         Args: { p_branch_id?: string; p_note?: string; p_period: string }
         Returns: Json
+      }
+      log_platform_action: {
+        Args: {
+          p_action: string
+          p_detail?: Json
+          p_entity?: string
+          p_entity_id?: string
+          p_school_id?: string
+        }
+        Returns: undefined
       }
       mark_class_attendance: {
         Args: { p_absent?: Json; p_class_id: string; p_day: string }
         Returns: Json
       }
+      mark_support_read: { Args: { p_thread_id: string }; Returns: Json }
       match_statement_row: {
         Args: { p_row_id: string; p_student_id: string }
         Returns: Json
@@ -3319,6 +3625,16 @@ export type Database = {
         Args: { p_branch_id: string; p_final?: boolean; p_period: string }
         Returns: Json
       }
+      open_support_thread: {
+        Args: {
+          p_body: string
+          p_file_path?: string
+          p_priority?: Database["public"]["Enums"]["support_priority"]
+          p_school_id?: string
+          p_subject: string
+        }
+        Returns: Json
+      }
       pending_absence_warnings: {
         Args: { p_branch_id?: string; p_days_back?: number }
         Returns: {
@@ -3327,6 +3643,76 @@ export type Database = {
           class_name: string
           day: string
         }[]
+      }
+      platform_overview: {
+        Args: never
+        Returns: {
+          branches_total: number
+          churn_90d: number
+          failed_messages: number
+          mrr: number
+          new_schools_30d: number
+          open_threads: number
+          overdue_schools: number
+          pending_payments: number
+          schools_active: number
+          schools_archived: number
+          schools_restricted: number
+          schools_suspended: number
+          schools_total: number
+          schools_trial: number
+          students_total: number
+          unpaid_amount: number
+          unpaid_invoices: number
+          unread_threads: number
+          users_total: number
+        }[]
+      }
+      platform_revenue: {
+        Args: { p_months?: number }
+        Returns: {
+          collected: number
+          invoices: number
+          issued: number
+          period: string
+          schools: number
+        }[]
+      }
+      platform_school_card: { Args: { p_school_id: string }; Returns: Json }
+      platform_schools: {
+        Args: never
+        Returns: {
+          branches_count: number
+          created_at: string
+          last_activity: string
+          last_paid_at: string
+          max_branches: number
+          max_students: number
+          monthly_amount: number
+          name: string
+          next_payment_date: string
+          over_limit: boolean
+          overdue_days: number
+          pending_payments: number
+          phone: string
+          plan_code: string
+          plan_name: string
+          school_id: string
+          status: Database["public"]["Enums"]["school_status"]
+          students_count: number
+          students_included: number
+          subscription_status: Database["public"]["Enums"]["subscription_status"]
+          tax_id: string
+          teachers_count: number
+          trial_ends_at: string
+          unpaid_amount: number
+          unread_messages: number
+          users_count: number
+        }[]
+      }
+      post_support_message: {
+        Args: { p_body: string; p_file_path?: string; p_thread_id: string }
+        Returns: Json
       }
       promote_classes: {
         Args: {
@@ -3345,6 +3731,16 @@ export type Database = {
           p_phone?: string
           p_plan_code?: string
           p_trial_days?: number
+        }
+        Returns: Json
+      }
+      record_subscription_payment: {
+        Args: {
+          p_amount: number
+          p_months?: number
+          p_note?: string
+          p_paid_on?: string
+          p_school_id: string
         }
         Returns: Json
       }
@@ -3555,6 +3951,10 @@ export type Database = {
           subscribers: number
         }[]
       }
+      review_subscription_payment: {
+        Args: { p_approve: boolean; p_payment_id: string; p_reason?: string }
+        Returns: Json
+      }
       revise_payment_proof: {
         Args: {
           p_action: string
@@ -3564,8 +3964,55 @@ export type Database = {
         }
         Returns: Json
       }
+      run_billing_cycle: { Args: never; Returns: Json }
+      school_price: { Args: { p_school_id: string }; Returns: Json }
+      school_users: {
+        Args: { p_school_id: string }
+        Returns: {
+          email: string
+          full_name: string
+          id: string
+          is_active: boolean
+          last_sign_in: string
+          phone: string
+          role: Database["public"]["Enums"]["user_role"]
+        }[]
+      }
       seed_school_defaults: { Args: { p_school_id: string }; Returns: Json }
       send_due_reminders: { Args: never; Returns: Json }
+      set_platform_setting: {
+        Args: { p_key: string; p_reason?: string; p_value: Json }
+        Returns: Json
+      }
+      set_school_plan: {
+        Args: { p_plan_code: string; p_reason?: string; p_school_id: string }
+        Returns: Json
+      }
+      set_school_status: {
+        Args: {
+          p_reason: string
+          p_school_id: string
+          p_status: Database["public"]["Enums"]["school_status"]
+        }
+        Returns: Json
+      }
+      set_support_thread_status: {
+        Args: {
+          p_status: Database["public"]["Enums"]["support_thread_status"]
+          p_thread_id: string
+        }
+        Returns: Json
+      }
+      start_impersonation: {
+        Args: {
+          p_minutes?: number
+          p_mode?: Database["public"]["Enums"]["impersonation_mode"]
+          p_reason?: string
+          p_school_id: string
+          p_target_user_id: string
+        }
+        Returns: Json
+      }
       student_history: {
         Args: { p_limit?: number; p_student_id: string }
         Returns: {
@@ -3588,6 +4035,17 @@ export type Database = {
         }
         Returns: Json
       }
+      submit_subscription_payment: {
+        Args: {
+          p_amount: number
+          p_file_path?: string
+          p_method?: string
+          p_months?: number
+          p_note?: string
+          p_paid_on: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       billing_type: "monthly_fixed" | "daily" | "one_time"
@@ -3607,14 +4065,24 @@ export type Database = {
       payment_channel: "cash" | "bank" | "proof"
       payment_status: "pending" | "confirmed" | "rejected" | "cancelled"
       payroll_status: "draft" | "approved" | "cancelled"
-      school_status: "trial" | "active" | "restricted" | "archived"
+      school_status:
+        | "trial"
+        | "active"
+        | "restricted"
+        | "archived"
+        | "suspended"
       student_status: "active" | "academic_leave" | "expelled"
+      subscription_invoice_status: "unpaid" | "partial" | "paid" | "void"
+      subscription_payment_status: "pending" | "confirmed" | "rejected"
       subscription_status:
         | "trial"
         | "active"
         | "grace"
         | "restricted"
         | "cancelled"
+        | "suspended"
+      support_priority: "low" | "normal" | "high"
+      support_thread_status: "open" | "answered" | "closed"
       user_role: "director" | "accountant" | "manager" | "duty" | "teacher"
     }
     CompositeTypes: {
@@ -3761,15 +4229,20 @@ export const Constants = {
       payment_channel: ["cash", "bank", "proof"],
       payment_status: ["pending", "confirmed", "rejected", "cancelled"],
       payroll_status: ["draft", "approved", "cancelled"],
-      school_status: ["trial", "active", "restricted", "archived"],
+      school_status: ["trial", "active", "restricted", "archived", "suspended"],
       student_status: ["active", "academic_leave", "expelled"],
+      subscription_invoice_status: ["unpaid", "partial", "paid", "void"],
+      subscription_payment_status: ["pending", "confirmed", "rejected"],
       subscription_status: [
         "trial",
         "active",
         "grace",
         "restricted",
         "cancelled",
+        "suspended",
       ],
+      support_priority: ["low", "normal", "high"],
+      support_thread_status: ["open", "answered", "closed"],
       user_role: ["director", "accountant", "manager", "duty", "teacher"],
     },
   },

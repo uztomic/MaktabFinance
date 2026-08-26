@@ -106,6 +106,15 @@ const GROUPS: NavGroup[] = [
       { to: '/sozlamalar', labelKey: 'nav.settings', permission: 'users.manage', icon: <Icon d={I.gear} /> },
     ],
   },
+  {
+    // Ijrochi bilan bog'liq bo'lim. Alohida guruh — chunki bu maktab
+    // ichidagi ish emas, tashqi munosabat: obuna to'lovi va yordam.
+    labelKey: 'nav.groupService',
+    items: [
+      { to: '/obuna', labelKey: 'nav.subscription', permission: 'users.manage', icon: <Icon d={I.wallet} /> },
+      { to: '/yordam', labelKey: 'nav.help', permission: null, icon: <Icon d={I.inbox} /> },
+    ],
+  },
 ];
 
 /** O'qituvchi uchun alohida, qisqa menyu (PWA, telefon). */

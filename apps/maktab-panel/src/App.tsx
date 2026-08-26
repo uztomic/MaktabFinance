@@ -16,6 +16,7 @@ import { useT } from '@/i18n';
 import LoginPage from '@/auth/LoginPage';
 import ResetPasswordPage from '@/auth/ResetPasswordPage';
 import AppShell from '@/layout/AppShell';
+import SuspendedShell from '@/layout/SuspendedShell';
 import { Button, Loading, Notice } from '@/ui';
 
 const Dashboard   = lazy(() => import('@/features/Dashboard'));
@@ -43,6 +44,8 @@ const Settings    = lazy(() => import('@/features/Settings'));
 const MyAttendance = lazy(() => import('@/features/teacher/MyAttendance'));
 const MyLoad      = lazy(() => import('@/features/teacher/MyLoad'));
 const MyPayroll   = lazy(() => import('@/features/teacher/MyPayroll'));
+const Subscription = lazy(() => import('@/features/Subscription'));
+const SupportChat  = lazy(() => import('@/features/SupportChat'));
 
 function NoProfile() {
   const t = useT();
@@ -83,6 +86,15 @@ export default function App() {
   if (!session) return <LoginPage />;
   if (error === 'noProfile' || !profile) return <NoProfile />;
 
+  // TO'XTATILGAN MAKTAB — oddiy panel ko'rsatilmaydi.
+  //
+  // To'lov 45 kundan ortiq kechikkanda baza ma'lumotni umuman
+  // qaytarmaydi. Oddiy panelni ochish bo'sh jadvallar va tushunarsiz
+  // "ma'lumot yo'q" yozuvlarini berardi. Buning o'rniga sabab va
+  // yechim aniq aytilgan alohida qobiq ochiladi. Ma'lumot
+  // O'CHIRILMAGAN — to'lovdan keyin hammasi qaytadi.
+  if (profile.school_status === 'suspended') return <SuspendedShell />;
+
   return (
     <Suspense fallback={<Loading />}>
       <Routes>
@@ -109,6 +121,8 @@ export default function App() {
           <Route path="foydalanuvchilar" element={<Users />} />
           <Route path="jurnal" element={<Audit />} />
           <Route path="sozlamalar" element={<Settings />} />
+          <Route path="obuna" element={<Subscription />} />
+          <Route path="yordam" element={<SupportChat />} />
           <Route path="davomat" element={<MyAttendance />} />
           <Route path="yuklamam" element={<MyLoad />} />
           <Route path="oyligim" element={<MyPayroll />} />
