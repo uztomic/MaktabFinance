@@ -22,6 +22,21 @@
 --  YECHIM. Narx BIR JOYDA hisoblanadi (`app.school_monthly_fee`).
 --  `school_price()` ham, kunlik tariflash ham o'shanga murojaat
 --  qiladi, va `monthly_amount` endi har kuni yangilanib turadi.
+--
+--  KESISHGAN BOG'LIQLIK. Bu migratsiya PLATFORMA qismiga tayanadi:
+--  `app.billing_num`, `public.school_subscriptions` va
+--  `public.subscription_invoices` boshqa repoda yaratiladi
+--  (`MaktabFinanceSupperAdmin`). Ular bir bazani bo'lishadi, lekin
+--  alohida qo'llanadi.
+--
+--  Shuning uchun platforma jadvallariga TEGADIGAN qismlar mavjudlik
+--  tekshiruvi bilan o'raladi. Busiz shu reponi yolg'iz o'zi toza
+--  bazaga qo'llab bo'lmasdi: migratsiya `school_subscriptions`
+--  jadvali yo'qligida yiqilardi.
+--
+--  Funksiyalarning O'ZI shartsiz yaratiladi — plpgsql tanasi chaqirilgunga
+--  qadar tekshirilmaydi, ya'ni ular platformasiz ham bemalol turaveradi
+--  va platforma qo'shilgan zahoti ishlab ketadi.
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
@@ -172,6 +187,14 @@ comment on function app.sync_subscription_amount(uuid) is
 do $do$
 declare s uuid;
 begin
+  --  Platforma qismi hali qo'llanmagan bo'lsa tenglashtiradigan narsa
+  --  ham yo'q. Kunlik tariflash uni keyinroq o'zi bajaradi.
+  if to_regclass('public.school_subscriptions') is null
+     or to_regprocedure('app.billing_num(text)') is null then
+    raise notice 'Platforma qismi yo''q — obuna summasi tenglashtirilmadi';
+    return;
+  end if;
+
   for s in select id from public.schools where deleted_at is null loop
     perform app.sync_subscription_amount(s);
   end loop;

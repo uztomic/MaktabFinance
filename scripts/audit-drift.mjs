@@ -28,31 +28,49 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const MIGRATIONS = join(ROOT, 'supabase', 'migrations');
 
 // ---------------------------------------------------------------------
-//  Tarixda bor, fayli yo'q — LEKIN mazmuni boshqa faylga ko'chirilgan.
+//  BOSHQA REPO EGALIK QILADIGAN QISM
 //
-//  Bu 10 ta migratsiya super admin qismini qurgan va jonli bazaga
-//  qo'llangan, ammo fayllari repoga tushmagan. Ular yaratgan obyektlar
-//  bazadan o'qib olinib `20260826120010_platform_reconstruct.sql` ga
-//  yozildi — ya'ni toza baza ham AYNAN shu holatda quriladi.
+//  Baza IKKI repo tomonidan bo'lishiladi:
 //
-//  Tarix yozuvlari ATAYLAB o'chirilmadi: agar o'sha 10 ta fayl keyin
-//  topilib repoga qo'shilsa, ular jonli bazada QAYTA bajarilmasligi
-//  kerak. "Qo'llangan" belgisi shuni ta'minlaydi.
+//    · maktab qismi   → SHU REPO
+//    · platforma qismi → `MaktabFinanceSupperAdmin/SupperAdminMaktabFinance`
+//      (obuna, tariflash, muloqot, impersonation, platforma hisobotlari)
+//
+//  Shuning uchun platforma migratsiyalari va ular yaratgan obyektlar
+//  bu yerda "yo'qolgan" deb hisoblanmaydi — ularning fayli boshqa
+//  repoda va o'sha repo o'z `audit-drift` ini yuritadi.
+//
+//  Nega ro'yxat QO'LDA: avtomatik aniqlash uchun ikkala repoga bir
+//  vaqtda qarash kerak bo'lardi. Ro'yxat esa o'n qatorlik va yangi
+//  platforma obyekti qo'shilganda bir marta yangilanadi.
 // ---------------------------------------------------------------------
-const COVERED = new Map([
-  ['20260826120000', 'platform_enums'],
-  ['20260826120001', 'platform_billing'],
-  ['20260826120002', 'support_chat'],
-  ['20260826120003', 'platform_rls'],
-  ['20260826120004', 'platform_rpc'],
-  ['20260826120005', 'impersonation_rpc'],
-  ['20260826120006', 'billing_cron'],
-  ['20260826120007', 'platform_reports'],
-  ['20260826120008', 'guard_service_context'],
-  ['20260826120009', 'log_platform_action'],
-].map(([v, n]) => [v, n]));
 
-const COVERED_BY = '20260826120010_platform_reconstruct.sql';
+//  Platforma migratsiyalari shu boshlanish bilan tanaladi.
+const FOREIGN_VERSION_PREFIXES = ['2026082612', '2026082615'];
+
+const isForeignVersion = (v) =>
+  FOREIGN_VERSION_PREFIXES.some((p) => v.startsWith(p));
+
+//  Platforma obyektlari — ularning DDL si boshqa repoda.
+const FOREIGN_OBJECTS = new Set([
+  'platform_settings', 'subscription_invoices', 'subscription_payments',
+  'support_threads', 'support_messages',
+  'subscription_invoice_status', 'subscription_payment_status',
+  'support_thread_status', 'support_priority',
+  'billing_num', 'plog', 'require_platform_admin', 'recompute_school_billing',
+  'apply_subscription_payment', 'support_post', 'notify_school',
+  'school_price', 'set_school_status', 'set_school_plan',
+  'issue_subscription_invoice', 'record_subscription_payment',
+  'submit_subscription_payment', 'review_subscription_payment',
+  'set_platform_setting', 'log_platform_action',
+  'start_impersonation', 'end_impersonation', 'school_users',
+  'open_support_thread', 'post_support_message',
+  'set_support_thread_status', 'mark_support_read',
+  'run_billing_cycle', 'platform_schools', 'platform_overview',
+  'platform_revenue', 'platform_school_card',
+]);
+
+
 
 async function loadEnv() {
   const path = join(ROOT, '.env.local');
@@ -130,6 +148,9 @@ for (const [kind, rows, key] of [
   ['funksiya', funcs, 'bare'],
 ]) {
   for (const r of rows) {
+    //  Platforma obyekti — uning DDL si boshqa repoda, bu yerda
+    //  "yo'qolgan" deb hisoblanmaydi.
+    if (FOREIGN_OBJECTS.has(r[key])) continue;
     if (!inRepo(r[key])) {
       problems.push(`bazada bor, repoda yo'q — ${kind}: ${r.name ?? r[key]}`);
     }
@@ -151,29 +172,19 @@ for (const [i, v] of versions.entries()) {
 //  Eng xavflisi shu: baza fayllardan oldinda. Toza bazani qurish
 //  natijasi HOZIRGIDAN BOSHQA bo'ladi.
 const known = new Set(versions);
-const covered = [];
+let foreign = 0;
 
 for (const v of [...applied].sort()) {
   if (known.has(v)) continue;
-  if (COVERED.has(v)) {
-    covered.push(`${v} (${COVERED.get(v)})`);
-    continue;
-  }
+  if (isForeignVersion(v)) { foreign++; continue; }
   problems.push(`tarixda bor, fayli yo'q: ${v}`);
-}
-
-if (covered.length > 0 && !files.includes(COVERED_BY)) {
-  problems.push(
-    `${COVERED_BY} yo'q — ${covered.length} ta migratsiya qoplanmay qoldi`);
 }
 
 // --- Natija ------------------------------------------------------------
 console.log(`\nMigratsiya fayli: ${files.length}, tarixda: ${applied.size}`);
 
-if (covered.length > 0) {
-  console.log(
-    `\n  ${covered.length} ta migratsiya fayli yo'q, mazmuni ${COVERED_BY} da:`);
-  for (const c of covered) console.log(`   · ${c}`);
+if (foreign > 0) {
+  console.log(`Platforma reposiniki (tekshirilmadi): ${foreign}`);
 }
 
 if (problems.length === 0) {

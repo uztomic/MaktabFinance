@@ -50,6 +50,27 @@ export default function Subscription() {
     },
   });
 
+  //  To'lov rekvizitlari.
+  //
+  //  Ilgari ular FAQAT bloklangan ekranda ko'rsatilardi. Ya'ni o'z
+  //  vaqtida to'lamoqchi bo'lgan direktor pulni qayerga o'tkazishni
+  //  bilmasdi — buni ko'rish uchun avval bloklanishi kerak edi.
+  //
+  //  Sozlamalarda ular ochiq belgilangan, shuning uchun har
+  //  qanday holatdagi maktab o'qiy oladi.
+  const requisites = useQuery({
+    queryKey: ['payment-requisites'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('platform_settings')
+        .select('value')
+        .eq('key', 'billing.requisites')
+        .maybeSingle();
+      if (error) throw error;
+      return (data?.value as string | null) ?? null;
+    },
+  });
+
   const sub = useQuery({
     queryKey: ['my-subscription', schoolId],
     enabled: !!schoolId,
@@ -232,6 +253,17 @@ export default function Subscription() {
           )}
         </Card>
       </div>
+
+      {/* --- To'lov rekvizitlari ---------------------------------- */}
+      {requisites.data && (
+        <Card title={t('blocked.requisites')} className="mt-3">
+          <pre className="whitespace-pre-wrap font-sans text-[13px]
+            text-[var(--text)]">{requisites.data}</pre>
+          <p className="mt-2 text-[11px] text-[var(--text-faint)]">
+            {t('sub.requisitesHint')}
+          </p>
+        </Card>
+      )}
 
       {/* --- Hisob-fakturalar ------------------------------------- */}
       <Card title={t('sub.invoices')} className="mt-3" padded={false}>

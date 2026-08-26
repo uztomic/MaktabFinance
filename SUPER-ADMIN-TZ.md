@@ -484,7 +484,7 @@ qo'shimcha kerak — to'lovni maktab tomonidan yuborish uchun.
 
 Yangi sahifa `/obuna` — faqat **direktor** ko'radi:
 
-- joriy tarif va uning tafsiloti (`calc_subscription` natijasi);
+- joriy tarif va uning tafsiloti (`school_price` natijasi);
 - hisob-kitoblar tarixi va ularning holati;
 - **chek yuklash** — rasm tanlash va yuborish;
 - yuborilgan cheklar holati (kutilmoqda / tasdiqlangan / rad etilgan
@@ -599,9 +599,11 @@ naqsh bor: oylik formulasi `payroll_settings` da yashaydi
 (TZ 4.11.10). Narx o'zgarganda migratsiya yozish kerak emas.
 
 ```sql
-create table public.pricing_settings (
+create table public.platform_settings (
   key        text primary key,
   value      jsonb not null,
+  note       text,
+  is_public  boolean not null default false,   -- true → maktab ham ko'radi
   updated_at timestamptz not null default now()
 );
 
@@ -614,26 +616,32 @@ create table public.pricing_settings (
 --   student_block_price  50000
 --   grace_days           30
 --   block_days           45
+--   first_reminder_days  15
+--   requisites           (to'lov rekvizitlari, matn)
 ```
 
 ```sql
-public.calc_subscription(p_school_id uuid, p_period date)
+public.school_price(p_school_id uuid) returns jsonb
+```
+
+Qaytaradi: `branches_count`, `students_count`, `students_included`,
+`students_extra_steps`, `base_amount`, `branches_amount`,
+`students_amount`, `monthly_total`, `setup_fee`. **Tafsilot bilan** —
+mijoz "nega shuncha" deb so'raganda javob tayyor bo'lsin.
+
+Hisobning o'zi `app.school_monthly_fee()` da; `school_price()` unga
+huquq tekshiruvi qo'shadi. Kunlik tariflash `monthly_amount` ni
+shu manbadan yangilab turadi.
+
+```sql
+public.issue_subscription_invoice(p_school_id uuid, p_period date)
   returns jsonb
 ```
 
-Qaytaradi: `branches`, `students`, `included_students`,
-`extra_blocks`, `base`, `branch_amount`, `student_amount`,
-`total`. **Tafsilot bilan** — mijoz "nega shuncha" deb so'raganda
-javob tayyor bo'lsin.
-
-```sql
-public.generate_subscription_invoices(p_period date) returns jsonb
-```
-
-Har oyning 1-sanasida cron chaqiradi. Har bir faol maktab uchun
-`subscription_invoices` ga qator qo'yadi. **Idempotent** —
-takror chaqirilsa dublikat yaratmaydi (mavjud
-`generate_invoices` bilan bir xil naqsh).
+Kunlik `run_billing_cycle()` chaqiradi: joriy kalendar oyga
+hisob-faktura yo'q bo'lsa chiqaradi — ya'ni amalda oyning
+1-sanasida. **Idempotent** — `subscription_invoices_period_idx`
+unikal indeksi dublikatni yaratmaydi.
 
 ### M6. To'lov va chek
 
@@ -653,18 +661,20 @@ create table public.subscription_payments (
 ```
 
 ```sql
-public.submit_subscription_payment(p_invoice_id, p_amount, p_file_path)
-public.confirm_subscription_payment(p_payment_id, p_months default 1)
-public.reject_subscription_payment(p_payment_id, p_reason)
+public.submit_subscription_payment(p_amount, p_paid_on, p_months,
+                                   p_method, p_file_path, p_note)
+public.review_subscription_payment(p_payment_id, p_approve, p_reason)
 ```
 
-Birinchisini **direktor** chaqiradi, qolgan ikkitasini **faqat super
-admin**. Hammasi `platform_log` ga.
+Birinchisini **direktor** chaqiradi, ikkinchisini **faqat super
+admin**. Tasdiqlash va rad etish bitta funksiyada: ikkalasi ham
+ayni bir yozuvni yopadi va ularni ajratish ikki joyda bir xil
+tekshiruvni takrorlashga olib kelardi. Hammasi `platform_log` ga.
 
 ### M7. Avtomatik bloklash
 
 ```sql
-public.enforce_subscription_status() returns jsonb
+public.run_billing_cycle() returns jsonb
 ```
 
 Kuniga bir marta cron:
@@ -721,7 +731,7 @@ login/parol chiqarish. Parol `scripts/password.mjs` dan.
 | 10 | Siyosatlarda funksiya chaqiruvi `(select ...)` ichida |
 | 11 | **Bloklash ma'lumotni o'chirmaydi** — faqat kirishni to'sadi |
 | 12 | **Bloklangan maktab to'lov ekrani va muloqotni ko'radi** |
-| 13 | Narxlar **bazada**, kodda emas (`pricing_settings`) |
+| 13 | Narxlar **bazada**, kodda emas (`platform_settings`) |
 | 14 | Chek tasdiqlangach maktab **avtomatik** ochiladi |
 | 15 | Har bir hisob-kitobda **tafsilot** saqlanadi (nega shuncha) |
 
@@ -756,7 +766,7 @@ Qo'shimcha sinovlar yozilsin (`scripts/test-platform.sql`):
 | Bloklangan maktabda xabar yozish | **ishlaydi** |
 | Chek tasdiqlangandan keyin holat | `active` |
 | To'lovdan keyin ma'lumot | **joyida** |
-| Direktor `confirm_subscription_payment` chaqirsa | `42501` |
+| Direktor `review_subscription_payment` chaqirsa | `42501` |
 
 ## 2.9. Tavsiya etilgan tartib
 

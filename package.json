@@ -28,7 +28,8 @@
     "audit:code": "node scripts/audit-code.mjs",
     "audit:data": "node scripts/db.mjs file scripts/audit-data.sql",
     "audit": "npm run audit:code && npm run audit:drift && npm run audit:security && npm run audit:data && npm run check:secrets && npm run i18n:check",
-    "audit:drift": "node scripts/audit-drift.mjs"
+    "audit:drift": "node scripts/audit-drift.mjs",
+    "db:dry": "node scripts/dry-run.mjs"
   },
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",

@@ -12,6 +12,7 @@
 import { type ReactNode, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthProvider';
+import { SubscriptionBanner } from '@/layout/SubscriptionBanner';
 import { useT } from '@/i18n';
 import { BranchSwitcher, LangSwitcher, ThemeToggle } from './Controls';
 import { Badge, Button } from '@/ui';
@@ -150,6 +151,11 @@ export default function AppShell() {
 
   return (
     <div className="flex min-h-screen flex-col">
+      {/* --- Obuna muddati ogohlantirishi (TZ P3) ------------------
+          Har sahifada ko'rinadi va muddatga qarab rangi o'zgaradi.
+          Faqat direktorga — boshqalar to'lay olmaydi. */}
+      <SubscriptionBanner />
+
       {/* --- Texnik yordam banneri (TZ 4.13.5.3) ------------------- */}
       {impersonation && (
         <div

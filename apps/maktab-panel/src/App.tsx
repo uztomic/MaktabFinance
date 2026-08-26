@@ -86,14 +86,20 @@ export default function App() {
   if (!session) return <LoginPage />;
   if (error === 'noProfile' || !profile) return <NoProfile />;
 
-  // TO'XTATILGAN MAKTAB — oddiy panel ko'rsatilmaydi.
+  // BLOKLANGAN MAKTAB — oddiy panel ko'rsatilmaydi.
   //
-  // To'lov 45 kundan ortiq kechikkanda baza ma'lumotni umuman
-  // qaytarmaydi. Oddiy panelni ochish bo'sh jadvallar va tushunarsiz
-  // "ma'lumot yo'q" yozuvlarini berardi. Buning o'rniga sabab va
-  // yechim aniq aytilgan alohida qobiq ochiladi. Ma'lumot
-  // O'CHIRILMAGAN — to'lovdan keyin hammasi qaytadi.
-  if (profile.school_status === 'suspended') return <SuspendedShell />;
+  // To'lov 45 kundan ortiq kechikkanda maktab `restricted` holatiga
+  // o'tadi va TZ 2.4 bo'yicha tizimga KIRA OLMAYDI.
+  //
+  // NEGA SHU YERDA, RLS DA EMAS (TZ 2.4 "Kirish darajasi"): bazani
+  // yopib qo'ysak direktor to'lov ekranini ham ko'ra olmaydi va
+  // tizim boshi berk ko'chaga kiradi — mijoz to'lay olmaydi.
+  // Shuning uchun baza o'qishga ochiq qoladi (yozish esa
+  // `app.school_is_writable()` bilan to'silgan), kirishni esa
+  // shu qator to'sadi.
+  //
+  // Ma'lumot O'CHIRILMAYDI — to'lov tasdiqlangach hammasi qaytadi.
+  if (profile.school_status === 'restricted') return <SuspendedShell />;
 
   return (
     <Suspense fallback={<Loading />}>
