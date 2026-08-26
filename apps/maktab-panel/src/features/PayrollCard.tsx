@@ -15,64 +15,179 @@ import { Link, useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useI18n, useT } from '@/i18n';
 import { date, money, num, periodLabel } from '@/lib/format';
+import { payrollLabel, valueLabel } from '@/lib/fieldNames';
 import {
   Badge, Button, Card, EmptyState, ErrorState, Loading, PageHeader,
 } from '@/ui';
 
-/** `source` jsonb ni o'qish oson matnga aylantiradi. */
+/**
+ *  `source` jsonb ni o'qish oson matnga aylantiradi.
+ *
+ *  NIMA CHIQARILMAYDI va NEGA:
+ *
+ *    · `formula` — "base_salary * rate_factor" degan XOM KOD edi va
+ *      ekranda shundayligicha turardi. Buxgalterga u hech narsa
+ *      aytmaydi, chunki formulada qatnashgan raqamlarning o'zi
+ *      quyida yonma-yon yozib qo'yilgan.
+ *    · `code` — ustama yoki ushlanma kodi ("class_teacher"). Uning
+ *      NOMI allaqachon qatorning sarlavhasida turibdi.
+ *    · `overridden: yo'q` — yolg'on qiymat hech narsa bildirmaydi,
+ *      faqat shovqin. Faqat ROST bo'lsa ko'rsatiladi.
+ */
 function explain(
   source: Record<string, unknown> | null,
   lang: 'uz' | 'uz-cyrl' | 'ru',
+  t: (key: string) => string,
 ): string[] {
   if (!source) return [];
   const out: string[] = [];
 
-  const LABEL: Record<string, string> = {
-    formula: 'Formula',
-    base_salary: 'Qat\'iy oylik',
-    rate_factor: 'Stavka ulushi',
-    hours_per_rate: 'Norma soat',
-    hour_price: 'Soat narxi',
-    category_factor: 'Toifa koeffitsiyenti',
-    held_hours: 'O\'tilgan soat',
-    subst_hours: 'O\'rniga kirilgan soat',
-    substitution_percent: 'O\'rniga kirish foizi',
-    paid_percent: 'To\'lanadigan foiz',
-    reason: 'Sabab',
-    hours: 'Soat',
-    code: 'Kod',
-    type: 'Turi',
-    value: 'Qiymat',
-    base: 'Baza',
-    overridden: 'Shaxsiy qiymat',
-    paid_on: 'To\'langan sana',
-    before: 'Yaxlitlashdan oldin',
-    after: 'Yaxlitlashdan keyin',
-    step: 'Yaxlitlash qadami',
-    mode: 'Yaxlitlash yo\'nalishi',
-    from: 'dan',
-    to: 'gacha',
-  };
-
+  //  `type` ham yashiriladi: qiymatning O'ZI foizmi yoki summami
+  //  ekanini ko'rsatib turadi ("15%" yoki "250 000"), ya'ni
+  //  "Turi: Foiz" degan alohida qator faqat takror.
+  const HIDE = new Set(['formula', 'code', 'type', 'advance_id']);
   const MONEY_KEYS = new Set([
-    'base_salary', 'hour_price', 'base', 'before', 'after', 'value',
+    'base_salary', 'hour_price', 'base', 'before', 'after', 'step',
   ]);
 
   for (const [k, v] of Object.entries(source)) {
     if (v === null || v === undefined || v === '') continue;
-    if (k === 'advance_id') continue;
+    if (HIDE.has(k)) continue;
+    if (k === 'overridden' && v !== true) continue;
 
-    const label = LABEL[k] ?? k;
+    const label = payrollLabel(t, k);
     let text: string;
 
-    if (typeof v === 'boolean') text = v ? 'ha' : 'yo\'q';
+    //  Qiymatning O'ZI kod bo'lishi mumkin: "percent", "nearest",
+    //  "teacher_absent". Ular ham tarjima qilinadi.
+    const translated = valueLabel(t, k, v);
+
+    if (translated) text = translated;
+    else if (typeof v === 'boolean') text = v ? t('common.yes') : t('common.no');
     else if (MONEY_KEYS.has(k) && typeof v === 'number') text = money(v, lang);
-    else if (typeof v === 'number') text = num(v, lang, 2);
-    else text = String(v);
+    else if (k === 'value' && typeof v === 'number') {
+      //  Ustama/ushlanma qiymati: foiz bo'lsa "15%", qat'iy bo'lsa summa.
+      text = source.type === 'percent' ? `${num(v, lang, 2)}%` : money(v, lang);
+    } else if (typeof v === 'number') text = num(v, lang, 2);
+    else if (k === 'paid_on' || k === 'from' || k === 'to') {
+      text = date(String(v), lang);
+    } else text = String(v);
 
     out.push(`${label}: ${text}`);
   }
   return out;
+}
+
+/**
+ *  Hisoblashda ishlatilgan sozlamalar.
+ *
+ *  Ilgari bu `JSON.stringify(...)` bilan xom holda to'kib qo'yilgan
+ *  edi — ekranda "base_type": "fixed", "unheld_lesson_policy": {...}
+ *  degan yarim sahifa kod turardi. Direktor uchun bu o'qib bo'lmaydigan
+ *  narsa, holbuki aynan shu yozuv nizoli holatda dalil bo'lishi kerak.
+ *
+ *  Endi o'qiladigan ro'yxat chiqadi. Xom JSON YO'QOTILMAYDI —
+ *  yig'ilgan bo'limda qoladi, chunki texnik xodimga u kerak bo'lishi
+ *  mumkin.
+ */
+function SettingsSnapshot({ data, lang, t }: {
+  data: Record<string, unknown>;
+  lang: 'uz' | 'uz-cyrl' | 'ru';
+  t: (key: string) => string;
+}) {
+  const rows: Array<[string, string]> = [];
+  const push = (label: string, value: string | null) => {
+    if (value) rows.push([label, value]);
+  };
+
+  const period = data.period as { from?: string; to?: string } | undefined;
+  if (period?.from && period?.to) {
+    push(t('payroll.period'),
+      `${date(period.from, lang)} — ${date(period.to, lang)}`);
+  }
+
+  push(t('pf.base.title'),
+    valueLabel(t, 'base_type', data.base_type) ?? String(data.base_type ?? ''));
+
+  if (data.category) {
+    const f = Number(data.category_factor ?? 1);
+    push(t('teachers.category'),
+      f === 1 ? String(data.category)
+        : `${data.category} · ${num(f, lang, 2)}`);
+  }
+
+  if (Number(data.base_salary) > 0) {
+    push(t('pl.base_salary'), money(Number(data.base_salary), lang));
+  }
+  if (data.rate_factor !== undefined) {
+    push(t('pl.rate_factor'), num(Number(data.rate_factor), lang, 2));
+  }
+  if (Number(data.hour_price) > 0) {
+    push(t('pf.hourPrice'), money(Number(data.hour_price), lang));
+  }
+  if (Number(data.hours_per_rate) > 0) {
+    push(t('pf.hoursPerRate'), num(Number(data.hours_per_rate), lang, 2));
+  }
+  if (data.substitution_percent !== undefined) {
+    push(t('pf.substitution'), `${num(Number(data.substitution_percent), lang, 2)}%`);
+  }
+
+  const rounding = data.rounding as { step?: number; mode?: string } | undefined;
+  if (rounding?.step) {
+    push(t('payroll.rounding'),
+      [money(rounding.step, lang),
+        valueLabel(t, 'mode', rounding.mode)].filter(Boolean).join(' · '));
+  }
+
+  //  Ustama va ushlanma — nomi va miqdori bilan, kodsiz.
+  const named = (list: unknown): string | null => {
+    if (!Array.isArray(list) || list.length === 0) return null;
+    return list.map((x) => {
+      const row = x as { name?: string; type?: string; value?: number };
+      const v = row.type === 'percent'
+        ? `${num(Number(row.value), lang, 2)}%`
+        : money(Number(row.value), lang);
+      return `${row.name} — ${v}`;
+    }).join(' · ');
+  };
+
+  push(t('pf.allowances'), named(data.allowances));
+  push(t('pf.deductions'), named(data.deductions));
+
+  //  O'tkazilmagan dars qoidasi: sabab kodlari tarjima qilinadi.
+  const policy = data.unheld_lesson_policy as
+    Record<string, { paid_percent?: number }> | undefined;
+  if (policy && Object.keys(policy).length > 0) {
+    push(t('pf.unheld'),
+      Object.entries(policy)
+        .map(([reason, cfg]) =>
+          `${valueLabel(t, 'reason', reason) ?? reason} — ${cfg?.paid_percent ?? 0}%`)
+        .join(' · '));
+  }
+
+  return (
+    <>
+      <dl className="space-y-1.5 text-[13px]">
+        {rows.map(([label, value]) => (
+          <div key={label} className="flex flex-wrap items-baseline justify-between gap-2">
+            <dt className="text-[var(--text-muted)]">{label}</dt>
+            <dd className="text-right">{value}</dd>
+          </div>
+        ))}
+      </dl>
+
+      <details className="mt-3">
+        <summary className="cursor-pointer text-[12px] text-[var(--text-faint)]
+          hover:text-[var(--text-muted)]">
+          {t('pf.advanced')}
+        </summary>
+        <pre className="mt-2 overflow-x-auto rounded bg-[var(--bg-inset)] p-3
+          text-[11px] leading-relaxed text-[var(--text-muted)]">
+          {JSON.stringify(data, null, 2)}
+        </pre>
+      </details>
+    </>
+  );
 }
 
 export default function PayrollCard() {
@@ -117,11 +232,23 @@ export default function PayrollCard() {
   const teacher = (r as any).teachers;
   const rows = lines.data ?? [];
 
-  const gross = rows.filter((l) => Number(l.amount) > 0)
+  //  Yaxlitlash ALOHIDA sanaladi.
+  //
+  //  Ilgari jamlanma shunchaki musbat va manfiy qatorlarni qo'shardi,
+  //  ya'ni yaxlitlash (masalan −36 so'm) "Ushlanmalar" ichiga tushib
+  //  ketardi. Natijada ushlanma 379 950 bo'lib ko'rinardi, aslida
+  //  soliq 379 914 edi. Buxgalter soliq hisobotini shu raqamdan
+  //  olsa — u to'g'ri kelmaydi.
+  const isRounding = (l: { source_kind?: string | null }) =>
+    l.source_kind === 'rounding';
+
+  const gross = rows.filter((l) => !isRounding(l) && Number(l.amount) > 0)
     .reduce((s, l) => s + Number(l.amount), 0);
-  const deductions = rows.filter((l) => Number(l.amount) < 0)
+  const deductions = rows.filter((l) => !isRounding(l) && Number(l.amount) < 0)
     .reduce((s, l) => s + Number(l.amount), 0);
-  const net = gross + deductions;
+  const rounding = rows.filter(isRounding)
+    .reduce((s, l) => s + Number(l.amount), 0);
+  const net = gross + deductions + rounding;
 
   return (
     <>
@@ -157,7 +284,7 @@ export default function PayrollCard() {
               const amount = Number(l.amount);
               const negative = amount < 0;
               const details = explain(
-                l.source as Record<string, unknown> | null, lang);
+                l.source as Record<string, unknown> | null, lang, t);
 
               return (
                 <div key={l.id} className="px-4 py-2.5">
@@ -212,6 +339,16 @@ export default function PayrollCard() {
                   </span>
                 </div>
               )}
+              {rounding !== 0 && (
+                <div className="mt-1 flex justify-between text-[13px]">
+                  <span className="text-[var(--text-muted)]">
+                    {t('payroll.rounding')}
+                  </span>
+                  <span className="num font-medium">
+                    {rounding < 0 ? '−' : '+'}{money(Math.abs(rounding), lang)}
+                  </span>
+                </div>
+              )}
               <div className="mt-2 flex justify-between border-t pt-2 text-sm">
                 <span className="font-semibold">{t('payroll.net')}</span>
                 <span className="num text-base font-semibold">{money(net, lang)}</span>
@@ -225,10 +362,14 @@ export default function PayrollCard() {
           "o'sha paytda qanday hisoblangani" isbotlanadi. */}
       {r.settings_snapshot && (
         <Card title={t('payroll.settings')} className="mt-4">
-          <pre className="overflow-x-auto rounded bg-[var(--bg-inset)] p-3
-            text-[11px] leading-relaxed text-[var(--text-muted)]">
-            {JSON.stringify(r.settings_snapshot, null, 2)}
-          </pre>
+          <p className="mb-3 text-[13px] text-[var(--text-muted)]">
+            {t('payroll.settingsHint')}
+          </p>
+          <SettingsSnapshot
+            data={r.settings_snapshot as Record<string, unknown>}
+            lang={lang}
+            t={t}
+          />
         </Card>
       )}
     </>

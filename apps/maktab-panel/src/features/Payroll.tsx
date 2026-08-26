@@ -75,7 +75,12 @@ export default function Payroll() {
         p_period: period,
       });
       if (error) throw error;
-      return data as { calculated: number; failed: number; errors: unknown[] };
+      return data as {
+        calculated: number;
+        skipped: number;
+        failed: number;
+        errors: Array<{ teacher: string; error: string }>;
+      };
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['payroll', period] }),
   });
@@ -154,9 +159,30 @@ export default function Payroll() {
 
       {calcAll.data && (
         <div className="mb-3">
+          {/*  Tasdiqlangan hisob qayta hisoblanmaydi (TZ 4.11.8) va bu
+              XATO emas. Ilgari u ham xato deb sanalardi va har oy
+              oxirida "22 ta xatolik" degan soxta ogohlantirish
+              chiqardi — haqiqiy xatolar esa o'sha 22 ta orasida
+              ko'rinmay ketardi. */}
           <Notice tone={calcAll.data.failed > 0 ? 'warn' : 'ok'}>
-            {t('payroll.calculate')}: {calcAll.data.calculated}
-            {calcAll.data.failed > 0 && ` · ${t('common.error')}: ${calcAll.data.failed}`}
+            <div>
+              {t('payroll.calculate')}: {calcAll.data.calculated}
+              {calcAll.data.skipped > 0
+                && ` · ${t('payroll.calcSkipped')}: ${calcAll.data.skipped}`}
+              {calcAll.data.failed > 0
+                && ` · ${t('payroll.calcFailed')}: ${calcAll.data.failed}`}
+            </div>
+            {calcAll.data.errors?.length > 0 && (
+              <ul className="mt-1.5 space-y-0.5 text-[12px]">
+                {calcAll.data.errors.map((e) => (
+                  <li key={e.teacher}>
+                    <span className="font-medium">{e.teacher}</span>
+                    {' — '}
+                    {e.error}
+                  </li>
+                ))}
+              </ul>
+            )}
           </Notice>
         </div>
       )}
@@ -215,6 +241,17 @@ export default function Payroll() {
                     <Td align="right" mono>{money(r.gross_total, lang)}</Td>
                     <Td align="right" mono className="text-[var(--danger)]">
                       {Number(r.deductions) > 0 ? `−${money(r.deductions, lang)}` : '—'}
+                      {/* Yaxlitlash ushlanma EMAS — u alohida ko'rsatiladi.
+                          Ilgari ikkalasi bir raqamga qo'shilib ketardi va
+                          buxgalter soliq summasini shu ustundan olganda
+                          deklaratsiyaga to'g'ri kelmasdi. */}
+                      {Number(r.rounding ?? 0) !== 0 && (
+                        <div className="text-[11px] font-normal text-[var(--text-faint)]">
+                          {t('payroll.rounding')}{' '}
+                          {Number(r.rounding) < 0 ? '−' : '+'}
+                          {money(Math.abs(Number(r.rounding)), lang)}
+                        </div>
+                      )}
                     </Td>
                     <Td align="right" mono className="font-semibold">
                       {money(r.net_total, lang)}

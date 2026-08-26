@@ -3538,6 +3538,7 @@ export type Database = {
           net_total: number | null
           payroll_run_id: string | null
           period: string | null
+          rounding_total: number | null
           school_id: string | null
           status: Database["public"]["Enums"]["payroll_status"] | null
           teacher_id: string | null
@@ -3997,6 +3998,7 @@ export type Database = {
           hours: number
           net_total: number
           payroll_run_id: string
+          rounding: number
           status: Database["public"]["Enums"]["payroll_status"]
           teacher_id: string
           teacher_name: string

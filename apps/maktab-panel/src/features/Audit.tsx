@@ -17,6 +17,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/auth/AuthProvider';
 import { useI18n, useT } from '@/i18n';
+import { fieldLabel, valueLabel } from '@/lib/fieldNames';
 import { dateTime } from '@/lib/format';
 import {
   Badge, Button, Card, EmptyState, ErrorState, Loading, Notice,
@@ -173,6 +174,14 @@ export default function Audit() {
 }
 
 /** Qaysi maydon qaysi qiymatdan qaysi qiymatga o'zgargani (TZ 5.4.10). */
+/**
+ *  Nima o'zgargani.
+ *
+ *  Ilgari bu yerda XOM USTUN NOMLARI turardi: "base_salary: 5000000 →
+ *  5500000", "method_id: null → ...". Direktor uchun bular tushunarsiz
+ *  kod, holbuki jurnal aynan direktor uchun yozilgan (TZ 4.13.5.2).
+ *  Endi nomlar ham, kod bo'lgan qiymatlar ham tarjima qilinadi.
+ */
 function ChangeSummary({
   keys, before, after,
 }: {
@@ -180,7 +189,12 @@ function ChangeSummary({
   before: Record<string, unknown> | null;
   after: Record<string, unknown> | null;
 }) {
-  const HIDE = new Set(['id', 'school_id', 'created_at', 'updated_at']);
+  const t = useT();
+  //  Texnik maydonlar: ular har o'zgarishda bo'ladi va hech narsa
+  //  aytmaydi. Chiqarilsa haqiqiy o'zgarish ko'rinmay qoladi.
+  const HIDE = new Set([
+    'id', 'school_id', 'created_at', 'updated_at', 'search_vector',
+  ]);
 
   if (!keys?.length) {
     // INSERT yoki DELETE — asosiy maydonlarni ko'rsatamiz.
@@ -191,7 +205,9 @@ function ChangeSummary({
       .slice(0, 4);
     return (
       <span className="text-[12px] text-[var(--text-muted)]">
-        {shown.map(([k, v]) => `${k}: ${String(v)}`).join(' · ') || '—'}
+        {shown
+          .map(([k, v]) => `${fieldLabel(t, k)}: ${fmt(t, k, v)}`)
+          .join(' · ') || '—'}
       </span>
     );
   }
@@ -202,12 +218,12 @@ function ChangeSummary({
     <div className="space-y-0.5">
       {visible.map((k) => (
         <div key={k} className="text-[12px]">
-          <span className="text-[var(--text-muted)]">{k}: </span>
+          <span className="text-[var(--text-muted)]">{fieldLabel(t, k)}: </span>
           <span className="text-[var(--danger)] line-through">
-            {fmt(before?.[k])}
+            {fmt(t, k, before?.[k])}
           </span>
           <span className="mx-1 text-[var(--text-faint)]">→</span>
-          <span className="text-[var(--ok)]">{fmt(after?.[k])}</span>
+          <span className="text-[var(--ok)]">{fmt(t, k, after?.[k])}</span>
         </div>
       ))}
       {keys.filter((k) => !HIDE.has(k)).length > 4 && (
@@ -219,8 +235,19 @@ function ChangeSummary({
   );
 }
 
-function fmt(v: unknown): string {
+function fmt(t: (k: string) => string, key: string, v: unknown): string {
   if (v === null || v === undefined) return '—';
-  if (typeof v === 'object') return JSON.stringify(v).slice(0, 40);
+  if (typeof v === 'boolean') return v ? t('common.yes') : t('common.no');
+
+  //  `status`, `channel`, `kind` kabi maydonlarning QIYMATI ham kod.
+  const translated = valueLabel(t, key, v);
+  if (translated) return translated;
+
+  //  Ichma-ich obyekt: xom JSON ko'rsatish o'rniga qisqacha belgi.
+  //  To'liq ko'rinish baribir sig'masdi va yarmida kesilardi.
+  if (typeof v === 'object') {
+    const n = Array.isArray(v) ? v.length : Object.keys(v).length;
+    return `{${n}}`;
+  }
   return String(v).slice(0, 40);
 }
