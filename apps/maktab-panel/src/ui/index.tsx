@@ -13,6 +13,7 @@
 import {
   type ButtonHTMLAttributes,
   type ChangeEvent,
+  type ComponentPropsWithRef,
   type InputHTMLAttributes,
   type ReactNode,
   type SelectHTMLAttributes,
@@ -106,7 +107,10 @@ const FIELD_BASE =
   'placeholder:text-[var(--text-faint)] transition-colors ' +
   'focus:border-brand-500 disabled:bg-[var(--bg-inset)] disabled:text-[var(--text-faint)]';
 
-export function Input({ className = '', ...rest }: InputHTMLAttributes<HTMLInputElement>) {
+//  `ref` ham qabul qilinadi: kursor holatini boshqarish kerak
+//  bo'lgan maydonlar (masalan telefon) shu orqali ishlaydi.
+//  React 19 da bu oddiy prop — `forwardRef` kerak emas.
+export function Input({ className = '', ...rest }: ComponentPropsWithRef<'input'>) {
   return <input className={`${FIELD_BASE} h-9 ${className}`} {...rest} />;
 }
 

@@ -1104,5 +1104,6 @@
   "att.noReason": "Sabab ko'rsatilmagan",
   "att.uncheckedHint": "{count} ta sinfda davomat hali olinmagan. Bunday sinfda bola kelmagani hech qayerda qayd etilmaydi — sinf rahbariga eslating.",
   "settings.attendanceNotice": "Ota-onaga kundalik davomat xabari",
-  "settings.attendanceNotice.hint": "Har kuni soat 10:00 da ota-onaga Telegram orqali xabar boradi: farzandi bugun maktabda yoki kelmagani, sababi bilan. Faqat davomat OLINGAN sinflar bo'yicha — rahbar belgilamagan bo'lsa xabar ketmaydi."
+  "settings.attendanceNotice.hint": "Har kuni soat 10:00 da ota-onaga Telegram orqali xabar boradi: farzandi bugun maktabda yoki kelmagani, sababi bilan. Faqat davomat OLINGAN sinflar bo'yicha — rahbar belgilamagan bo'lsa xabar ketmaydi.",
+  "phone.hint": "To'qqizta raqam kiriting, masalan: 90 123 45 67"
 }

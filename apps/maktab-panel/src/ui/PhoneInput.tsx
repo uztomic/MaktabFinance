@@ -19,7 +19,10 @@
 //  `8` yoki bo'sh joylar bo'lsa ular olib tashlanadi.
 // =====================================================================
 
-import { type InputHTMLAttributes } from 'react';
+import {
+  type ChangeEvent, type InputHTMLAttributes, useLayoutEffect, useRef,
+} from 'react';
+import { useT } from '@/i18n';
 import { Input } from './index';
 
 /** Faqat raqamlar, `998` prefiksisiz — ya'ni 9 ta belgi. */
@@ -45,9 +48,25 @@ function pretty(local: string): string {
   return p.join(' ');
 }
 
-/** Bazaga yoziladigan to'liq shakl. Raqam to'liq bo'lmasa bo'sh. */
+/**
+ *  Bazaga yoziladigan shakl.
+ *
+ *  DIQQAT: bu yerda "to'liq bo'lmasa bo'sh qaytar" degan mantiq
+ *  BO'LMASLIGI kerak. Avval shunday yozilgan edi va maydonga umuman
+ *  yozib bo'lmasdi: birinchi raqam kiritilishi bilan qiymat bo'shga
+ *  aylanardi, maydon tozalanardi va keyingi raqam ham xuddi shunday
+ *  yo'qolardi. Faqat to'liq raqamni NUSXA qilib qo'yish ishlardi.
+ *
+ *  Yarim raqam ham qaytadi; to'liqligini `isCompletePhone` va
+ *  maydonning `pattern` i tekshiradi.
+ */
 export function toStored(local: string): string {
-  return local.length === 9 ? `998${local}` : '';
+  return local ? `998${local}` : '';
+}
+
+/** Raqam to'liq kiritilganmi (998 + 9 ta raqam). */
+export function isCompletePhone(stored: string | null | undefined): boolean {
+  return toLocal(stored ?? '').length === 9;
 }
 
 /** Ko'rsatish uchun: `998901234567` → `+998 90 123 45 67` */
@@ -67,7 +86,46 @@ export function PhoneInput({
   disabled?: boolean;
 } & Omit<InputHTMLAttributes<HTMLInputElement>,
   'value' | 'onChange' | 'type' | 'required' | 'disabled'>) {
+  const t = useT();
   const local = toLocal(value);
+
+  //  Kursorni joyida ushlab turish.
+  //
+  //  Maydon har bosishda qayta formatlanadi ("90 123" → "90 123 4"),
+  //  ya'ni React qiymatni almashtiradi va brauzer kursorni oxiriga
+  //  tashlaydi. Oxiriga yozayotgan odam buni sezmaydi, lekin o'rtadagi
+  //  raqamni tuzatmoqchi bo'lgan odam har bosishda oxiriga uchib
+  //  ketadi. `MoneyInput` da bu allaqachon shunday yechilgan.
+  const ref = useRef<HTMLInputElement>(null);
+  const caret = useRef<number | null>(null);
+
+  useLayoutEffect(() => {
+    if (caret.current !== null && ref.current) {
+      ref.current.setSelectionRange(caret.current, caret.current);
+      caret.current = null;
+    }
+  });
+
+  function handleChange(e: ChangeEvent<HTMLInputElement>) {
+    const el = e.target;
+    const pos = el.selectionStart ?? el.value.length;
+    //  Kursordan oldingi RAQAMLAR soni — ajratgichlar siljiganda ham
+    //  shu son o'zgarmaydi.
+    const digitsBefore = (el.value.slice(0, pos).match(/d/g) ?? []).length;
+
+    const next = toLocal(el.value);
+    const shown = pretty(next);
+
+    let i = 0;
+    let seen = 0;
+    while (i < shown.length && seen < digitsBefore) {
+      if (/d/.test(shown[i])) seen++;
+      i++;
+    }
+    caret.current = i;
+
+    onChange(toStored(next));
+  }
 
   return (
     <span className="relative block">
@@ -80,18 +138,19 @@ export function PhoneInput({
       </span>
       <Input
         {...rest}
+        ref={ref}
         value={pretty(local)}
-        onChange={(e) => onChange(toStored(toLocal(e.target.value)))}
+        onChange={handleChange}
         inputMode="numeric"
         autoComplete="tel"
         placeholder="90 123 45 67"
-        //  Raqam to'liq bo'lmasa `toStored` bo'sh qaytaradi, ya'ni
-        //  yarim raqam bazaga tushmaydi. Lekin `required` shundagina
-        //  ishlashi uchun ko'rinadigan qiymat bo'yicha tekshiramiz.
+        //  Yarim raqam bilan formani yuborib bo'lmaydi: naqsh aynan
+        //  "90 123 45 67" shaklini talab qiladi. Bo'sh maydon esa
+        //  `required` bilan to'siladi.
         required={required}
         disabled={disabled}
-        pattern={required ? '.{12,}' : undefined}
-        title={required ? "To'qqizta raqam kiriting" : undefined}
+        pattern="\d{2} \d{3} \d{2} \d{2}"
+        title={t('phone.hint')}
         className={`pl-[3.4rem] ${rest.className ?? ''}`}
       />
     </span>

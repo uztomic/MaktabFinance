@@ -45,11 +45,26 @@ const MIGRATIONS = join(ROOT, 'supabase', 'migrations');
 //  platforma obyekti qo'shilganda bir marta yangilanadi.
 // ---------------------------------------------------------------------
 
-//  Platforma migratsiyalari shu boshlanish bilan tanaladi.
-const FOREIGN_VERSION_PREFIXES = ['2026082612', '2026082615'];
+//  QAYSI MIGRATSIYA BEGONA — VAQT UYASI BO'YICHA.
+//
+//  Versiya `YYYYMMDD` + `HHMMSS`. Ikkala repo bitta tarix jadvaliga
+//  yozadi, shuning uchun raqamlar to'qnashmasligi kerak: platforma
+//  repo HAR DOIM `15` uyasini oladi, bu repo `12`–`14` ni.
+//
+//  TO'QNASHUV JIM O'TADI: bir xil versiya raqami `db.mjs` tomonidan
+//  "allaqachon qo'llangan" deb ko'riladi va migratsiya BAJARILMAY
+//  qoladi, xato ham bermaydi. 2026-08-27 da aynan shunday bo'ldi.
+//
+//  Istisno — platforma reposining birinchi o'nta migratsiyasi `12`
+//  uyasida yozilgan, qoida joriy qilinishidan oldin.
+const FOREIGN_LEGACY = new Set([
+  '20260826120000', '20260826120001', '20260826120002', '20260826120003',
+  '20260826120004', '20260826120005', '20260826120006', '20260826120007',
+  '20260826120008', '20260826120009',
+]);
 
 const isForeignVersion = (v) =>
-  FOREIGN_VERSION_PREFIXES.some((p) => v.startsWith(p));
+  v.slice(8, 10) === '15' || FOREIGN_LEGACY.has(v);
 
 //  Platforma obyektlari — ularning DDL si boshqa repoda.
 const FOREIGN_OBJECTS = new Set([
@@ -66,7 +81,8 @@ const FOREIGN_OBJECTS = new Set([
   'start_impersonation', 'end_impersonation', 'school_users',
   'open_support_thread', 'post_support_message',
   'set_support_thread_status', 'mark_support_read',
-  'run_billing_cycle', 'platform_schools', 'platform_overview',
+  'run_billing_cycle', 'update_school_profile',
+  'platform_schools', 'platform_overview',
   'platform_revenue', 'platform_school_card',
 ]);
 

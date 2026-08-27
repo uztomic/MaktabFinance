@@ -22,7 +22,7 @@ import {
   Badge, Button, Card, EmptyState, ErrorState, Field, Input, Loading,
   Modal, Notice, PageHeader, Select, Table, Td, Th, Tr,
 } from '@/ui';
-import { formatPhone, PhoneInput } from '@/ui/PhoneInput';
+import { formatPhone, isCompletePhone, PhoneInput } from '@/ui/PhoneInput';
 import { useToast } from '@/ui/Feedback';
 import { CatalogSelect } from '@/ui/CatalogSelect';
 import { ClassPicker, useClassOptions } from '@/ui/ClassPicker';
@@ -434,7 +434,7 @@ function LeadModal({
         <>
           <Button onClick={onClose}>{t('common.cancel')}</Button>
           <Button variant="primary" form="lead-form" type="submit"
-                  disabled={busy || !f.full_name || !f.phone}>
+                  disabled={busy || !f.full_name || !isCompletePhone(f.phone)}>
             {busy ? t('common.saving') : t('common.save')}
           </Button>
         </>
