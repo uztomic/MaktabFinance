@@ -15,6 +15,7 @@ import {
   Badge, Button, Card, EmptyState, ErrorState, Field, Input, Loading,
   Modal, Notice, PageHeader, Table, Td, Th, Tr,
 } from '@/ui';
+import { formatPhone, PhoneInput } from '@/ui/PhoneInput';
 import { useToast } from '@/ui/Feedback';
 
 export default function Branches() {
@@ -148,7 +149,7 @@ export default function Branches() {
                   </Td>
                   <Td className="text-[var(--text-muted)]">{b.address ?? '—'}</Td>
                   <Td className="text-[var(--text-muted)]">{b.manager_name ?? '—'}</Td>
-                  <Td mono className="text-[var(--text-muted)]">{b.phone ?? '—'}</Td>
+                  <Td mono className="text-[var(--text-muted)]">{formatPhone(b.phone) || '—'}</Td>
                   <Td align="right" mono>{counts.data?.get(b.id) ?? 0}</Td>
                   <Td>
                     <Badge tone={b.is_active ? 'ok' : 'neutral'}>
@@ -238,8 +239,7 @@ function BranchForm({
                  onChange={(e) => set('manager_name', e.target.value)} />
         </Field>
         <Field label={t('common.phone')}>
-          <Input value={f.phone} onChange={(e) => set('phone', e.target.value)}
-                 inputMode="tel" />
+          <PhoneInput value={f.phone} onChange={(v) => set('phone', v)} />
         </Field>
       </div>
 

@@ -22,6 +22,7 @@ import {
   Badge, Button, Card, EmptyState, ErrorState, Field, Input, Loading,
   Modal, Notice, PageHeader, Select, Table, Td, Th, Tr,
 } from '@/ui';
+import { formatPhone, PhoneInput } from '@/ui/PhoneInput';
 import { useToast } from '@/ui/Feedback';
 import { CatalogSelect } from '@/ui/CatalogSelect';
 import { ClassPicker, useClassOptions } from '@/ui/ClassPicker';
@@ -300,7 +301,7 @@ export default function Leads() {
                 return (
                   <Tr key={l.id}>
                     <Td className="font-medium">{l.full_name}</Td>
-                    <Td mono className="text-[var(--text-muted)]">{l.phone}</Td>
+                    <Td mono className="text-[var(--text-muted)]">{formatPhone(l.phone)}</Td>
                     <Td className="text-[var(--text-muted)]">
                       {l.target_class ?? '—'}
                     </Td>
@@ -452,8 +453,7 @@ function LeadModal({
 
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label={t('common.phone')} required>
-            <Input value={f.phone} onChange={(e) => set('phone', e.target.value)}
-                   inputMode="tel" placeholder="998901234567" required />
+            <PhoneInput value={f.phone} onChange={(v) => set('phone', v)} required />
           </Field>
           {/* Mavjud sinflar taklif qilinadi, lekin yozish ham
               mumkin: murojaat kelayotgan o'quv yiliga sinf hali

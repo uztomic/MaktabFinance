@@ -20,6 +20,7 @@ import { isoDate } from '@/lib/format';
 import {
   Button, Field, Input, Modal, MoneyInput, Notice, Select,
 } from '@/ui';
+import { PhoneInput } from '@/ui/PhoneInput';
 
 // =====================================================================
 //  SHARTNOMA (TZ 4.3)
@@ -531,8 +532,7 @@ export function ParentModal({
         </Field>
 
         <Field label={t('common.phone')} hint={t('parents.phoneHint')} required>
-          <Input value={f.phone} onChange={(e) => set('phone', e.target.value)}
-                 inputMode="tel" placeholder="998901234567" required />
+          <PhoneInput value={f.phone} onChange={(v) => set('phone', v)} required />
         </Field>
 
         <div className="grid gap-3 sm:grid-cols-2">

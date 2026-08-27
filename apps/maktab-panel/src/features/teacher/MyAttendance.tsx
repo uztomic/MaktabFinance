@@ -27,6 +27,7 @@ import {
   PageHeader, Select,
 } from '@/ui';
 import { useToast } from '@/ui/Feedback';
+import { AttendanceToday } from '@/features/AttendanceToday';
 
 export default function MyAttendance() {
   const t = useT();
@@ -166,13 +167,18 @@ export default function MyAttendance() {
   }
 
   // --- Sinf rahbari emas ---------------------------------------------
+  //
+  //  Ilgari bu yerda "sizda sinf yo'q" degan bo'sh ekran chiqardi va
+  //  sahifa direktor uchun butunlay foydasiz edi. Endi u butun maktab
+  //  bo'yicha kunlik manzarani ko'radi — belgilash emas, KUZATISH.
   if ((classes.data?.length ?? 0) === 0) {
     return (
       <>
-        <PageHeader title={t('att.title')} />
-        <Card>
-          <EmptyState title={t('att.noClass')} hint={t('att.noClassHint')} />
-        </Card>
+        <PageHeader
+          title={t('att.overviewTitle')}
+          subtitle={t('att.overviewHint')}
+        />
+        <AttendanceToday />
       </>
     );
   }
@@ -329,6 +335,15 @@ export default function MyAttendance() {
             ? t('att.confirmAllPresent')
             : t('att.confirmN', { count: absent.size })}
         </Button>
+      </div>
+
+      {/*  Rahbar o'z sinfini belgilagach butun maktab manzarasini
+           ham ko'radi: qaysi sinfda davomat hali olinmagan. */}
+      <div className="mt-6">
+        <h2 className="mb-3 text-sm font-semibold">
+          {t('att.overviewTitle')}
+        </h2>
+        <AttendanceToday />
       </div>
     </>
   );

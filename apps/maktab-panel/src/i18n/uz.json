@@ -1092,5 +1092,17 @@
   "subBanner.trial": "Sinov muddati tugashiga {days} kun qoldi — {date}.",
   "subBanner.overdue": "To'lov muddati {days} kun oldin o'tdi. 45 kunda tizimga kirish to'xtatiladi.",
   "subBanner.action": "To'lash",
-  "sub.requisitesHint": "To'lov maqsadida maktab nomini va davrni yozing. To'lagandan keyin chekni shu sahifadan yuboring — tasdiqlangach hisob-faktura yopiladi."
+  "sub.requisitesHint": "To'lov maqsadida maktab nomini va davrni yozing. To'lagandan keyin chekni shu sahifadan yuboring — tasdiqlangach hisob-faktura yopiladi.",
+  "nav.attendance": "Davomat",
+  "att.overviewTitle": "Kunlik davomat",
+  "att.overviewHint": "Qaysi sinfda davomat olingan va bugun kim kelgan",
+  "att.byClass": "Sinflar bo'yicha",
+  "att.came": "Keldi",
+  "att.notCame": "Kelmadi",
+  "att.checked": "Davomat olingan",
+  "att.notChecked": "Olinmagan",
+  "att.noReason": "Sabab ko'rsatilmagan",
+  "att.uncheckedHint": "{count} ta sinfda davomat hali olinmagan. Bunday sinfda bola kelmagani hech qayerda qayd etilmaydi — sinf rahbariga eslating.",
+  "settings.attendanceNotice": "Ota-onaga kundalik davomat xabari",
+  "settings.attendanceNotice.hint": "Har kuni soat 10:00 da ota-onaga Telegram orqali xabar boradi: farzandi bugun maktabda yoki kelmagani, sababi bilan. Faqat davomat OLINGAN sinflar bo'yicha — rahbar belgilamagan bo'lsa xabar ketmaydi."
 }

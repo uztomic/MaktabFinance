@@ -130,6 +130,19 @@ const MESSAGING: SettingDef[] = [
     kind: 'number', min: 0, max: 30,
   },
   {
+    //  Kundalik davomat xabari. Maktab uni o'chirib qo'yishi mumkin —
+    //  masalan bog'chada ota-ona bolani o'zi olib keladi va xabar
+    //  ortiqcha bo'ladi.
+    key: 'messaging.attendance_notice',
+    labelKey: 'settings.attendanceNotice',
+    hintKey: 'settings.attendanceNotice.hint',
+    kind: 'select',
+    options: [
+      { value: 'true', labelKey: 'common.yes' },
+      { value: 'false', labelKey: 'common.no' },
+    ],
+  },
+  {
     key: 'messaging.quiet_hours',
     labelKey: 'settings.quietHours',
     hintKey: 'settings.quietHours.hint',

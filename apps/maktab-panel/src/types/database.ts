@@ -3619,6 +3619,17 @@ export type Database = {
         Args: { p_payment_id: string; p_reason: string }
         Returns: Json
       }
+      class_attendance_students: {
+        Args: { p_class_id: string; p_day?: string }
+        Returns: {
+          full_name: string
+          is_present: boolean
+          marked_at: string
+          note: string
+          reason_name: string
+          student_id: string
+        }[]
+      }
       cleanup_expired_files: { Args: never; Returns: Json }
       confirm_payment_proof: {
         Args: { p_amount?: number; p_paid_on?: string; p_proof_id: string }
@@ -3846,6 +3857,21 @@ export type Database = {
           class_name: string
           full_name: string
           student_id: string
+        }[]
+      }
+      report_attendance_today: {
+        Args: { p_branch_id?: string; p_day?: string }
+        Returns: {
+          absent: number
+          branch_id: string
+          checked: boolean
+          class_id: string
+          class_name: string
+          grade_level: number
+          marked_at: string
+          present: number
+          teacher_name: string
+          total: number
         }[]
       }
       report_by_class: {
@@ -4086,6 +4112,7 @@ export type Database = {
         }[]
       }
       seed_school_defaults: { Args: { p_school_id: string }; Returns: Json }
+      send_attendance_notices: { Args: never; Returns: Json }
       send_due_reminders: { Args: never; Returns: Json }
       set_platform_setting: {
         Args: { p_key: string; p_reason?: string; p_value: Json }

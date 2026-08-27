@@ -22,6 +22,7 @@ import {
   Badge, Button, Card, EmptyState, ErrorState, Field, Input, Loading,
   Modal, Money, MoneyInput, Notice, PageHeader, Table, Td, Th, Tr,
 } from '@/ui';
+import { formatPhone } from '@/ui/PhoneInput';
 import { useConfirm, useToast } from '@/ui/Feedback';
 import {
   ContractModal, type ParentLink, ParentModal, ServiceModal, StudentEditModal,
@@ -568,7 +569,7 @@ export default function StudentCard() {
                           )}
                         </div>
                         <div className="num text-[12px] text-[var(--text-muted)]">
-                          {par.phone}
+                          {formatPhone(par.phone)}
                           {p.relation && ` · ${t(`parents.relation.${p.relation}`)}`}
                           {` · ${par.lang}`}
                         </div>

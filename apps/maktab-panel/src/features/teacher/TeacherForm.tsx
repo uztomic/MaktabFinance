@@ -18,6 +18,7 @@ import { isoDate } from '@/lib/format';
 import {
   Button, Field, Input, Modal, MoneyInput, Notice, Select,
 } from '@/ui';
+import { PhoneInput } from '@/ui/PhoneInput';
 import { useToast } from '@/ui/Feedback';
 import { CatalogSelect } from '@/ui/CatalogSelect';
 import { ClassPicker } from '@/ui/ClassPicker';
@@ -184,8 +185,7 @@ export function TeacherModal({
 
         <div className="grid grid-cols-2 gap-3">
           <Field label={t('common.phone')}>
-            <Input value={f.phone} onChange={(e) => set('phone', e.target.value)}
-                   inputMode="tel" placeholder="998901234567" />
+            <PhoneInput value={f.phone} onChange={(v) => set('phone', v)} />
           </Field>
           <CatalogSelect
             kind="teacher_category"

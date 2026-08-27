@@ -49,9 +49,19 @@ const DEV = 'http://localhost:5173';
 
 const WANTED = {
   // --- Parol ------------------------------------------------------
-  //  8 ta belgi 2026-yilda kam. Moliyaviy tizim uchun 12 — oqilona
-  //  minimum va bu bepul tarifda ham qo'llanadi.
-  password_min_length: 12,
+  //  2026-08-27: 12 dan 9 ga TUSHIRILDI — loyiha egasining qarori.
+  //
+  //  Bu skript sozlamani MAJBURLAYDI: ishga tushirilganda joriy
+  //  qiymatni o'zinikiga qaytaradi. Shuning uchun bu yerdagi raqam
+  //  bazadagi haqiqiy siyosat bilan bir xil bo'lishi SHART — aks
+  //  holda skript ishga tushgan zahoti amaldagi parollar siyosatdan
+  //  qisqa bo'lib qoladi va odamlar parolini o'zgartira olmaydi.
+  //
+  //  Xavf ochiq yozib qo'yiladi: 9 ta belgi moliyaviy tizim uchun
+  //  kam. Harf turlari talabi (pastda) saqlanib qolgani uchun
+  //  lug'at hujumi ancha qiyin, lekin 12 ga qaytarish tavsiya
+  //  etiladi — o'shanda amaldagi parollarni ham yangilash kerak.
+  password_min_length: 9,
 
   //  Kichik + katta harf + raqam. Maxsus belgi TALAB QILINMAYDI:
   //  u odamlarni "Parol1!" kabi bir xil naqshga majburlaydi va
@@ -213,7 +223,7 @@ for (const [k] of proChanges) console.log(`      · ${PRO_LABEL[k] ?? k}`);
 console.log(`\n      ${msg}\n`);
 console.log("    Amaldagi ta'siri:");
 console.log("    · sizib chiqqan parolni qo'yish mumkin — shuning uchun");
-console.log('      12 belgi va harf+raqam talabi MUHIM, ular bepul');
+console.log('      9 belgi va harf+raqam talabi MUHIM, ular bepul');
 console.log("      tarifda ham ishlaydi va qo'llandi;");
 console.log("    · sessiya o'zi tugamaydi — ochiq qolgan brauzer ochiq");
 console.log('      qolaveradi.');

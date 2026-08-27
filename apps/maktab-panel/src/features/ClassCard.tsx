@@ -22,6 +22,7 @@ import {
   Badge, Button, Card, EmptyState, ErrorState, Input, Loading, Money,
   Notice, PageHeader, Table, Td, Th, Tr,
 } from '@/ui';
+import { formatPhone } from '@/ui/PhoneInput';
 import { useSort } from '@/ui/Feedback';
 import { DateRangePicker, useDateRange } from '@/ui/DateRange';
 
@@ -269,7 +270,7 @@ export default function ClassCard() {
                   </Link>
                   {teacher.phone && (
                     <div className="text-[13px] text-[var(--text-muted)]">
-                      {teacher.phone}
+                      {formatPhone(teacher.phone)}
                     </div>
                   )}
                 </div>

@@ -76,6 +76,7 @@ const GROUPS: NavGroup[] = [
       { to: '/oquvchilar', labelKey: 'nav.students', permission: 'students.manage', icon: <Icon d={I.users} /> },
       { to: '/sinflar', labelKey: 'nav.classes', permission: 'students.manage', icon: <Icon d={I.grid} /> },
       { to: '/xizmatlar', labelKey: 'nav.services', permission: 'services.manage', icon: <Icon d={I.doc} /> },
+      { to: '/davomat', labelKey: 'nav.attendance', permission: null, icon: <Icon d={I.calendar} /> },
       { to: '/yoqlik', labelKey: 'nav.absences', permission: 'absences.mark', icon: <Icon d={I.calendar} /> },
       { to: '/murojaatlar', labelKey: 'nav.leads', permission: 'leads.manage', icon: <Icon d={I.inbox} /> },
     ],
