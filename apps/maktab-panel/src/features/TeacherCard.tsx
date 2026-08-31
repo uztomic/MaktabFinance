@@ -21,7 +21,9 @@ import {
   Badge, Button, Card, EmptyState, ErrorState, Field, Input, Loading,
   Modal, MoneyInput, Notice, PageHeader, Select, Table, Td, Th, Tr,
 } from '@/ui';
-import { TeacherModal, useSaveTeacher } from './teacher/TeacherForm';
+import {
+  type NewLogin, TeacherCredentials, TeacherModal, useSaveTeacher,
+} from './teacher/TeacherForm';
 
 interface CatalogRow {
   code: string;
@@ -38,7 +40,8 @@ export default function TeacherCard() {
   const { branches, mayWrite, profile } = useAuth();
 
   const [editOpen, setEditOpen] = useState(false);
-  const saveTeacher = useSaveTeacher(() => setEditOpen(false));
+  const [newLogin, setNewLogin] = useState<NewLogin | null>(null);
+  const saveTeacher = useSaveTeacher(() => setEditOpen(false), setNewLogin);
   const [allowanceOpen, setAllowanceOpen] = useState(false);
   const [advanceOpen, setAdvanceOpen] = useState(false);
 
@@ -435,6 +438,10 @@ export default function TeacherCard() {
           </Table>
         )}
       </Card>
+
+      {newLogin && (
+        <TeacherCredentials data={newLogin} onClose={() => setNewLogin(null)} />
+      )}
 
       {editOpen && (
         <TeacherModal

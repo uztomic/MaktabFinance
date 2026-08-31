@@ -17,7 +17,9 @@ import {
   Badge, Button, Card, EmptyState, ErrorState, Field, Input, Loading,
   Modal, Notice, PageHeader, Select, Table, Td, Th, Tr,
 } from '@/ui';
-import { TeacherModal, useSaveTeacher } from './teacher/TeacherForm';
+import {
+  type NewLogin, TeacherCredentials, TeacherModal, useSaveTeacher,
+} from './teacher/TeacherForm';
 
 export default function Teachers() {
   const t = useT();
@@ -74,10 +76,12 @@ export default function Teachers() {
     },
   });
 
-  const save = useSaveTeacher(() => {
-    setAdding(false);
-    setEditing(null);
-  });
+  const [newLogin, setNewLogin] = useState<NewLogin | null>(null);
+
+  const save = useSaveTeacher(
+    () => { setAdding(false); setEditing(null); },
+    setNewLogin,
+  );
 
   const addLesson = useMutation({
     mutationFn: async (f: {
@@ -222,6 +226,13 @@ export default function Teachers() {
             </Table>
           )}
       </Card>
+
+      {/*  Parol serverda yaratiladi va hech qayerda saqlanmaydi —
+           faqat shu javobda bir marta keladi. Shuning uchun uni
+           darhol ko'rsatamiz. */}
+      {newLogin && (
+        <TeacherCredentials data={newLogin} onClose={() => setNewLogin(null)} />
+      )}
 
       {(adding || editing) && (
         <TeacherModal

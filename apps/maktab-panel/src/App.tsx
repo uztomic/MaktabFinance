@@ -9,8 +9,8 @@
 //  esa bazadagi RLS da.
 // =====================================================================
 
-import { lazy, Suspense } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Suspense } from 'react';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthProvider';
 import { useT } from '@/i18n';
 import LoginPage from '@/auth/LoginPage';
@@ -18,34 +18,66 @@ import ResetPasswordPage from '@/auth/ResetPasswordPage';
 import AppShell from '@/layout/AppShell';
 import SuspendedShell from '@/layout/SuspendedShell';
 import { Button, Loading, Notice } from '@/ui';
+import { ErrorBoundary } from '@/ui/ErrorBoundary';
+import { lazyPage } from '@/lib/lazyPage';
 
-const Dashboard   = lazy(() => import('@/features/Dashboard'));
-const Students    = lazy(() => import('@/features/Students'));
-const StudentCard = lazy(() => import('@/features/StudentCard'));
-const Classes     = lazy(() => import('@/features/Classes'));
-const ClassCard   = lazy(() => import('@/features/ClassCard'));
-const Services    = lazy(() => import('@/features/Services'));
-const Invoices    = lazy(() => import('@/features/Invoices'));
-const Payments    = lazy(() => import('@/features/Payments'));
-const Debts       = lazy(() => import('@/features/Debts'));
-const Expenses    = lazy(() => import('@/features/Expenses'));
-const Reports     = lazy(() => import('@/features/Reports'));
-const Leads       = lazy(() => import('@/features/Leads'));
-const Absences    = lazy(() => import('@/features/Absences'));
-const Teachers    = lazy(() => import('@/features/Teachers'));
-const TeacherCard = lazy(() => import('@/features/TeacherCard'));
-const Messages    = lazy(() => import('@/features/Messages'));
-const Payroll     = lazy(() => import('@/features/Payroll'));
-const PayrollCard = lazy(() => import('@/features/PayrollCard'));
-const Branches    = lazy(() => import('@/features/Branches'));
-const Users       = lazy(() => import('@/features/Users'));
-const Audit       = lazy(() => import('@/features/Audit'));
-const Settings    = lazy(() => import('@/features/Settings'));
-const MyAttendance = lazy(() => import('@/features/teacher/MyAttendance'));
-const MyLoad      = lazy(() => import('@/features/teacher/MyLoad'));
-const MyPayroll   = lazy(() => import('@/features/teacher/MyPayroll'));
-const Subscription = lazy(() => import('@/features/Subscription'));
-const SupportChat  = lazy(() => import('@/features/SupportChat'));
+const Dashboard   = lazyPage(() => import('@/features/Dashboard'));
+const Students    = lazyPage(() => import('@/features/Students'));
+const StudentCard = lazyPage(() => import('@/features/StudentCard'));
+const Classes     = lazyPage(() => import('@/features/Classes'));
+const ClassCard   = lazyPage(() => import('@/features/ClassCard'));
+const Services    = lazyPage(() => import('@/features/Services'));
+const Invoices    = lazyPage(() => import('@/features/Invoices'));
+const Payments    = lazyPage(() => import('@/features/Payments'));
+const Debts       = lazyPage(() => import('@/features/Debts'));
+const Expenses    = lazyPage(() => import('@/features/Expenses'));
+const Reports     = lazyPage(() => import('@/features/Reports'));
+const Leads       = lazyPage(() => import('@/features/Leads'));
+const Absences    = lazyPage(() => import('@/features/Absences'));
+const Teachers    = lazyPage(() => import('@/features/Teachers'));
+const TeacherCard = lazyPage(() => import('@/features/TeacherCard'));
+const Messages    = lazyPage(() => import('@/features/Messages'));
+const Payroll     = lazyPage(() => import('@/features/Payroll'));
+const PayrollCard = lazyPage(() => import('@/features/PayrollCard'));
+const Branches    = lazyPage(() => import('@/features/Branches'));
+const Users       = lazyPage(() => import('@/features/Users'));
+const Audit       = lazyPage(() => import('@/features/Audit'));
+const Settings    = lazyPage(() => import('@/features/Settings'));
+const MyAttendance = lazyPage(() => import('@/features/teacher/MyAttendance'));
+const MyLoad      = lazyPage(() => import('@/features/teacher/MyLoad'));
+const MyPayroll   = lazyPage(() => import('@/features/teacher/MyPayroll'));
+const Subscription = lazyPage(() => import('@/features/Subscription'));
+const SupportChat  = lazyPage(() => import('@/features/SupportChat'));
+
+/**
+ *  Arxivga olingan maktab.
+ *
+ *  Bu to'lov masalasi EMAS, shuning uchun to'lov ekrani ko'rsatilmaydi
+ *  — u "qarzingizni to'lang" deb yolg'on aytardi. Arxiv — bu maktab
+ *  ishlashdan to'xtaganini bildiradi va uni faqat platforma operatori
+ *  qaytara oladi.
+ *
+ *  Ma'lumot O'CHIRILMAYDI: baza o'qishga ochiq, faqat yozish to'silgan
+ *  (`app.school_is_writable()`).
+ */
+function ArchivedSchool() {
+  const t = useT();
+  const { profile, signOut } = useAuth();
+  return (
+    <div className="flex min-h-screen items-center justify-center p-6">
+      <div className="max-w-md text-center">
+        <h1 className="text-lg font-semibold">{profile?.school_name}</h1>
+        <div className="mt-3">
+          <Notice tone="warn">{t('school.archived')}</Notice>
+        </div>
+        <p className="mt-3 text-[13px] text-[var(--text-muted)]">
+          {t('school.archivedHint')}
+        </p>
+        <Button className="mt-4" onClick={signOut}>{t('auth.logout')}</Button>
+      </div>
+    </div>
+  );
+}
 
 function NoProfile() {
   const t = useT();
@@ -62,6 +94,18 @@ function NoProfile() {
 
 export default function App() {
   const { session, profile, loading, error } = useAuth();
+  const t = useT();
+  const location = useLocation();
+
+  //  Xato chegarasi oddiy sinf komponenti — u `useT` ni chaqira
+  //  olmaydi, shuning uchun matnlar shu yerda tayyorlanadi.
+  const errorLabels = {
+    title: t('err.crashTitle'),
+    hint: t('err.crashHint'),
+    retry: t('err.retry'),
+    home: t('err.home'),
+    details: t('err.details'),
+  };
 
   if (loading) {
     return (
@@ -99,42 +143,60 @@ export default function App() {
   // shu qator to'sadi.
   //
   // Ma'lumot O'CHIRILMAYDI — to'lov tasdiqlangach hammasi qaytadi.
-  if (profile.school_status === 'restricted') return <SuspendedShell />;
+  //  `restricted` — to'lov kechikkan, to'lov ekrani ko'rsatiladi.
+  //  `suspended` va `archived` — maktab butunlay to'xtatilgan yoki
+  //  arxivga olingan. Ilgari bu ikkalasi HISOBGA OLINMAGAN edi: odam
+  //  odatdagi panelni ko'rardi, lekin har qanday saqlash jimgina rad
+  //  etilardi (`app.school_is_writable()` faqat trial/active ga ruxsat
+  //  beradi). "Tugmani bosaman, hech narsa bo'lmayapti" degan holat
+  //  aynan shundan kelib chiqadi.
+  if (profile.school_status === 'restricted'
+      || profile.school_status === 'suspended') {
+    return <SuspendedShell />;
+  }
+
+  //  Arxiv — boshqa hol: to'lov bilan bog'liq emas.
+  if (profile.school_status === 'archived') return <ArchivedSchool />;
 
   return (
-    <Suspense fallback={<Loading />}>
-      <Routes>
-        <Route element={<AppShell />}>
-          <Route index element={<Dashboard />} />
-          <Route path="oquvchilar" element={<Students />} />
-          <Route path="oquvchilar/:id" element={<StudentCard />} />
-          <Route path="sinflar" element={<Classes />} />
-          <Route path="sinflar/:id" element={<ClassCard />} />
-          <Route path="xizmatlar" element={<Services />} />
-          <Route path="yoqlik" element={<Absences />} />
-          <Route path="murojaatlar" element={<Leads />} />
-          <Route path="hisoblanma" element={<Invoices />} />
-          <Route path="tolovlar" element={<Payments />} />
-          <Route path="qarzdorlik" element={<Debts />} />
-          <Route path="xarajatlar" element={<Expenses />} />
-          <Route path="hisobotlar" element={<Reports />} />
-          <Route path="oqituvchilar" element={<Teachers />} />
-          <Route path="oqituvchilar/:id" element={<TeacherCard />} />
-          <Route path="xabarlar" element={<Messages />} />
-          <Route path="oylik" element={<Payroll />} />
-          <Route path="oylik/:id" element={<PayrollCard />} />
-          <Route path="filiallar" element={<Branches />} />
-          <Route path="foydalanuvchilar" element={<Users />} />
-          <Route path="jurnal" element={<Audit />} />
-          <Route path="sozlamalar" element={<Settings />} />
-          <Route path="obuna" element={<Subscription />} />
-          <Route path="yordam" element={<SupportChat />} />
-          <Route path="davomat" element={<MyAttendance />} />
-          <Route path="yuklamam" element={<MyLoad />} />
-          <Route path="oyligim" element={<MyPayroll />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      </Routes>
-    </Suspense>
+    //  Har bir sahifa alohida chegara ichida: bittasida xato chiqsa
+    //  butun ilova emas, faqat o'sha sahifa to'xtaydi. Yo'l o'zgarganda
+    //  chegara tozalanadi — odam boshqa bo'limga o'tib ishlay oladi.
+    <ErrorBoundary resetKey={location.pathname} labels={errorLabels}>
+      <Suspense fallback={<Loading />}>
+        <Routes>
+          <Route element={<AppShell />}>
+            <Route index element={<Dashboard />} />
+            <Route path="oquvchilar" element={<Students />} />
+            <Route path="oquvchilar/:id" element={<StudentCard />} />
+            <Route path="sinflar" element={<Classes />} />
+            <Route path="sinflar/:id" element={<ClassCard />} />
+            <Route path="xizmatlar" element={<Services />} />
+            <Route path="yoqlik" element={<Absences />} />
+            <Route path="murojaatlar" element={<Leads />} />
+            <Route path="hisoblanma" element={<Invoices />} />
+            <Route path="tolovlar" element={<Payments />} />
+            <Route path="qarzdorlik" element={<Debts />} />
+            <Route path="xarajatlar" element={<Expenses />} />
+            <Route path="hisobotlar" element={<Reports />} />
+            <Route path="oqituvchilar" element={<Teachers />} />
+            <Route path="oqituvchilar/:id" element={<TeacherCard />} />
+            <Route path="xabarlar" element={<Messages />} />
+            <Route path="oylik" element={<Payroll />} />
+            <Route path="oylik/:id" element={<PayrollCard />} />
+            <Route path="filiallar" element={<Branches />} />
+            <Route path="foydalanuvchilar" element={<Users />} />
+            <Route path="jurnal" element={<Audit />} />
+            <Route path="sozlamalar" element={<Settings />} />
+            <Route path="obuna" element={<Subscription />} />
+            <Route path="yordam" element={<SupportChat />} />
+            <Route path="davomat" element={<MyAttendance />} />
+            <Route path="yuklamam" element={<MyLoad />} />
+            <Route path="oyligim" element={<MyPayroll />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+        </Routes>
+      </Suspense>
+    </ErrorBoundary>
   );
 }

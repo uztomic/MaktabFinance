@@ -111,7 +111,7 @@ export function PhoneInput({
     const pos = el.selectionStart ?? el.value.length;
     //  Kursordan oldingi RAQAMLAR soni — ajratgichlar siljiganda ham
     //  shu son o'zgarmaydi.
-    const digitsBefore = (el.value.slice(0, pos).match(/d/g) ?? []).length;
+    const digitsBefore = (el.value.slice(0, pos).match(/\d/g) ?? []).length;
 
     const next = toLocal(el.value);
     const shown = pretty(next);
@@ -119,7 +119,7 @@ export function PhoneInput({
     let i = 0;
     let seen = 0;
     while (i < shown.length && seen < digitsBefore) {
-      if (/d/.test(shown[i])) seen++;
+      if (/\d/.test(shown[i])) seen++;
       i++;
     }
     caret.current = i;

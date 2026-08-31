@@ -18,7 +18,7 @@ import { isoDate } from '@/lib/format';
 import {
   Button, Field, Input, Modal, MoneyInput, Notice, Select,
 } from '@/ui';
-import { PhoneInput } from '@/ui/PhoneInput';
+import { isCompletePhone, PhoneInput } from '@/ui/PhoneInput';
 import { useToast } from '@/ui/Feedback';
 import { CatalogSelect } from '@/ui/CatalogSelect';
 import { ClassPicker } from '@/ui/ClassPicker';
@@ -51,8 +51,109 @@ async function setClassTeacher(
   }
 }
 
+/** Yangi hisob ma'lumotlari — bir marta ko'rsatiladi. */
+export interface NewLogin {
+  full_name: string;
+  login: string;
+  password: string;
+}
+
+/**
+ *  O'qituvchiga tizimga kirish hisobini yaratadi.
+ *
+ *  NEGA SHU YERDA, alohida sahifada emas: o'qituvchi va uning hisobi —
+ *  bitta odam. Ilgari ular ikki joyda yaratilardi va bog'lanish
+ *  `teachers.user_id` orqali QO'LDA o'rnatilishi kerak edi. Amalda bu
+ *  qadam unutilardi: o'qituvchi ro'yxatda turadi, lekin tizimga kira
+ *  olmaydi va davomat olmaydi.
+ *
+ *  Login sifatida TELEFON raqami ishlatiladi — o'qituvchi va navbatchi
+ *  aynan shunday kiradi (pochta faqat direktor va buxgalterda).
+ */
+async function createTeacherLogin(
+  teacherId: string,
+  fullName: string,
+  phone: string,
+  branchId: string,
+): Promise<NewLogin> {
+  const { data, error } = await supabase.functions.invoke('school-user-ops', {
+    body: {
+      action: 'create',
+      full_name: fullName,
+      login: phone,
+      role: 'teacher',
+      all_branches: false,
+      branch_ids: [branchId],
+    },
+  });
+  if (error) throw error;
+  if (!data?.user_id) throw new Error(data?.error ?? 'Hisob yaratilmadi');
+
+  //  Bog'lanish. Busiz hisob bor, lekin o'qituvchi bilan bog'liq emas
+  //  va "mening sinflarim" bo'sh chiqadi.
+  const { error: linkErr } = await supabase.from('teachers')
+    .update({ user_id: data.user_id }).eq('id', teacherId);
+  if (linkErr) throw linkErr;
+
+  return { full_name: fullName, login: data.login, password: data.password };
+}
+
+/**
+ *  Yangi hisob ma'lumotlari.
+ *
+ *  Parol serverda yaratiladi va HECH QAYERDA saqlanmaydi — faqat shu
+ *  javobda bir marta keladi. Shuning uchun uni ko'rsatmasdan oynani
+ *  yopib bo'lmaydi: aks holda hisob yaratilgan, lekin unga kirib
+ *  bo'lmaydigan holat qoladi.
+ */
+export function TeacherCredentials({ data, onClose }: {
+  data: NewLogin;
+  onClose: () => void;
+}) {
+  const t = useT();
+
+  return (
+    <Modal
+      open
+      title={t('teachers.loginCreated')}
+      onClose={onClose}
+      footer={
+        <Button variant="primary" onClick={onClose}>{t('common.close')}</Button>
+      }
+    >
+      <div className="space-y-3">
+        <Notice tone="warn">{t('teachers.loginCreatedHint')}</Notice>
+
+        <div className="rounded-md bg-[var(--bg-inset)] px-3 py-2">
+          <div className="text-[11px] uppercase text-[var(--text-muted)]">
+            {t('common.fullName')}
+          </div>
+          <div className="font-medium">{data.full_name}</div>
+        </div>
+
+        <div className="rounded-md bg-[var(--bg-inset)] px-3 py-2">
+          <div className="text-[11px] uppercase text-[var(--text-muted)]">
+            {t('auth.login')}
+          </div>
+          <div className="num text-lg font-semibold">{data.login}</div>
+        </div>
+
+        <div className="rounded-md bg-[var(--bg-inset)] px-3 py-2">
+          <div className="text-[11px] uppercase text-[var(--text-muted)]">
+            {t('auth.password')}
+          </div>
+          <div className="num text-lg font-semibold">{data.password}</div>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 /** Yangi o'qituvchi qo'shish yoki mavjudini tahrirlash. */
-export function useSaveTeacher(onDone?: () => void) {
+export function useSaveTeacher(
+  onDone?: () => void,
+  onLogin?: (login: NewLogin) => void,
+) {
   const t = useT();
   const qc = useQueryClient();
   const toast = useToast();
@@ -107,15 +208,27 @@ export function useSaveTeacher(onDone?: () => void) {
       //  aks holda buni keyin sinflar sahifasidan qidirish kerak
       //  bo'lardi va odatda unutilib ketardi.
       await setClassTeacher(te.id, f.class_id || null, null);
+
+      //  Tizimga kirish hisobi — ixtiyoriy, lekin standart holatda YOQIQ.
+      if (f.create_login && f.phone) {
+        const cred = await createTeacherLogin(
+          te.id, common.full_name, f.phone, f.branch_id);
+        return { ...te, credentials: cred };
+      }
+
       return te;
     },
-    onSuccess: () => {
+    onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['teachers'] });
       qc.invalidateQueries({ queryKey: ['teacher'] });
       qc.invalidateQueries({ queryKey: ['classes'] });
       qc.invalidateQueries({ queryKey: ['class-options'] });
       toast.ok(t('ux.saved'));
       onDone?.();
+
+      // deno-lint-ignore no-explicit-any
+      const cred = (res as any)?.credentials as NewLogin | undefined;
+      if (cred) onLogin?.(cred);
     },
     onError: (e) => toast.error((e as Error).message),
   });
@@ -152,6 +265,8 @@ export function TeacherModal({
     branch_id: branches[0]?.id ?? '',
     is_active: existing?.is_active ?? true,
     base_type: existing?.base_type ?? '',
+    //  Yangi o'qituvchiga hisob ham yaratiladi — bu odatiy hol.
+    create_login: !existing,
     //  Qaysi sinfga rahbar. Bo'sh — fan o'qituvchisi.
     class_id: currentClass ?? '',
     prev_class_id: currentClass ?? '',
@@ -167,7 +282,8 @@ export function TeacherModal({
         <>
           <Button onClick={onClose}>{t('common.cancel')}</Button>
           <Button variant="primary" form="teacher-form" type="submit"
-                  disabled={busy || !f.full_name}>
+                  disabled={busy || !f.full_name
+                    || (f.create_login && !isCompletePhone(f.phone))}>
             {busy ? t('common.saving') : t('common.save')}
           </Button>
         </>
@@ -247,6 +363,26 @@ export function TeacherModal({
             allowCreate={false}
           />
         </Field>
+
+        {!existing && (
+          <label className="flex items-start gap-2 rounded-md border
+            bg-[var(--bg-subtle)] px-3 py-2.5 text-[13px]">
+            <input
+              type="checkbox"
+              checked={f.create_login}
+              onChange={(e) => set('create_login', e.target.checked)}
+              className="mt-0.5 h-4 w-4"
+            />
+            <span>
+              <span className="font-medium">{t('teachers.createLogin')}</span>
+              <span className="block text-[12px] text-[var(--text-muted)]">
+                {f.phone
+                  ? t('teachers.createLoginHint')
+                  : t('teachers.createLoginNeedPhone')}
+              </span>
+            </span>
+          </label>
+        )}
 
         {!existing && (
           <Field label={t('common.branch')} required

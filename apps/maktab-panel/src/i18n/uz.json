@@ -1105,5 +1105,17 @@
   "att.uncheckedHint": "{count} ta sinfda davomat hali olinmagan. Bunday sinfda bola kelmagani hech qayerda qayd etilmaydi — sinf rahbariga eslating.",
   "settings.attendanceNotice": "Ota-onaga kundalik davomat xabari",
   "settings.attendanceNotice.hint": "Har kuni soat 10:00 da ota-onaga Telegram orqali xabar boradi: farzandi bugun maktabda yoki kelmagani, sababi bilan. Faqat davomat OLINGAN sinflar bo'yicha — rahbar belgilamagan bo'lsa xabar ketmaydi.",
-  "phone.hint": "To'qqizta raqam kiriting, masalan: 90 123 45 67"
+  "phone.hint": "To'qqizta raqam kiriting, masalan: 90 123 45 67",
+  "err.crashTitle": "Bu sahifa ochilmadi",
+  "err.crashHint": "Kutilmagan xato yuz berdi. Ma'lumotlaringiz joyida — hech narsa yo'qolmadi. Qaytadan urinib ko'ring yoki bosh sahifaga qayting.",
+  "err.retry": "Qaytadan urinish",
+  "err.home": "Bosh sahifa",
+  "err.details": "Texnik tafsilot",
+  "teachers.createLogin": "Tizimga kirish hisobi ham yaratilsin",
+  "teachers.createLoginHint": "O'qituvchi telefon raqami bilan kiradi va o'z sinfining davomatini oladi. Parol bir marta ko'rsatiladi — uni o'qituvchiga yetkazing.",
+  "teachers.createLoginNeedPhone": "Buning uchun telefon raqami kerak — u login bo'ladi.",
+  "teachers.loginCreated": "Hisob yaratildi",
+  "teachers.loginCreatedHint": "Bu parol FAQAT HOZIR ko'rsatiladi. O'qituvchiga yetkazing va saqlab qo'ying — keyin ko'rib bo'lmaydi. Unutilsa yangi parol berish mumkin.",
+  "school.archived": "Bu maktab arxivga olingan",
+  "school.archivedHint": "Ma'lumotlar joyida va o'chirilmagan, lekin yangi yozuv kiritib bo'lmaydi. Maktabni qaytarish uchun Uztomic Solutions bilan bog'laning."
 }
