@@ -104,6 +104,26 @@ export default function StudentCard() {
     },
   });
 
+  /**
+   *  Avans nechta oyni qoplaydi.
+   *
+   *  Faqat avans bo'lganda so'raladi — qarzdor o'quvchida bu savol
+   *  yo'q va ortiqcha so'rov qilishning hojati ham yo'q.
+   */
+  const advance = useQuery({
+    queryKey: ['student-advance', id],
+    enabled: !!id && Number(balance.data?.balance ?? 0) < 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('prepay_quote', {
+        p_student_id: id!, p_months: 24,
+      });
+      if (error) throw error;
+      return (data as unknown as {
+        months: Array<{ period: string; amount: number }>;
+      }).months;
+    },
+  });
+
   const contract = useQuery({
     queryKey: ['student-contract', id],
     enabled: !!id,
@@ -401,6 +421,22 @@ export default function StudentCard() {
 
   const s = student.data;
   const bal = Number(balance.data?.balance ?? 0);
+
+  //  Avansni kelasi oylar bo'yicha tarqatamiz: oylar summasi har xil
+  //  bo'lishi mumkin (chegirma, xizmatlar, yozgi ta'til), shuning
+  //  uchun oddiy bo'lish noto'g'ri javob beradi.
+  const advanceMonths = (() => {
+    if (bal >= 0 || !advance.data?.length) return null;
+    let left = -bal;
+    let n = 0;
+    for (const m of advance.data) {
+      const a = Number(m.amount);
+      if (a <= 0 || left < a) break;
+      left -= a;
+      n++;
+    }
+    return n > 0 ? n : null;
+  })();
   const c = contract.data;
   // deno-lint-ignore no-explicit-any
   const klass = (s as any).classes;
@@ -482,6 +518,14 @@ export default function StudentCard() {
             bal > 0 ? 'text-[var(--danger)]' : bal < 0 ? 'text-[var(--ok)]' : ''}`}>
             {money(Math.abs(bal), lang)}
           </div>
+          {/*  Avans nechta oyni qoplaydi — ota-ona aynan shuni
+              so'raydi, "qancha pul qoldi" degan raqam esa unga
+              hech narsa aytmaydi. */}
+          {bal < 0 && advanceMonths !== null && (
+            <div className="mt-0.5 text-[11px] text-[var(--ok)]">
+              {t('prepay.covered', { count: advanceMonths })}
+            </div>
+          )}
         </div>
         <div className="rounded-lg border bg-[var(--bg)] px-4 py-3">
           <div className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
@@ -969,6 +1013,7 @@ export default function StudentCard() {
       <CashPaymentModal
         open={payOpen}
         onClose={() => setPayOpen(false)}
+        studentId={id!}
         studentName={s.full_name}
         suggested={bal > 0 ? bal : 0}
         onSubmit={(v) => pay.mutate(v)}
@@ -1328,10 +1373,12 @@ function EditPaymentInline({
 // ---------------------------------------------------------------------
 
 function CashPaymentModal({
-  open, onClose, studentName, suggested, onSubmit, busy, error, result, schoolName,
+  open, onClose, studentId, studentName, suggested, onSubmit, busy, error,
+  result, schoolName,
 }: {
   open: boolean;
   onClose: () => void;
+  studentId: string;
   studentName: string;
   suggested: number;
   onSubmit: (v: {
@@ -1367,6 +1414,53 @@ function CashPaymentModal({
    */
   const [mixed, setMixed] = useState(false);
   const [split, setSplit] = useState<Record<string, string>>({});
+
+  /**
+   *  Oldindan to'lov.
+   *
+   *  Summani kassir o'zi hisoblamasligi kerak: 9 oylik shartnomada
+   *  yozgi oylar tushib qoladi, chegirma har oydan ayriladi,
+   *  qo'shimcha xizmatlar qo'shiladi. Qo'lda hisoblanganda
+   *  bularning bittasi albatta unutiladi.
+   */
+  const [plan, setPlan] = useState<{
+    months: Array<{ period: string; amount: number }>;
+    total: number; to_pay: number; month_count: number;
+    months_left_in_year: number;
+  } | null>(null);
+  const [planBusy, setPlanBusy] = useState(false);
+
+  //  Yil oxirigacha nechta oy qolgani oldindan olinadi — tugmada
+  //  aniq son turishi kerak, "yil oxirigacha" degan mavhum yozuv
+  //  emas.
+  const yearAhead = useQuery({
+    queryKey: ['prepay-year', studentId],
+    enabled: open,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('prepay_quote', {
+        p_student_id: studentId, p_months: 1,
+      });
+      if (error) throw error;
+      return (data as unknown as { months_left_in_year: number })
+        .months_left_in_year;
+    },
+  });
+
+  async function pickMonths(n: number) {
+    setPlanBusy(true);
+    try {
+      const { data, error } = await supabase.rpc('prepay_quote', {
+        p_student_id: studentId, p_months: n,
+      });
+      if (error) throw error;
+      // deno-lint-ignore no-explicit-any
+      const q = data as any;
+      setPlan(q);
+      setAmount(String(Math.round(Number(q.to_pay))));
+    } finally {
+      setPlanBusy(false);
+    }
+  }
 
   const parts = (methods.data ?? [])
     .map((m) => ({ method_id: m.id, amount: Number(split[m.id] ?? 0) }))
@@ -1441,6 +1535,59 @@ function CashPaymentModal({
       <form id="cash-pay" onSubmit={submit} className="space-y-3">
         {!mixed && (
           <>
+            {/*  Oldindan to'lov — tez tanlash. */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[12px] text-[var(--text-muted)]">
+                {t('prepay.label')}
+              </span>
+              {suggested > 0 && (
+                <Button size="sm" type="button" disabled={planBusy}
+                        onClick={() => {
+                          setPlan(null);
+                          setAmount(String(Math.round(suggested)));
+                        }}>
+                  {t('prepay.debtOnly')}
+                </Button>
+              )}
+              {[3, 6].map((n) => (
+                <Button key={n} size="sm" type="button" disabled={planBusy}
+                        onClick={() => pickMonths(n)}>
+                  {t('prepay.months', { count: n })}
+                </Button>
+              ))}
+              {(yearAhead.data ?? 0) > 0 && (
+                <Button size="sm" type="button" disabled={planBusy}
+                        onClick={() => pickMonths(yearAhead.data!)}>
+                  {t('prepay.toYearEnd', { count: yearAhead.data! })}
+                </Button>
+              )}
+              <Button size="sm" type="button" disabled={planBusy}
+                      onClick={() => pickMonths(12)}>
+                {t('prepay.year')}
+              </Button>
+            </div>
+
+            {plan && (
+              <div className="rounded-md bg-[var(--bg-subtle)] px-3 py-2
+                text-[12px]">
+                <div className="font-medium">
+                  {t('prepay.covers', { count: plan.month_count })}
+                </div>
+                <div className="mt-0.5 text-[var(--text-muted)]">
+                  {plan.months.map((m) =>
+                    periodLabel(m.period, lang)).join(' · ')}
+                </div>
+                {Number(plan.to_pay) !== Number(plan.total) && (
+                  <div className="mt-1 text-[var(--text-muted)]">
+                    {t('prepay.plusDebt', {
+                      months: money(plan.total, lang),
+                      debt: money(Number(plan.to_pay) - Number(plan.total), lang),
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
             <Field label={t('common.amount')} required>
               <MoneyInput value={amount} onChange={(e) => setAmount(e.target.value)}
                           autoFocus required />

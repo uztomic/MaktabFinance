@@ -3816,6 +3816,10 @@ export type Database = {
         Args: { p_body: string; p_file_path?: string; p_thread_id: string }
         Returns: Json
       }
+      prepay_quote: {
+        Args: { p_from?: string; p_months?: number; p_student_id: string }
+        Returns: Json
+      }
       promote_classes: {
         Args: {
           p_branch_id?: string
