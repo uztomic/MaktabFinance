@@ -37,6 +37,7 @@ type ClassRow = {
   total: number;
   present: number;
   absent: number;
+  late: number;
   checked: boolean;
   marked_at: string | null;
 };
@@ -72,7 +73,8 @@ export function AttendanceToday() {
     total: a.total + r.total,
     present: a.present + r.present,
     absent: a.absent + r.absent,
-  }), { total: 0, present: 0, absent: 0 });
+    late: a.late + (r.late ?? 0),
+  }), { total: 0, present: 0, absent: 0, late: 0 });
 
   const unchecked = list.filter((r) => !r.checked && r.total > 0);
 
@@ -99,6 +101,7 @@ export function AttendanceToday() {
           <div className="flex flex-wrap gap-4">
             <Stat label={t('att.came')} value={totals.present} tone="ok" />
             <Stat label={t('att.notCame')} value={totals.absent} tone="danger" />
+            <Stat label={t('att.late')} value={totals.late} tone="warn" />
             <Stat label={t('att.students')} value={totals.total} />
           </div>
 
@@ -114,6 +117,7 @@ export function AttendanceToday() {
                 { header: t('att.students'), value: (r: ClassRow) => r.total, numeric: true },
                 { header: t('att.came'), value: (r: ClassRow) => r.present, numeric: true },
                 { header: t('att.notCame'), value: (r: ClassRow) => r.absent, numeric: true },
+                { header: t('att.late'), value: (r: ClassRow) => r.late ?? 0, numeric: true },
                 {
                   header: t('att.checked'),
                   value: (r: ClassRow) => (r.checked ? t('common.yes') : t('common.no')),
@@ -170,6 +174,11 @@ export function AttendanceToday() {
                   <Td align="right" mono
                       className={r.absent > 0 ? 'text-[var(--danger)]' : ''}>
                     {r.absent || '—'}
+                    {(r.late ?? 0) > 0 && (
+                      <span className="ml-1 text-[11px] text-[var(--warn)]">
+                        +{r.late}
+                      </span>
+                    )}
                   </Td>
                   <Td>
                     {r.total === 0
@@ -201,7 +210,7 @@ export function AttendanceToday() {
 function Stat({ label, value, tone }: {
   label: string;
   value: number;
-  tone?: 'ok' | 'danger';
+  tone?: 'ok' | 'warn' | 'danger';
 }) {
   return (
     <div>
@@ -210,6 +219,7 @@ function Stat({ label, value, tone }: {
       </div>
       <div className={`num text-lg font-semibold ${
         tone === 'ok' ? 'text-[var(--ok)]'
+          : tone === 'warn' && value > 0 ? 'text-[var(--warn)]'
           : tone === 'danger' && value > 0 ? 'text-[var(--danger)]' : ''}`}>
         {value}
       </div>
@@ -267,12 +277,16 @@ function ClassStudents({ row, day, onClose }: {
                     </Link>
                   </Td>
                   <Td>
-                    <Badge tone={s.is_present ? 'ok' : 'danger'}>
-                      {s.is_present ? t('att.came') : t('att.notCame')}
+                    <Badge tone={s.is_late ? 'warn' : s.is_present ? 'ok' : 'danger'}>
+                      {s.is_late
+                        ? t('att.late')
+                        : s.is_present ? t('att.came') : t('att.notCame')}
                     </Badge>
                   </Td>
                   <Td className="text-[13px] text-[var(--text-muted)]">
-                    {s.is_present ? '—' : (s.reason_name ?? t('att.noReason'))}
+                    {s.is_present && !s.is_late
+                      ? '—'
+                      : (s.reason_name ?? t('att.noReason'))}
                     {s.note && (
                       <span className="ml-1.5 text-[11px] text-[var(--text-faint)]">
                         {s.note}

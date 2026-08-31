@@ -745,7 +745,7 @@ function SetupIssues({ rows }: {
 function TodayAttendance({ rows }: {
   rows: Array<{
     class_id: string; class_name: string; teacher_name: string | null;
-    total: number; present: number; absent: number;
+    total: number; present: number; absent: number; late: number;
     checked: boolean; marked_at: string | null;
   }>;
 }) {
@@ -762,6 +762,7 @@ function TodayAttendance({ rows }: {
   const marked  = working.filter((r) => r.checked);
   const present = marked.reduce((s, r) => s + r.present, 0);
   const absent  = marked.reduce((s, r) => s + r.absent, 0);
+  const late    = marked.reduce((s, r) => s + (r.late ?? 0), 0);
   const pending = working.length - marked.length;
 
   return (
@@ -770,11 +771,13 @@ function TodayAttendance({ rows }: {
       className="mb-4"
       padded={false}
     >
-      <div className="grid gap-3 p-3 sm:grid-cols-4">
+      <div className="grid gap-3 p-3 sm:grid-cols-5">
         <Mini label={t('nav.students')} value={String(total)} />
         <Mini label={t('att.present')} value={String(present)} tone="ok" />
         <Mini label={t('att.absent')} value={String(absent)}
               tone={absent > 0 ? 'danger' : undefined} />
+        <Mini label={t('att.late')} value={String(late)}
+              tone={late > 0 ? 'warn' : undefined} />
         <Mini label={t('att.notMarked')} value={String(pending)}
               tone={pending > 0 ? 'warn' : 'ok'} />
       </div>
@@ -787,6 +790,7 @@ function TodayAttendance({ rows }: {
             <Th align="right">{t('att.expected')}</Th>
             <Th align="right">{t('att.present')}</Th>
             <Th align="right">{t('att.absent')}</Th>
+            <Th align="right">{t('att.late')}</Th>
             <Th>{t('common.status')}</Th>
           </tr>
         </thead>
@@ -807,6 +811,10 @@ function TodayAttendance({ rows }: {
               <Td align="right" mono
                   className={r.absent > 0 ? 'text-[var(--danger)]' : ''}>
                 {r.checked ? r.absent : '—'}
+              </Td>
+              <Td align="right" mono
+                  className={(r.late ?? 0) > 0 ? 'text-[var(--warn)]' : ''}>
+                {r.checked ? (r.late ?? 0) : '—'}
               </Td>
               <Td>
                 {r.checked

@@ -20,6 +20,7 @@ export type Database = {
           deducts: boolean
           id: string
           is_active: boolean
+          is_late: boolean
           name: string
           school_id: string
           sort_order: number
@@ -29,6 +30,7 @@ export type Database = {
           deducts?: boolean
           id?: string
           is_active?: boolean
+          is_late?: boolean
           name: string
           school_id: string
           sort_order?: number
@@ -38,6 +40,7 @@ export type Database = {
           deducts?: boolean
           id?: string
           is_active?: boolean
+          is_late?: boolean
           name?: string
           school_id?: string
           sort_order?: number
@@ -3651,6 +3654,7 @@ export type Database = {
         Args: { p_class_id: string; p_day?: string }
         Returns: {
           full_name: string
+          is_late: boolean
           is_present: boolean
           marked_at: string
           note: string
@@ -3922,6 +3926,7 @@ export type Database = {
           class_id: string
           class_name: string
           grade_level: number
+          late: number
           marked_at: string
           present: number
           teacher_name: string
