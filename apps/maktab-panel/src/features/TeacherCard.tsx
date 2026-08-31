@@ -22,8 +22,10 @@ import {
   Modal, MoneyInput, Notice, PageHeader, Select, Table, Td, Th, Tr,
 } from '@/ui';
 import {
-  type NewLogin, TeacherCredentials, TeacherModal, useSaveTeacher,
+  createTeacherLogin, type NewLogin, TeacherCredentials, TeacherModal,
+  useSaveTeacher,
 } from './teacher/TeacherForm';
+import { useToast } from '@/ui/Feedback';
 
 interface CatalogRow {
   code: string;
@@ -37,11 +39,36 @@ export default function TeacherCard() {
   const t = useT();
   const { lang } = useI18n();
   const qc = useQueryClient();
+  const toast = useToast();
   const { branches, mayWrite, profile } = useAuth();
 
   const [editOpen, setEditOpen] = useState(false);
   const [newLogin, setNewLogin] = useState<NewLogin | null>(null);
   const saveTeacher = useSaveTeacher(() => setEditOpen(false), setNewLogin);
+
+  /**
+   *  Mavjud o'qituvchiga hisob yaratish.
+   *
+   *  Ilgari buni faqat qo'shish paytida qilish mumkin edi. O'sha payt
+   *  tarmoq xatosi bo'lsa yoki belgi qo'yilmagan bo'lsa, o'qituvchi
+   *  hisobsiz qolib ketardi va tuzatishning yagona yo'li uni
+   *  o'chirib qayta yaratish edi — ya'ni ma'lumot yo'qotish.
+   */
+  const makeLogin = useMutation({
+    mutationFn: async () => {
+      // deno-lint-ignore no-explicit-any
+      const t2 = teacher.data as any;
+      const branchId = t2?.teacher_branches?.[0]?.branch_id;
+      if (!branchId) throw new Error(t('setup.teacher_no_branch', { count: 1 }));
+      return createTeacherLogin(t2.id, t2.full_name, t2.phone, branchId);
+    },
+    onSuccess: (cred) => {
+      qc.invalidateQueries({ queryKey: ['teacher', id] });
+      qc.invalidateQueries({ queryKey: ['teachers'] });
+      setNewLogin(cred);
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
   const [allowanceOpen, setAllowanceOpen] = useState(false);
   const [advanceOpen, setAdvanceOpen] = useState(false);
 
@@ -251,8 +278,27 @@ export default function TeacherCard() {
             <Row label={t('teachers.weeklyHours')}
                  value={num(te.weekly_hours, lang, 1)} mono />
             <Row label={t('teachers.hiredOn')} value={date(te.hired_on, lang)} />
-            <Row label={t('teachers.linkedUser')}
-                 value={te.user_id ? '✓' : t('teachers.notLinked')} />
+            <div className="flex items-center justify-between gap-3">
+              <dt className="text-[var(--text-muted)]">
+                {t('teachers.linkedUser')}
+              </dt>
+              <dd className="flex items-center gap-2">
+                <span>{te.user_id ? '✓' : t('teachers.notLinked')}</span>
+                {/*  Hisobsiz o'qituvchi davomat ololmaydi. Ilgari uni
+                    faqat qo'shish paytida yaratish mumkin edi: o'sha
+                    payt xato bo'lsa yoki belgi qo'yilmagan bo'lsa,
+                    keyin tuzatishning yo'li yo'q edi. */}
+                {!te.user_id && canEdit && te.phone && (
+                  <Button size="sm" variant="ghost"
+                          disabled={makeLogin.isPending}
+                          onClick={() => makeLogin.mutate()}>
+                    {makeLogin.isPending
+                      ? t('common.saving')
+                      : t('teachers.createLoginNow')}
+                  </Button>
+                )}
+              </dd>
+            </div>
             <div className="flex justify-between gap-3">
               <dt className="text-[var(--text-muted)]">{t('teachers.branches')}</dt>
               <dd className="flex flex-wrap justify-end gap-1">

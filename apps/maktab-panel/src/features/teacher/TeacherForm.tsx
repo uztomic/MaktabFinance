@@ -70,7 +70,7 @@ export interface NewLogin {
  *  Login sifatida TELEFON raqami ishlatiladi — o'qituvchi va navbatchi
  *  aynan shunday kiradi (pochta faqat direktor va buxgalterda).
  */
-async function createTeacherLogin(
+export async function createTeacherLogin(
   teacherId: string,
   fullName: string,
   phone: string,
@@ -210,10 +210,20 @@ export function useSaveTeacher(
       await setClassTeacher(te.id, f.class_id || null, null);
 
       //  Tizimga kirish hisobi — ixtiyoriy, lekin standart holatda YOQIQ.
+      //
+      //  XATO BU YERDA TASHLANMAYDI. O'qituvchi allaqachon bazaga
+      //  yozilgan: agar hisob yaratilmagani uchun butun amal xato deb
+      //  ko'rsatilsa, foydalanuvchi qayta urinadi va ikkinchi nusxa
+      //  paydo bo'ladi. Hisobni keyin kartochkadan ham yaratsa
+      //  bo'ladi, o'qituvchini esa qayta yozib bo'lmaydi.
       if (f.create_login && f.phone) {
-        const cred = await createTeacherLogin(
-          te.id, common.full_name, f.phone, f.branch_id);
-        return { ...te, credentials: cred };
+        try {
+          const cred = await createTeacherLogin(
+            te.id, common.full_name, f.phone, f.branch_id);
+          return { ...te, credentials: cred };
+        } catch (e) {
+          return { ...te, loginError: (e as Error).message };
+        }
       }
 
       return te;
@@ -223,12 +233,22 @@ export function useSaveTeacher(
       qc.invalidateQueries({ queryKey: ['teacher'] });
       qc.invalidateQueries({ queryKey: ['classes'] });
       qc.invalidateQueries({ queryKey: ['class-options'] });
-      toast.ok(t('ux.saved'));
       onDone?.();
 
       // deno-lint-ignore no-explicit-any
-      const cred = (res as any)?.credentials as NewLogin | undefined;
-      if (cred) onLogin?.(cred);
+      const r = res as any;
+      const cred = r?.credentials as NewLogin | undefined;
+
+      if (cred) {
+        toast.ok(t('ux.saved'));
+        onLogin?.(cred);
+      } else if (r?.loginError) {
+        //  O'qituvchi saqlangani ANIQ aytiladi — aks holda
+        //  saqlanmagan deb o'ylanadi.
+        toast.warn(t('teachers.savedNoLogin'));
+      } else {
+        toast.ok(t('ux.saved'));
+      }
     },
     onError: (e) => toast.error((e as Error).message),
   });
