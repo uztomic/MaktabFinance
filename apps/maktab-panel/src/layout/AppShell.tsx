@@ -151,7 +151,22 @@ export default function AppShell() {
     }`;
 
   return (
-    <div className="flex min-h-screen flex-col">
+    /*  Qobiq balandligi QAT'IY va faqat ichki qism suriladi.
+        Ilgari butun sahifa surilardi va sarlavha `sticky` bilan
+        ushlab turilardi. Mobil brauzerda bu ishlamasdi: `html` va
+        `body` ga `height: 100%` berilgani uchun surish konteyneri
+        chalkashib qolardi va sarlavha yuqoriga chiqib ketardi —
+        pastga tushgandan keyin menyu tugmasiga umuman yetib
+        bo'lmasdi.
+
+        `dvh` — mobil brauzerdagi manzil satri yig'ilganda ham
+        to'g'ri balandlik. `vh` bunday paytda ekrandan kattaroq
+        chiqadi va pastda kesilib qoladi.
+
+        Chop etishda cheklovlar olib tashlanadi (`print:`), aks holda
+        faqat birinchi ekran bosiladi.  */
+    <div className="flex h-[100dvh] flex-col overflow-hidden
+      print:h-auto print:overflow-visible">
       {/* --- Obuna muddati ogohlantirishi (TZ P3) ------------------
           Har sahifada ko'rinadi va muddatga qarab rangi o'zgaradi.
           Faqat direktorga — boshqalar to'lay olmaydi. */}
@@ -177,10 +192,15 @@ export default function AppShell() {
         </div>
       )}
 
-      <div className="flex flex-1">
+      <div className="flex min-h-0 flex-1 print:min-h-0 print:overflow-visible">
         {/* --- Yon panel (katta ekran) --------------------------- */}
+        {/*  Yon panel sahifa bilan BIRGA surilmaydi: uning o'z
+             surish qismi bor (`nav` ichida). Ilgari u qatorning
+             bir qismi edi va uzun ro'yxatda sahifa bilan birga
+             ko'tarilib ketardi. */}
         <aside
-          className="no-print hidden w-56 shrink-0 flex-col bg-brand-900 md:flex"
+          className="no-print hidden h-full w-56 shrink-0 flex-col
+            overflow-hidden bg-brand-900 md:flex"
         >
           <div className="flex items-center gap-2 px-4 py-4">
             <img src="/logo-mark.svg" alt="" className="h-7 w-7" width={28} height={28} />
@@ -233,8 +253,10 @@ export default function AppShell() {
         </aside>
 
         {/* --- Asosiy qism ---------------------------------------- */}
-        <div className="flex min-w-0 flex-1 flex-col">
-          <header className="no-print sticky top-0 z-20 flex items-center gap-2
+        <div className="flex min-w-0 min-h-0 flex-1 flex-col">
+          {/*  `sticky` olib tashlandi: sarlavha endi surilmaydigan
+               qismda turadi va har doim ko'rinadi. */}
+          <header className="no-print z-20 flex shrink-0 items-center gap-2
             border-b bg-[var(--bg)] px-3 py-2 md:px-5">
             <button
               onClick={() => setMenuOpen((v) => !v)}
@@ -281,7 +303,8 @@ export default function AppShell() {
 
           {/* Mobil menyu */}
           {menuOpen && (
-            <nav className="no-print border-b bg-brand-900 px-2 py-3 md:hidden">
+            <nav className="no-print max-h-[60dvh] shrink-0 overflow-y-auto
+              border-b bg-brand-900 px-2 py-3 md:hidden">
               {groups.map((g, gi) => (
                 <div key={g.labelKey || gi} className="mb-3 last:mb-0">
                   {g.labelKey && (
@@ -312,7 +335,8 @@ export default function AppShell() {
             </nav>
           )}
 
-          <main className="flex-1 px-3 py-4 md:px-5 md:py-5">
+          <main className="flex-1 overflow-y-auto px-3 py-4 md:px-5 md:py-5
+            print:overflow-visible">
             <Outlet />
           </main>
 

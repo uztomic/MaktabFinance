@@ -10,15 +10,19 @@
 //  topadi — bu nizoli holatlarni oldini oladi (TZ 1.2).
 // =====================================================================
 
-import { useQuery } from '@tanstack/react-query';
-import { Link, useParams } from 'react-router-dom';
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useI18n, useT } from '@/i18n';
 import { date, money, num, periodLabel } from '@/lib/format';
 import { payrollLabel, valueLabel } from '@/lib/fieldNames';
 import {
-  Badge, Button, Card, EmptyState, ErrorState, Loading, PageHeader,
+  Badge, Button, Card, EmptyState, ErrorState, Field, Input, Loading,
+  Modal, MoneyInput, Notice, PageHeader,
 } from '@/ui';
+import { useToast } from '@/ui/Feedback';
+import { useAuth } from '@/auth/AuthProvider';
 
 /**
  *  `source` jsonb ni o'qish oson matnga aylantiradi.
@@ -194,6 +198,10 @@ export default function PayrollCard() {
   const { id } = useParams<{ id: string }>();
   const t = useT();
   const { lang } = useI18n();
+  const qc = useQueryClient();
+  const toast = useToast();
+  const nav = useNavigate();
+  const { mayWrite } = useAuth();
 
   const run = useQuery({
     queryKey: ['payroll-run', id],
@@ -221,6 +229,55 @@ export default function PayrollCard() {
       if (error) throw error;
       return data ?? [];
     },
+  });
+
+  /**
+   *  Qo'lda tuzatish — mukofot yoki jarima.
+   *
+   *  Hisoblangan raqamni to'g'ridan-to'g'ri tahrirlash noto'g'ri
+   *  bo'lardi: u formuladan kelib chiqadi va qayta hisoblaganda
+   *  tiklanadi. Soat yoki stavka xato bo'lsa — o'sha SABABNI
+   *  tuzatib qayta hisoblash kerak. Formulaga sig'maydigan
+   *  holatlar uchun esa alohida qator: u qayta hisoblaganda
+   *  o'chmaydi.
+   */
+  const [adjOpen, setAdjOpen] = useState(false);
+
+  const addAdj = useMutation({
+    mutationFn: async (f: {
+      description: string; amount: number; reason: string;
+    }) => {
+      const { error } = await supabase.rpc('add_payroll_adjustment', {
+        p_run_id: id!,
+        p_description: f.description,
+        p_amount: f.amount,
+        p_reason: f.reason || undefined,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['payroll-lines', id] });
+      qc.invalidateQueries({ queryKey: ['payroll-run', id] });
+      toast.ok(t('ux.saved'));
+      setAdjOpen(false);
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
+  //  Hisobni butunlay o'chirish — faqat tasdiqlanmaganini.
+  const dropRun = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.rpc('delete_payroll_run', {
+        p_run_id: id!,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['payroll'] });
+      toast.ok(t('ux.saved'));
+      nav('/oylik');
+    },
+    onError: (e) => toast.error((e as Error).message),
   });
 
   if (run.isLoading) return <Loading />;
@@ -273,9 +330,35 @@ export default function PayrollCard() {
             <Button className="no-print" onClick={() => window.print()}>
               {t('common.print')}
             </Button>
+            {r.status === 'draft' && mayWrite('payroll.manage') && (
+              <Button className="no-print" onClick={() => setAdjOpen(true)}>
+                {t('payroll.addAdjustment')}
+              </Button>
+            )}
+            {r.status !== 'approved' && mayWrite('payroll.approve') && (
+              <Button
+                className="no-print" variant="ghost"
+                disabled={dropRun.isPending}
+                onClick={() => {
+                  if (globalThis.confirm(t('payroll.deleteConfirm'))) {
+                    dropRun.mutate();
+                  }
+                }}
+              >
+                {t('common.delete')}
+              </Button>
+            )}
           </>
         }
       />
+
+      {adjOpen && (
+        <AdjustmentModal
+          onClose={() => setAdjOpen(false)}
+          onSubmit={(f) => addAdj.mutate(f)}
+          busy={addAdj.isPending}
+        />
+      )}
 
       <Card title={t('payroll.sheet')} padded={false}>
         {rows.length === 0 ? <EmptyState /> : (
@@ -291,6 +374,11 @@ export default function PayrollCard() {
                   <div className="flex items-baseline justify-between gap-3">
                     <div className="min-w-0">
                       <span className="text-sm font-medium">{l.description}</span>
+                      {l.source_kind === 'manual' && (
+                        <span className="ml-2 text-[11px] text-[var(--warn)]">
+                          {t('payroll.manual')}
+                        </span>
+                      )}
                       {/* deno-lint-ignore no-explicit-any */}
                       {(l as any).branches?.name && (
                         <span className="ml-2 text-[11px] text-[var(--text-faint)]">
@@ -373,5 +461,87 @@ export default function PayrollCard() {
         </Card>
       )}
     </>
+  );
+}
+
+
+/**
+ *  Mukofot yoki jarima.
+ *
+ *  Bitta oynada ikkalasi: farq faqat ishorada. Ikkita alohida shakl
+ *  yozish mumkin edi, lekin ular bir xil maydonlarga ega bo'lardi va
+ *  vaqt o'tishi bilan biri-biridan ajralib ketardi.
+ */
+function AdjustmentModal({ onClose, onSubmit, busy }: {
+  onClose: () => void;
+  onSubmit: (f: {
+    description: string; amount: number; reason: string;
+  }) => void;
+  busy: boolean;
+}) {
+  const t = useT();
+  const [sign, setSign] = useState<'plus' | 'minus'>('minus');
+  const [amount, setAmount] = useState('');
+  const [description, setDescription] = useState('');
+  const [reason, setReason] = useState('');
+
+  const value = Number(amount || 0);
+
+  return (
+    <Modal
+      open
+      title={t('payroll.addAdjustment')}
+      onClose={onClose}
+      footer={
+        <>
+          <Button onClick={onClose}>{t('common.cancel')}</Button>
+          <Button
+            variant="primary"
+            disabled={busy || value <= 0 || description.trim().length < 3}
+            onClick={() => onSubmit({
+              description: description.trim(),
+              amount: sign === 'minus' ? -value : value,
+              reason,
+            })}
+          >
+            {busy ? t('common.saving') : t('common.save')}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <Notice tone="neutral">{t('payroll.adjustmentHint')}</Notice>
+
+        <div className="flex gap-2">
+          <Button
+            variant={sign === 'minus' ? 'danger' : undefined}
+            onClick={() => setSign('minus')}
+          >
+            {t('payroll.fine')}
+          </Button>
+          <Button
+            variant={sign === 'plus' ? 'accent' : undefined}
+            onClick={() => setSign('plus')}
+          >
+            {t('payroll.bonus')}
+          </Button>
+        </div>
+
+        <Field label={t('common.amount')} required>
+          <MoneyInput value={amount}
+                      onChange={(e) => setAmount(e.target.value)} autoFocus />
+        </Field>
+
+        <Field label={t('common.note')} required
+               hint={t('payroll.adjustmentDescHint')}>
+          <Input value={description}
+                 onChange={(e) => setDescription(e.target.value)} />
+        </Field>
+
+        <Field label={t('pay.cancelReason')}>
+          <Input value={reason} onChange={(e) => setReason(e.target.value)} />
+        </Field>
+      </div>
+    </Modal>
   );
 }

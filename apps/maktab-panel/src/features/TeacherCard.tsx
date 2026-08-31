@@ -12,7 +12,7 @@
 
 import { type FormEvent, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/auth/AuthProvider';
 import { useI18n, useT } from '@/i18n';
@@ -40,6 +40,7 @@ export default function TeacherCard() {
   const { lang } = useI18n();
   const qc = useQueryClient();
   const toast = useToast();
+  const nav = useNavigate();
   const { branches, mayWrite, profile } = useAuth();
 
   const [editOpen, setEditOpen] = useState(false);
@@ -129,22 +130,26 @@ export default function TeacherCard() {
   const [leaving, setLeaving] = useState<'dismiss' | 'delete' | null>(null);
 
   const dismiss = useMutation({
-    mutationFn: async (v: { mode: 'dismiss' | 'delete'; reason: string; day: string }) => {
+    mutationFn: async (v: {
+      mode: 'dismiss' | 'delete'; reason: string; day: string; force: boolean;
+    }) => {
       const { error } = v.mode === 'dismiss'
         ? await supabase.rpc('dismiss_teacher', {
             p_teacher_id: id!, p_reason: v.reason, p_left_on: v.day,
           })
         : await supabase.rpc('delete_teacher', {
-            p_teacher_id: id!, p_reason: v.reason,
+            p_teacher_id: id!, p_reason: v.reason, p_force: v.force,
           });
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_r, v) => {
       qc.invalidateQueries({ queryKey: ['teachers'] });
       qc.invalidateQueries({ queryKey: ['teacher', id] });
       qc.invalidateQueries({ queryKey: ['classes'] });
       toast.ok(t('ux.saved'));
       setLeaving(null);
+      //  O'chirilgan yozuvning kartochkasida qolib bo'lmaydi.
+      if (v.mode === 'delete') nav('/oqituvchilar');
     },
     onError: (e) => toast.error((e as Error).message),
   });
@@ -610,8 +615,8 @@ export default function TeacherCard() {
           mode={leaving}
           name={te.full_name}
           onClose={() => setLeaving(null)}
-          onSubmit={(reason, day) =>
-            dismiss.mutate({ mode: leaving, reason, day })}
+          onSubmit={(reason, day, force) =>
+            dismiss.mutate({ mode: leaving, reason, day, force })}
           busy={dismiss.isPending}
         />
       )}
@@ -918,12 +923,15 @@ function DismissModal({ mode, name, onClose, onSubmit, busy }: {
   mode: 'dismiss' | 'delete';
   name: string;
   onClose: () => void;
-  onSubmit: (reason: string, day: string) => void;
+  onSubmit: (reason: string, day: string, force: boolean) => void;
   busy: boolean;
 }) {
   const t = useT();
   const [reason, setReason] = useState('');
   const [day, setDay] = useState(isoDate());
+  //  Darslari va hisoblangan oyligi bilan birga o'chirish. Ataylab
+  //  alohida belgi: tasodifan bosilib ketmasin.
+  const [force, setForce] = useState(false);
 
   return (
     <Modal
@@ -933,7 +941,7 @@ function DismissModal({ mode, name, onClose, onSubmit, busy }: {
       footer={
         <>
           <Button onClick={onClose}>{t('common.cancel')}</Button>
-          <Button variant="danger" onClick={() => onSubmit(reason, day)}
+          <Button variant="danger" onClick={() => onSubmit(reason, day, force)}
                   disabled={busy || reason.trim().length < 3}>
             {busy ? t('common.saving')
               : mode === 'dismiss' ? t('teachers.dismiss') : t('common.delete')}
@@ -959,6 +967,24 @@ function DismissModal({ mode, name, onClose, onSubmit, busy }: {
           <Input value={reason} onChange={(e) => setReason(e.target.value)}
                  autoFocus />
         </Field>
+
+        {mode === 'delete' && (
+          <label className="flex items-start gap-2 rounded-md border
+            bg-[var(--bg-subtle)] px-3 py-2.5 text-[13px]">
+            <input
+              type="checkbox"
+              checked={force}
+              onChange={(e) => setForce(e.target.checked)}
+              className="mt-0.5 h-4 w-4"
+            />
+            <span>
+              <span className="font-medium">{t('teachers.forceDelete')}</span>
+              <span className="block text-[12px] text-[var(--text-muted)]">
+                {t('teachers.forceDeleteHint')}
+              </span>
+            </span>
+          </label>
+        )}
       </div>
     </Modal>
   );
