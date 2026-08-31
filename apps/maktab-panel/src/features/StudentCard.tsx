@@ -282,6 +282,37 @@ export default function StudentCard() {
     onError: (e) => toast.error((e as Error).message),
   });
 
+  /**
+   *  To'lovni bekor qilish — kartochka ichidan.
+   *
+   *  Ilgari buni faqat "To'lovlar" sahifasidan qilish mumkin edi.
+   *  Amalda esa xato aynan shu yerda ko'rinadi: o'quvchining qarzi
+   *  noto'g'ri chiqadi, kassir kartochkani ochadi va tuzatmoqchi
+   *  bo'ladi.
+   *
+   *  Yozuv o'chirilmaydi — holati `cancelled` ga o'tadi va sabab
+   *  jurnalga tushadi.
+   */
+  const [cancellingPayment, setCancellingPayment] =
+    useState<{ id: string; label: string } | null>(null);
+
+  const cancelPayment = useMutation({
+    mutationFn: async (v: { id: string; reason: string }) => {
+      const { error } = await supabase.rpc('cancel_payment', {
+        p_payment_id: v.id, p_reason: v.reason,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['student-payments', id] });
+      qc.invalidateQueries({ queryKey: ['student-balance', id] });
+      qc.invalidateQueries({ queryKey: ['student-history', id] });
+      toast.ok(t('pay.cancelled'));
+      setCancellingPayment(null);
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
   const detachParent = useMutation({
     mutationFn: async (parentId: string) => {
       const { error } = await supabase.rpc('detach_parent', {
@@ -753,10 +784,21 @@ export default function StudentCard() {
                             </Button>
                           )}
                           {p.status === 'confirmed' && mayWrite('payments.create') && (
-                            <Button size="sm" variant="ghost"
-                                    onClick={() => setEditingPayment(p)}>
-                              {t('common.edit')}
-                            </Button>
+                            <>
+                              <Button size="sm" variant="ghost"
+                                      onClick={() => setEditingPayment(p)}>
+                                {t('common.edit')}
+                              </Button>
+                              <Button
+                                size="sm" variant="ghost"
+                                onClick={() => setCancellingPayment({
+                                  id: p.id as string,
+                                  label: `${money(p.amount, lang)} · ${date(p.paid_on, lang)}`,
+                                })}
+                              >
+                                {t('pay.cancel')}
+                              </Button>
+                            </>
                           )}
                         </div>
                       </Td>
@@ -923,6 +965,19 @@ export default function StudentCard() {
         />
       )}
 
+      {cancellingPayment && (
+        <CancelPaymentInline
+          target={cancellingPayment}
+          studentName={s.full_name}
+          onClose={() => setCancellingPayment(null)}
+          onSubmit={(reason) =>
+            cancelPayment.mutate({ id: cancellingPayment.id, reason })}
+          busy={cancelPayment.isPending}
+          error={cancelPayment.error
+            ? (cancelPayment.error as Error).message : null}
+        />
+      )}
+
       <Modal
         open={!!openInvoice}
         title={t('inv.lines')}
@@ -1074,6 +1129,67 @@ function ProofImageButton({ path }: { path: string }) {
 }
 
 // ---------------------------------------------------------------------
+//  To'lovni bekor qilish (kartochka ichidan)
+// ---------------------------------------------------------------------
+
+/**
+ *  To'lov O'CHIRILMAYDI, holati `cancelled` ga o'tadi.
+ *
+ *  Kassaga pul kelgani va keyin qaytarilgani ikkalasi ham ko'rinib
+ *  turishi kerak: yozuvni yo'q qilsak, kunlik kassa hisobotida
+ *  tushuntirib bo'lmaydigan farq paydo bo'ladi.
+ */
+function CancelPaymentInline({
+  target, studentName, onClose, onSubmit, busy, error,
+}: {
+  target: { id: string; label: string };
+  studentName: string;
+  onClose: () => void;
+  onSubmit: (reason: string) => void;
+  busy: boolean;
+  error: string | null;
+}) {
+  const t = useT();
+  const [reason, setReason] = useState('');
+
+  return (
+    <Modal
+      open
+      title={`${t('pay.cancel')} — ${studentName}`}
+      onClose={onClose}
+      footer={
+        <>
+          <Button onClick={onClose}>{t('common.cancel')}</Button>
+          <Button
+            variant="danger"
+            onClick={() => onSubmit(reason)}
+            disabled={busy || reason.trim().length < 5}
+          >
+            {busy ? t('common.saving') : t('pay.cancel')}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <div className="rounded-md bg-[var(--bg-subtle)] px-3 py-2 text-[13px]">
+          {target.label}
+        </div>
+
+        <Notice tone="warn">{t('pay.cancelWarning')}</Notice>
+
+        <Field label={t('pay.cancelReason')} required
+               hint={t('pay.cancelReasonHint')}>
+          <Input value={reason} onChange={(e) => setReason(e.target.value)}
+                 autoFocus />
+        </Field>
+
+        {error && <Notice tone="danger">{error}</Notice>}
+      </div>
+    </Modal>
+  );
+}
+
+// ---------------------------------------------------------------------
 //  To'lovni tahrirlash (kartochka ichidan)
 // ---------------------------------------------------------------------
 
@@ -1093,7 +1209,10 @@ function EditPaymentInline({
   const t = useT();
   const { lang } = useI18n();
 
-  const [amount, setAmount] = useState(String(payment.amount ?? ''));
+  //  Butun songa keltiramiz: baza `numeric(14,2)` qaytaradi va
+  //  "1500000.00" ko'rinishidagi qiymat maydonni buzadi.
+  const [amount, setAmount] = useState(
+    String(Math.round(Number(payment.amount ?? 0))));
   const [paidOn, setPaidOn] = useState(payment.paid_on ?? isoDate());
   const [note, setNote] = useState(payment.note ?? '');
   const [reason, setReason] = useState('');
@@ -1103,6 +1222,17 @@ function EditPaymentInline({
     || note !== (payment.note ?? '');
   const amountChanged = Number(amount) !== Number(payment.amount);
   const code = payment.cash_receipts?.[0]?.receipt_code;
+
+  //  NEGA saqlab bo'lmaydi. Ilgari tugma shunchaki o'chiq turardi va
+  //  sababi aytilmasdi — foydalanuvchi buni "ishlamayapti" deb
+  //  tushunadi va yordam so'raydi.
+  const blocked = Number(amount) <= 0
+    ? t('pay.editNeedAmount')
+    : reason.trim().length < 5
+      ? t('pay.editNeedReason')
+      : !changed
+        ? t('pay.editNoChange')
+        : null;
 
   return (
     <Modal
@@ -1114,8 +1244,8 @@ function EditPaymentInline({
           <Button onClick={onClose}>{t('common.cancel')}</Button>
           <Button
             variant="primary" form="edit-pay-card" type="submit"
-            disabled={busy || !changed || Number(amount) <= 0
-              || reason.trim().length < 5}
+            disabled={busy || !!blocked}
+            title={blocked ?? undefined}
           >
             {busy ? t('common.saving') : t('common.save')}
           </Button>
@@ -1161,6 +1291,7 @@ function EditPaymentInline({
           <Notice tone="warn">{t('pay.receiptWarning', { code })}</Notice>
         )}
         {amountChanged && <Notice tone="neutral">{t('pay.editNotify')}</Notice>}
+        {blocked && <Notice tone="neutral">{blocked}</Notice>}
         {error && <Notice tone="danger">{error}</Notice>}
       </form>
     </Modal>
