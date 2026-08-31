@@ -223,7 +223,32 @@ export default function StudentCard() {
   const pay = useMutation({
     mutationFn: async (v: {
       amount: number; paid_on: string; note: string; method_id: string;
+      //  Aralash to'lov: har qism o'z usuli bilan alohida yoziladi,
+      //  kvitansiya bitta. Bo'sh bo'lsa — oddiy to'lov.
+      parts?: Array<{ method_id: string; amount: number }>;
     }) => {
+      if (v.parts?.length) {
+        const { data, error } = await supabase.rpc('register_split_payment', {
+          p_student_id: id!,
+          p_parts: v.parts,
+          p_paid_on: v.paid_on,
+          p_note: v.note || undefined,
+        });
+        if (error) throw error;
+        const r = data as unknown as {
+          receipt_code: string; balance: number;
+          parts: Array<{ method_name: string; amount: number }>;
+        };
+        return {
+          receipt_code: r.receipt_code,
+          balance: r.balance,
+          //  Kvitansiyada usul o'rniga qismlar ro'yxati chiqadi.
+          method_name: r.parts
+            .map((x) => `${x.method_name} ${Number(x.amount).toLocaleString()}`)
+            .join(' + '),
+        };
+      }
+
       const { data, error } = await supabase.rpc('register_cash_payment', {
         p_student_id: id!,
         p_amount: v.amount,
@@ -1311,6 +1336,7 @@ function CashPaymentModal({
   suggested: number;
   onSubmit: (v: {
     amount: number; paid_on: string; note: string; method_id: string;
+    parts?: Array<{ method_id: string; amount: number }>;
   }) => void;
   busy: boolean;
   error: string | null;
@@ -1331,8 +1357,37 @@ function CashPaymentModal({
   const [methodId, setMethodId] = useState('');
   const method = methodId || defaultMethodId(methods.data);
 
+  /**
+   *  Aralash to'lov: bir qismi naqd, qolgani kartadan.
+   *
+   *  Summalar HAR USUL bo'yicha alohida so'raladi. "Aralash" degan
+   *  bitta usul qo'shish osonroq bo'lardi, lekin kassa hisobotining
+   *  butun ma'nosi naqd bilan naqdsizni ajratishda: kun oxirida
+   *  sandiqdagi pul tizimdagi raqamga to'g'ri kelishi kerak.
+   */
+  const [mixed, setMixed] = useState(false);
+  const [split, setSplit] = useState<Record<string, string>>({});
+
+  const parts = (methods.data ?? [])
+    .map((m) => ({ method_id: m.id, amount: Number(split[m.id] ?? 0) }))
+    .filter((p) => p.amount > 0);
+
+  const splitTotal = parts.reduce((s, p) => s + p.amount, 0);
+
+  //  Nega tasdiqlab bo'lmaydi — jimgina o'chiq tugma foydalanuvchiga
+  //  hech narsa aytmaydi.
+  const blocked = mixed
+    ? parts.length < 2 ? t('pay.mixedNeedTwo') : null
+    : Number(amount) <= 0 ? t('pay.editNeedAmount') : null;
+
   function submit(e: FormEvent) {
     e.preventDefault();
+    if (mixed) {
+      onSubmit({
+        amount: splitTotal, paid_on: paidOn, note, method_id: '', parts,
+      });
+      return;
+    }
     onSubmit({
       amount: Number(amount), paid_on: paidOn, note, method_id: method,
     });
@@ -1377,20 +1432,63 @@ function CashPaymentModal({
         <>
           <Button onClick={onClose}>{t('common.cancel')}</Button>
           <Button variant="accent" form="cash-pay" type="submit"
-                  disabled={busy || !amount || Number(amount) <= 0}>
+                  disabled={busy || !!blocked} title={blocked ?? undefined}>
             {busy ? t('common.saving') : t('common.confirm')}
           </Button>
         </>
       }
     >
       <form id="cash-pay" onSubmit={submit} className="space-y-3">
-        <Field label={t('common.amount')} required>
-          <MoneyInput value={amount} onChange={(e) => setAmount(e.target.value)}
-                      autoFocus required />
-        </Field>
-        <Field label={t('payMethod.label')} hint={t('payMethod.hint')} required>
-          <PaymentMethodPicker value={method} onChange={setMethodId} />
-        </Field>
+        {!mixed && (
+          <>
+            <Field label={t('common.amount')} required>
+              <MoneyInput value={amount} onChange={(e) => setAmount(e.target.value)}
+                          autoFocus required />
+            </Field>
+            <Field label={t('payMethod.label')} hint={t('payMethod.hint')} required>
+              <PaymentMethodPicker value={method} onChange={setMethodId} />
+            </Field>
+          </>
+        )}
+
+        <label className="flex items-center gap-2 text-[13px]">
+          <input
+            type="checkbox"
+            checked={mixed}
+            onChange={(e) => setMixed(e.target.checked)}
+            className="h-4 w-4"
+          />
+          <span>{t('pay.mixed')}</span>
+        </label>
+
+        {mixed && (
+          <div className="space-y-2 rounded-md border bg-[var(--bg-subtle)] p-3">
+            <p className="text-[12px] text-[var(--text-muted)]">
+              {t('pay.mixedHint')}
+            </p>
+            {(methods.data ?? []).map((m) => (
+              <div key={m.id} className="flex items-center gap-2">
+                <span className="w-32 shrink-0 text-[13px]">{m.name}</span>
+                <MoneyInput
+                  value={split[m.id] ?? ''}
+                  onChange={(e) =>
+                    setSplit((p) => ({ ...p, [m.id]: e.target.value }))}
+                />
+              </div>
+            ))}
+            <div className="flex items-center justify-between border-t pt-2
+              text-[13px] font-semibold">
+              <span>{t('common.total')}</span>
+              <span className="num">{money(splitTotal, lang)}</span>
+            </div>
+            {suggested > 0 && splitTotal !== suggested && (
+              <p className="text-[12px] text-[var(--text-muted)]">
+                {t('pay.mixedVsDebt', { amount: money(suggested, lang) })}
+              </p>
+            )}
+          </div>
+        )}
+
         <Field label={t('common.date')} required>
           <Input type="date" value={paidOn} onChange={(e) => setPaidOn(e.target.value)}
                  required />
@@ -1398,6 +1496,7 @@ function CashPaymentModal({
         <Field label={t('common.note')}>
           <Input value={note} onChange={(e) => setNote(e.target.value)} />
         </Field>
+        {blocked && <Notice tone="neutral">{blocked}</Notice>}
         {error && <Notice tone="danger">{error}</Notice>}
       </form>
     </Modal>

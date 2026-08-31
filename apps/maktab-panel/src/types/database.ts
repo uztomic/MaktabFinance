@@ -1939,6 +1939,7 @@ export type Database = {
           note: string | null
           paid_on: string
           school_id: string
+          split_group_id: string | null
           status: Database["public"]["Enums"]["payment_status"]
           student_id: string
           updated_at: string
@@ -1957,6 +1958,7 @@ export type Database = {
           note?: string | null
           paid_on?: string
           school_id: string
+          split_group_id?: string | null
           status?: Database["public"]["Enums"]["payment_status"]
           student_id: string
           updated_at?: string
@@ -1975,6 +1977,7 @@ export type Database = {
           note?: string | null
           paid_on?: string
           school_id?: string
+          split_group_id?: string | null
           status?: Database["public"]["Enums"]["payment_status"]
           student_id?: string
           updated_at?: string
@@ -3849,6 +3852,15 @@ export type Database = {
           p_method_id?: string
           p_note?: string
           p_paid_on?: string
+          p_student_id: string
+        }
+        Returns: Json
+      }
+      register_split_payment: {
+        Args: {
+          p_note?: string
+          p_paid_on?: string
+          p_parts: Json
           p_student_id: string
         }
         Returns: Json
