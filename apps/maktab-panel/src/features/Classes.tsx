@@ -28,7 +28,7 @@ import { DateRangePicker, rangeLabel, useDateRange } from '@/ui/DateRange';
 
 type SortKey =
   | 'class_name' | 'students' | 'charged' | 'collected'
-  | 'remaining' | 'collection_rate' | 'debt';
+  | 'remaining' | 'collection_rate' | 'overdue';
 
 export default function Classes() {
   const t = useT();
@@ -179,8 +179,8 @@ export default function Classes() {
       charged: a.charged + Number(r.charged ?? 0),
       collected: a.collected + Number(r.collected ?? 0),
       remaining: a.remaining + Number(r.remaining ?? 0),
-      debt: a.debt + Number(r.debt ?? 0),
-    }), { students: 0, charged: 0, collected: 0, remaining: 0, debt: 0 }),
+      overdue: a.overdue + Number(r.overdue ?? 0),
+    }), { students: 0, charged: 0, collected: 0, remaining: 0, overdue: 0 }),
     [rows.data]);
 
   const canEdit = mayWrite('students.manage');
@@ -227,7 +227,7 @@ export default function Classes() {
                   { header: t('cls.students'), value: (r) => r.students, numeric: true },
                   { header: t('cls.charged'), value: (r) => r.charged, numeric: true },
                   { header: t('cls.collected'), value: (r) => r.collected, numeric: true },
-                  { header: t('cls.debt'), value: (r) => r.remaining, numeric: true },
+                  { header: t('cls.overdue'), value: (r) => r.overdue, numeric: true },
                   { header: '%', value: (r) => r.collection_rate, numeric: true },
                 ],
                 list,
@@ -279,7 +279,7 @@ export default function Classes() {
                   <SortTh k="students" align="right">{t('cls.students')}</SortTh>
                   <SortTh k="charged" align="right">{t('cls.charged')}</SortTh>
                   <SortTh k="collected" align="right">{t('cls.collected')}</SortTh>
-                  <SortTh k="remaining" align="right">{t('cls.debt')}</SortTh>
+                  <SortTh k="overdue" align="right">{t('cls.overdue')}</SortTh>
                   <SortTh k="collection_rate" align="right">%</SortTh>
                   <Th align="right">{t('common.actions')}</Th>
                 </tr>
@@ -322,7 +322,7 @@ export default function Classes() {
                         {money(c.collected, lang)}
                       </Td>
                       <Td align="right" mono>
-                        <Money value={c.remaining} colored />
+                        <Money value={c.overdue} colored />
                       </Td>
                       <Td align="right">
                         <Badge tone={r >= 80 ? 'ok' : r >= 50 ? 'warn' : 'danger'}>
@@ -369,7 +369,7 @@ export default function Classes() {
                     {money(totals.collected, lang)}
                   </Td>
                   <Td align="right" mono className="text-[var(--danger)]">
-                    {money(totals.remaining, lang)}
+                    {money(totals.overdue, lang)}
                   </Td>
                   <Td align="right">
                     <Badge tone={rate >= 80 ? 'ok' : rate >= 50 ? 'warn' : 'danger'}>

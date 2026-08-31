@@ -159,7 +159,10 @@ export default function ClassCard() {
   const f = fin.data;
   const rate = Number(f?.collection_rate ?? 0);
   const active = (students.data ?? []).filter((s) => s.status === 'active').length;
-  const debtors = (students.data ?? []).filter((s) => s.balance > 0).length;
+  //  "Qarzdor" — muddati O'TGANI. Ilgari bu `balance > 0` edi va
+  //  1-sentabrda hisoblanma qurilishi bilan butun maktab qarzdor
+  //  bo'lib ko'rinardi, holbuki to'lov muddati 10-sentabr.
+  const debtors = (students.data ?? []).filter((s) => s.overdue > 0).length;
   const overfull = c.capacity ? active > c.capacity : false;
 
   const SortTh = ({ k, children, align }: {
@@ -250,11 +253,13 @@ export default function ClassCard() {
         <Stat label={t('cls.students')} value={String(active)}
               hint={c.capacity ? t('cls.ofCapacity', { capacity: c.capacity }) : undefined} />
         <Stat label={t('cls.debtors')} value={String(debtors)}
-              tone={debtors > 0 ? 'warn' : 'ok'} />
-        <Stat label={t('cls.totalDebt')} value={money(f?.debt, lang)}
-              tone="danger" hint={t('cls.totalDebtHint')} />
-        <Stat label={t('cls.avgPerStudent')}
-              value={money(f?.avg_per_student, lang)} />
+              tone={debtors > 0 ? 'warn' : 'ok'}
+              hint={t('cls.debtorsHint')} />
+        <Stat label={t('cls.unpaid')} value={money(f?.unpaid, lang)}
+              hint={t('cls.unpaidHint')} />
+        <Stat label={t('cls.overdue')} value={money(f?.overdue, lang)}
+              tone={Number(f?.overdue ?? 0) > 0 ? 'danger' : 'ok'}
+              hint={t('cls.overdueHint')} />
       </div>
 
       {/* --- Sinf rahbari ---------------------------------------- */}

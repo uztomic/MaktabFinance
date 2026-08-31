@@ -3619,6 +3619,10 @@ export type Database = {
         Args: { p_payment_id: string; p_reason: string }
         Returns: Json
       }
+      cancel_payroll: {
+        Args: { p_reason: string; p_run_id: string }
+        Returns: Json
+      }
       class_attendance_students: {
         Args: { p_class_id: string; p_day?: string }
         Returns: {
@@ -3889,11 +3893,13 @@ export type Database = {
           class_name: string
           collected: number
           collection_rate: number
-          debt: number
+          debtors: number
           grade_level: number
+          overdue: number
           remaining: number
           students: number
           teacher_name: string
+          unpaid: number
         }[]
       }
       report_cash: {
@@ -4103,6 +4109,10 @@ export type Database = {
       }
       run_billing_cycle: { Args: never; Returns: Json }
       run_monthly_invoices: {
+        Args: { p_dry_run?: boolean; p_period?: string }
+        Returns: Json
+      }
+      run_monthly_payroll: {
         Args: { p_dry_run?: boolean; p_period?: string }
         Returns: Json
       }

@@ -17,8 +17,8 @@ import { useAuth } from '@/auth/AuthProvider';
 import { useI18n, useT } from '@/i18n';
 import { currentPeriod, money, periodLabel, shiftPeriod } from '@/lib/format';
 import {
-  Badge, Button, Card, EmptyState, ErrorState, Loading, Notice,
-  PageHeader, Table, Td, Th, Tr,
+  Badge, Button, Card, EmptyState, ErrorState, Field, Input, Loading,
+  Modal, Notice, PageHeader, Table, Td, Th, Tr,
 } from '@/ui';
 
 export default function Payroll() {
@@ -96,6 +96,36 @@ export default function Payroll() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['payroll', period] });
       qc.invalidateQueries({ queryKey: ['pnl'] });
+    },
+  });
+
+  /**
+   *  Oylikni bekor qilish.
+   *
+   *  Uchala ehtiyojni bitta amal qoplaydi: berilgan pulni qaytarish,
+   *  xato summani tuzatish va butunlay olib tashlash. Bekor qilingan
+   *  hisob ro'yxatdan chiqadi va "Hammasini hisoblash" uni yangidan
+   *  quradi — tuzatish uchun alohida tugma kerak emas.
+   *
+   *  Yozuv o'chirilmaydi: pul berilgani ham, qaytarilgani ham
+   *  jurnalda qolishi kerak.
+   */
+  const [cancelling, setCancelling] =
+    useState<{ id: string; name: string; net: number } | null>(null);
+
+  const cancel = useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      const { data, error } = await supabase.rpc('cancel_payroll', {
+        p_run_id: id, p_reason: reason,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['payroll', period] });
+      qc.invalidateQueries({ queryKey: ['pnl'] });
+      qc.invalidateQueries({ queryKey: ['expenses'] });
+      setCancelling(null);
     },
   });
 
@@ -262,15 +292,30 @@ export default function Payroll() {
                       </Badge>
                     </Td>
                     <Td align="right">
-                      {r.status !== 'approved' && mayWrite('payroll.approve') && (
-                        <Button
-                          size="sm"
-                          variant="accent"
-                          onClick={() => approve.mutate(r.payroll_run_id!)}
-                          disabled={approve.isPending}
-                        >
-                          {t('payroll.approve')}
-                        </Button>
+                      {mayWrite('payroll.approve') && (
+                        <div className="flex justify-end gap-1.5">
+                          {r.status !== 'approved' && (
+                            <Button
+                              size="sm"
+                              variant="accent"
+                              onClick={() => approve.mutate(r.payroll_run_id!)}
+                              disabled={approve.isPending}
+                            >
+                              {t('payroll.approve')}
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setCancelling({
+                              id: r.payroll_run_id!,
+                              name: r.teacher_name ?? '',
+                              net: Number(r.net_total ?? 0),
+                            })}
+                          >
+                            {t('payroll.cancel')}
+                          </Button>
+                        </div>
                       )}
                     </Td>
                   </Tr>
@@ -301,6 +346,73 @@ export default function Payroll() {
       <div className="mt-3">
         <Notice tone="neutral">{t('payroll.approveWarning')}</Notice>
       </div>
+
+      {cancelling && (
+        <CancelPayrollModal
+          target={cancelling}
+          onClose={() => setCancelling(null)}
+          onSubmit={(reason) =>
+            cancel.mutate({ id: cancelling.id, reason })}
+          busy={cancel.isPending}
+          error={cancel.error ? (cancel.error as Error).message : null}
+        />
+      )}
     </>
+  );
+}
+
+/**
+ *  Bekor qilish sababi MAJBURIY.
+ *
+ *  Pul qaytarilganda "nega" degan savol albatta tug'iladi — bir oy
+ *  o'tib buni hech kim eslay olmaydi. Shuning uchun sabab jurnalga
+ *  yoziladi va bo'sh qoldirib bo'lmaydi.
+ */
+function CancelPayrollModal({ target, onClose, onSubmit, busy, error }: {
+  target: { id: string; name: string; net: number };
+  onClose: () => void;
+  onSubmit: (reason: string) => void;
+  busy: boolean;
+  error: string | null;
+}) {
+  const t = useT();
+  const { lang } = useI18n();
+  const [reason, setReason] = useState('');
+
+  return (
+    <Modal
+      open
+      title={`${t('payroll.cancel')} — ${target.name}`}
+      onClose={onClose}
+      footer={
+        <>
+          <Button onClick={onClose}>{t('common.cancel')}</Button>
+          <Button
+            variant="danger"
+            onClick={() => onSubmit(reason)}
+            disabled={busy || reason.trim().length < 3}
+          >
+            {busy ? t('common.saving') : t('payroll.cancel')}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <Notice tone="warn">
+          {t('payroll.cancelWarning', { amount: money(target.net, lang) })}
+        </Notice>
+
+        <Field label={t('payroll.cancelReason')} required
+               hint={t('payroll.cancelReasonHint')}>
+          <Input
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            autoFocus
+          />
+        </Field>
+
+        {error && <Notice tone="danger">{error}</Notice>}
+      </div>
+    </Modal>
   );
 }
