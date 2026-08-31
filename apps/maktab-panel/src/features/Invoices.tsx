@@ -32,6 +32,27 @@ import {
 
 type Status = 'preliminary' | 'final' | 'approved' | 'cancelled';
 
+/** `period_forecast` qaytaradigan ma'lumot. */
+interface Forecast {
+  ok: number;
+  not_started: number;
+  ended: number;
+  left: number;
+  summer: number;
+  no_contract: number;
+  first_period: string | null;
+  expected_total: number;
+  expected_tuition: number;
+  expected_service: number;
+  expected_discount: number;
+  by_class: Array<{ class_name: string; students: number; total: number }>;
+  payroll_net: number;
+  payroll_runs: number;
+  payroll_teachers: number;
+  payroll_missing: number;
+  net: number;
+}
+
 const TONE: Record<Status, 'warn' | 'brand' | 'ok' | 'neutral'> = {
   preliminary: 'warn',
   final: 'brand',
@@ -104,7 +125,8 @@ export default function Invoices() {
   });
 
   /**
-   *  Nega hisoblanma quriladi yoki qurilmaydi.
+   *  Davr prognozi: daromad sinflar kesimida, oylik va qo'lda
+   *  qoladigan summa. Nega hisoblanma qurilmagani ham shu yerdan.
    *
    *  Ilgari tugma bosilganda "O'tkazib yuborildi: 227" chiqardi va
    *  tamom. Bu raqam hech narsani tushuntirmaydi: tizim buzilganmi,
@@ -112,19 +134,14 @@ export default function Invoices() {
    *  boshqa-boshqa va har biriga boshqacha javob kerak.
    */
   const diag = useQuery({
-    queryKey: ['invoice-diag', activeBranch, period],
+    queryKey: ['period-forecast', activeBranch, period],
     enabled: !!activeBranch,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('invoice_skip_reasons', {
+      const { data, error } = await supabase.rpc('period_forecast', {
         p_branch_id: activeBranch!, p_period: period,
       });
       if (error) throw error;
-      return data as {
-        ok: number; not_started: number; ended: number; left: number;
-        summer: number; no_contract: number; first_period: string | null;
-        expected_total: number; expected_tuition: number;
-        expected_service: number; expected_discount: number;
-      };
+      return data as unknown as Forecast;
     },
   });
 
@@ -311,11 +328,7 @@ export default function Invoices() {
           </Notice>
         )}
         {diag.data && (
-          <PeriodDiagnosis
-            d={diag.data}
-            hasInvoices={list.length > 0}
-            onGo={(pp) => setPeriod(pp)}
-          />
+          <PeriodDiagnosis d={diag.data} onGo={(pp) => setPeriod(pp)} />
         )}
         {autoRun.data?.period === period && (
           <Notice tone="neutral">
@@ -331,6 +344,9 @@ export default function Invoices() {
         {note && <Notice tone="ok">{note}</Notice>}
         {error && <Notice tone="danger">{(error as Error).message}</Notice>}
       </div>
+
+      {/* --- Davr bo'yicha hisob --------------------------------- */}
+      {diag.data && <PeriodSummary d={diag.data} rows={list} />}
 
       {/* --- Ro'yxat -------------------------------------------- */}
       <Card padded={false}>
@@ -416,14 +432,127 @@ export default function Invoices() {
  *  xabar bilan to'ldirish foydalanuvchini muhimini payqamaydigan
  *  qilib qo'yadi.
  */
-function PeriodDiagnosis({ d, hasInvoices, onGo }: {
-  d: {
-    ok: number; not_started: number; ended: number; left: number;
-    summer: number; no_contract: number; first_period: string | null;
-    expected_total: number; expected_tuition: number;
-    expected_service: number; expected_discount: number;
-  };
-  hasInvoices: boolean;
+/**
+ *  Davr bo'yicha hisob: daromad — oylik = qo'lda qoladi.
+ *
+ *  DAROMAD IKKI MANBADAN. Hisoblanma allaqachon qurilgan bo'lsa
+ *  HAQIQIY summa olinadi (yakunlashda kunlik xizmatlar yo'qlik
+ *  bo'yicha qayta hisoblangan bo'lishi mumkin), aks holda prognoz.
+ *  Ikkalasini aralashtirsak, oy oxirida jadval bilan bu yerdagi
+ *  raqam bir-biriga to'g'ri kelmasdi.
+ *
+ *  Sinf kesimi ham shu qoidaga bo'ysunadi.
+ */
+function PeriodSummary({ d, rows }: {
+  d: Forecast;
+  //  Qurilgan hisoblanmalar — bo'sh bo'lsa prognozga o'tiladi.
+  rows: Array<{
+    total: number | null;
+    student?: { class_name?: string | null } | undefined;
+  }>;
+}) {
+  const t = useT();
+  const { lang } = useI18n();
+
+  const real = rows.length > 0;
+
+  const income = real
+    ? rows.reduce((s, r) => s + Number(r.total ?? 0), 0)
+    : d.expected_total;
+
+  const byClass = real
+    ? [...rows.reduce((m, r) => {
+        const k = r.student?.class_name || '—';
+        const cur = m.get(k) ?? { class_name: k, students: 0, total: 0 };
+        cur.students += 1;
+        cur.total += Number(r.total ?? 0);
+        return m.set(k, cur);
+      }, new Map<string, { class_name: string; students: number; total: number }>())
+        .values()].sort((a, b) => a.class_name.localeCompare(b.class_name))
+    : d.by_class;
+
+  //  Na daromad, na oylik — ko'rsatadigan narsa yo'q.
+  if (income === 0 && d.payroll_net === 0) return null;
+
+  return (
+    <Card className="mb-4">
+      <h2 className="mb-3 text-[13px] font-semibold">
+        {real ? t('inv.sum.titleReal') : t('inv.sum.titlePlan')}
+      </h2>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Figure label={t('inv.sum.income')} value={money(income, lang)} />
+        <Figure
+          label={t('inv.sum.payroll')}
+          value={d.payroll_net > 0 ? `− ${money(d.payroll_net, lang)}` : '—'}
+          hint={d.payroll_missing > 0
+            ? t('inv.sum.payrollMissing', { count: d.payroll_missing })
+            : undefined}
+        />
+        <Figure
+          label={t('inv.sum.net')}
+          value={money(income - d.payroll_net, lang)}
+          strong
+        />
+      </div>
+
+      {!real && d.expected_service > 0 && (
+        <p className="mt-2 text-[12px] text-[var(--text-muted)]">
+          {t('inv.expectedDaily')}
+        </p>
+      )}
+
+      {byClass.length > 0 && (
+        <details className="mt-3">
+          <summary className="cursor-pointer text-[13px] font-medium">
+            {t('inv.sum.byClass', { count: byClass.length })}
+          </summary>
+          <div className="mt-2 overflow-x-auto">
+            <Table>
+              <thead>
+                <tr>
+                  <Th>{t('students.class')}</Th>
+                  <Th align="right">{t('nav.students')}</Th>
+                  <Th align="right">{t('common.total')}</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {byClass.map((c) => (
+                  <Tr key={c.class_name}>
+                    <Td>{c.class_name}</Td>
+                    <Td align="right" mono>{c.students}</Td>
+                    <Td align="right" mono>{money(c.total, lang)}</Td>
+                  </Tr>
+                ))}
+              </tbody>
+            </Table>
+          </div>
+        </details>
+      )}
+    </Card>
+  );
+}
+
+function Figure({ label, value, hint, strong }: {
+  label: string; value: string; hint?: string; strong?: boolean;
+}) {
+  return (
+    <div className="rounded-md bg-[var(--bg-subtle)] px-3 py-2">
+      <div className="text-[11px] uppercase text-[var(--text-muted)]">
+        {label}
+      </div>
+      <div className={`num ${strong ? 'text-lg font-semibold' : 'font-medium'}`}>
+        {value}
+      </div>
+      {hint && (
+        <div className="mt-0.5 text-[11px] text-[var(--warn)]">{hint}</div>
+      )}
+    </div>
+  );
+}
+
+function PeriodDiagnosis({ d, onGo }: {
+  d: Forecast;
   onGo: (period: string) => void;
 }) {
   const t = useT();
@@ -432,21 +561,13 @@ function PeriodDiagnosis({ d, hasInvoices, onGo }: {
   //  Shartnomasizlar — YAGONA haqiqiy muammo. Qolganlari tabiiy hol.
   const problem = d.no_contract > 0;
 
-  //  Hisoblanma allaqachon bor — jadvalning o'zida jami qatori bor,
-  //  taxminni takrorlash ortiqcha.
-  if (hasInvoices && !problem) return null;
-
-  //  Hisoblanma hali yaratilmagan, lekin yaratiladiganlar bor:
-  //  "qancha yig'iladi?" degan savolga javob shu yerda.
-  const forecast = !hasInvoices && d.ok > 0;
-
   const lines: string[] = [];
   if (d.not_started > 0) lines.push(t('inv.diag.notStarted', { count: d.not_started }));
   if (d.summer > 0)      lines.push(t('inv.diag.summer', { count: d.summer }));
   if (d.left + d.ended > 0) lines.push(t('inv.diag.gone', { count: d.left + d.ended }));
   if (d.no_contract > 0) lines.push(t('inv.diag.noContract', { count: d.no_contract }));
 
-  if (lines.length === 0 && !forecast) return null;
+  if (lines.length === 0) return null;
 
   const goto = d.first_period && d.ok === 0 && d.not_started > 0
     ? d.first_period.slice(0, 10)
@@ -455,30 +576,6 @@ function PeriodDiagnosis({ d, hasInvoices, onGo }: {
   return (
     <Notice tone={problem ? 'warn' : 'neutral'}>
       <div className="space-y-1">
-        {forecast && (
-          <div className="mb-2">
-            <p className="text-[13px] text-[var(--text-muted)]">
-              {t('inv.expected', { count: d.ok })}
-            </p>
-            <p className="num text-lg font-semibold text-[var(--text)]">
-              {money(d.expected_total, lang)}
-            </p>
-            {(d.expected_service > 0 || d.expected_discount > 0) && (
-              <p className="text-[12px] text-[var(--text-muted)]">
-                {t('inv.expectedParts', {
-                  tuition:  money(d.expected_tuition, lang),
-                  service:  money(d.expected_service, lang),
-                  discount: money(d.expected_discount, lang),
-                })}
-              </p>
-            )}
-            {d.expected_service > 0 && (
-              <p className="text-[12px] text-[var(--text-muted)]">
-                {t('inv.expectedDaily')}
-              </p>
-            )}
-          </div>
-        )}
         {lines.map((l) => <p key={l}>{l}</p>)}
         {goto && (
           <p className="pt-1">

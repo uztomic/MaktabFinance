@@ -3663,10 +3663,6 @@ export type Database = {
         Args: { p_rows: Json; p_statement_id: string }
         Returns: Json
       }
-      invoice_skip_reasons: {
-        Args: { p_branch_id: string; p_period: string }
-        Returns: Json
-      }
       issue_subscription_invoice: {
         Args: { p_period?: string; p_school_id: string }
         Returns: Json
@@ -3738,6 +3734,10 @@ export type Database = {
           class_name: string
           day: string
         }[]
+      }
+      period_forecast: {
+        Args: { p_branch_id: string; p_period: string }
+        Returns: Json
       }
       platform_overview: {
         Args: never
