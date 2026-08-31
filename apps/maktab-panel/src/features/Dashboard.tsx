@@ -130,6 +130,28 @@ export default function Dashboard() {
     },
   });
 
+  /**
+   *  Jim ishlamay turgan joylar.
+   *
+   *  Tizimning eng yomon xatosi — xato bermaydigani. Ota-onasi
+   *  kiritilmagan maktabda Telegram xabarlari hech kimga bormaydi,
+   *  lekin hech qayerda qizil yozuv chiqmaydi: navbatga qo'yilgan
+   *  xabar soni shunchaki nol bo'ladi. Maktab esa tizim ishlayapti
+   *  deb o'ylab yuraveradi.
+   */
+  const setup = useQuery({
+    queryKey: ['setup-issues', branchId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('school_setup_issues', {
+        p_branch_id: branchId ?? undefined,
+      });
+      if (error) throw error;
+      return (data ?? []) as Array<{
+        code: string; severity: string; count: number;
+      }>;
+    },
+  });
+
   const proofs = useQuery({
     queryKey: ['pending-proofs', branchId],
     enabled: can('payments.create'),
@@ -190,6 +212,9 @@ export default function Dashboard() {
 
       {/* --- Ogohlantirishlar ------------------------------------- */}
       <div className="mb-4 space-y-2">
+        {(setup.data?.length ?? 0) > 0 && (
+          <SetupIssues rows={setup.data!} />
+        )}
         {(gaps.data?.length ?? 0) > 0 && (
           <Notice tone="warn">
             <strong>{t('dashboard.absenceWarning')}: </strong>
@@ -633,5 +658,52 @@ function Row({ label, value }: { label: string; value: string }) {
       <span className="text-[var(--text-muted)]">{label}</span>
       <span className="num">{value}</span>
     </div>
+  );
+}
+
+/**
+ *  Sozlamadagi jim kamchiliklar.
+ *
+ *  Har biri uchun javob boshqacha, shuning uchun ular bitta xabarga
+ *  qo'shilmaydi: og'irligi bo'yicha guruhlanadi va har biriga
+ *  tuzatiladigan sahifaga havola beriladi.
+ */
+function SetupIssues({ rows }: {
+  rows: Array<{ code: string; severity: string; count: number }>;
+}) {
+  const t = useT();
+
+  const LINK: Record<string, string> = {
+    no_parent: '/oquvchilar',
+    parent_no_telegram: '/oquvchilar',
+    no_contract: '/oquvchilar',
+    no_class: '/oquvchilar',
+    teacher_no_branch: '/oqituvchilar',
+    teacher_no_login: '/oqituvchilar',
+    class_no_teacher: '/sinflar',
+  };
+
+  //  Eng og'iri tepada — kassir birinchi shuni ko'rsin.
+  const order = { danger: 0, warn: 1, info: 2 } as Record<string, number>;
+  const sorted = [...rows].sort(
+    (a, b) => (order[a.severity] ?? 9) - (order[b.severity] ?? 9),
+  );
+
+  const worst = sorted[0]?.severity === 'danger' ? 'danger' : 'warn';
+
+  return (
+    <Notice tone={worst}>
+      <div className="space-y-1">
+        <strong>{t('setup.title')}</strong>
+        {sorted.map((r) => (
+          <p key={r.code}>
+            {t(`setup.${r.code}`, { count: r.count })}{' '}
+            <Link to={LINK[r.code] ?? '/'} className="font-medium underline">
+              {t('setup.fix')}
+            </Link>
+          </p>
+        ))}
+      </div>
+    </Notice>
   );
 }

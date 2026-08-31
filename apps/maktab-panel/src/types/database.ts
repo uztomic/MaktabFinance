@@ -4129,6 +4129,14 @@ export type Database = {
         Returns: Json
       }
       school_price: { Args: { p_school_id: string }; Returns: Json }
+      school_setup_issues: {
+        Args: { p_branch_id?: string }
+        Returns: {
+          code: string
+          count: number
+          severity: string
+        }[]
+      }
       school_users: {
         Args: { p_school_id: string }
         Returns: {
