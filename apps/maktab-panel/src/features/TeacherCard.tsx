@@ -69,6 +69,86 @@ export default function TeacherCard() {
     },
     onError: (e) => toast.error((e as Error).message),
   });
+  /**
+   *  Darsni tahrirlash va bekor qilish.
+   *
+   *  Oylik aynan shu soatlarga tayanadi: xato kiritilgan dars
+   *  tuzatilmasa, o'qituvchiga noto'g'ri pul beriladi. Yozuv
+   *  o'chirilmaydi — `deleted_at` qo'yiladi, chunki oylik qayta
+   *  hisoblanganda nima o'zgargani ko'rinib turishi kerak.
+   */
+  const [editLesson, setEditLesson] = useState<any>(null);
+
+  const saveLesson = useMutation({
+    mutationFn: async (f: {
+      id: string; day: string; hours: string; kind: string;
+      subject: string; reason: string;
+    }) => {
+      const { error } = await supabase.from('lessons').update({
+        day: f.day,
+        hours: Number(f.hours),
+        kind: f.kind as 'held' | 'substituted' | 'not_held',
+        subject: f.subject.trim() || null,
+        reason: f.reason.trim() || null,
+      }).eq('id', f.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['teacher-lessons', id] });
+      qc.invalidateQueries({ queryKey: ['teacher-hours'] });
+      toast.ok(t('ux.saved'));
+      setEditLesson(null);
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
+  const dropLesson = useMutation({
+    mutationFn: async (lessonId: string) => {
+      const { error } = await supabase.from('lessons').update({
+        deleted_at: new Date().toISOString(),
+        deleted_reason: 'Xato kiritilgan',
+      }).eq('id', lessonId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['teacher-lessons', id] });
+      qc.invalidateQueries({ queryKey: ['teacher-hours'] });
+      toast.ok(t('lessons.removed'));
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
+  /**
+   *  Ishdan bo'shatish va o'chirish — IKKI XIL narsa.
+   *
+   *  Ishlagan odam ro'yxatdan yo'qolmaydi: uning oyligi va darslari
+   *  hisobotlarda qoladi. Xato kiritilgan yozuv esa umuman
+   *  ko'rinmasligi kerak. Server ikkalasini ajratadi va moliyaviy
+   *  izi bor odamni o'chirishga yo'l qo'ymaydi.
+   */
+  const [leaving, setLeaving] = useState<'dismiss' | 'delete' | null>(null);
+
+  const dismiss = useMutation({
+    mutationFn: async (v: { mode: 'dismiss' | 'delete'; reason: string; day: string }) => {
+      const { error } = v.mode === 'dismiss'
+        ? await supabase.rpc('dismiss_teacher', {
+            p_teacher_id: id!, p_reason: v.reason, p_left_on: v.day,
+          })
+        : await supabase.rpc('delete_teacher', {
+            p_teacher_id: id!, p_reason: v.reason,
+          });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['teachers'] });
+      qc.invalidateQueries({ queryKey: ['teacher', id] });
+      qc.invalidateQueries({ queryKey: ['classes'] });
+      toast.ok(t('ux.saved'));
+      setLeaving(null);
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
   const [allowanceOpen, setAllowanceOpen] = useState(false);
   const [advanceOpen, setAdvanceOpen] = useState(false);
 
@@ -154,8 +234,9 @@ export default function TeacherCard() {
       const from = currentPeriod();
       const { data, error } = await supabase
         .from('lessons')
-        .select('id, day, hours, kind, subject, class_name, reason')
+        .select('id, day, hours, kind, subject, class_name, reason, branch_id')
         .eq('teacher_id', id!)
+        .is('deleted_at', null)
         .gte('day', from)
         .order('day', { ascending: false })
         .limit(60);
@@ -261,9 +342,19 @@ export default function TeacherCard() {
                  kartochkaga kirgan odam orqaga qaytib, ro'yxatdan
                  qidirib, o'sha qatordagi tugmani bosishi kerak bo'lardi. */}
             {mayWrite('teachers.manage') && (
-              <Button onClick={() => setEditOpen(true)}>
-                {t('common.edit')}
-              </Button>
+              <>
+                <Button onClick={() => setEditOpen(true)}>
+                  {t('common.edit')}
+                </Button>
+                {te.is_active && (
+                  <Button variant="ghost" onClick={() => setLeaving('dismiss')}>
+                    {t('teachers.dismiss')}
+                  </Button>
+                )}
+                <Button variant="ghost" onClick={() => setLeaving('delete')}>
+                  {t('common.delete')}
+                </Button>
+              </>
             )}
           </>
         }
@@ -456,6 +547,7 @@ export default function TeacherCard() {
                 <Th>{t('students.class')}</Th>
                 <Th>{t('lessons.kind')}</Th>
                 <Th align="right">{t('lessons.hours')}</Th>
+                <Th align="right">{t('common.actions')}</Th>
               </tr>
             </thead>
             <tbody>
@@ -478,6 +570,21 @@ export default function TeacherCard() {
                     )}
                   </Td>
                   <Td align="right" mono>{num(l.hours, lang, 1)}</Td>
+                  <Td align="right">
+                    {mayWrite('teachers.manage') && (
+                      <div className="flex justify-end gap-1">
+                        <Button size="sm" variant="ghost"
+                                onClick={() => setEditLesson(l)}>
+                          {t('common.edit')}
+                        </Button>
+                        <Button size="sm" variant="ghost"
+                                disabled={dropLesson.isPending}
+                                onClick={() => dropLesson.mutate(l.id)}>
+                          {t('common.remove')}
+                        </Button>
+                      </div>
+                    )}
+                  </Td>
                 </Tr>
               ))}
             </tbody>
@@ -487,6 +594,26 @@ export default function TeacherCard() {
 
       {newLogin && (
         <TeacherCredentials data={newLogin} onClose={() => setNewLogin(null)} />
+      )}
+
+      {editLesson && (
+        <EditLessonModal
+          lesson={editLesson}
+          onClose={() => setEditLesson(null)}
+          onSubmit={(f) => saveLesson.mutate({ ...f, id: editLesson.id })}
+          busy={saveLesson.isPending}
+        />
+      )}
+
+      {leaving && (
+        <DismissModal
+          mode={leaving}
+          name={te.full_name}
+          onClose={() => setLeaving(null)}
+          onSubmit={(reason, day) =>
+            dismiss.mutate({ mode: leaving, reason, day })}
+          busy={dismiss.isPending}
+        />
       )}
 
       {editOpen && (
@@ -702,6 +829,137 @@ function AdvanceModal({
         <Notice tone="neutral">{t('adv.hint')}</Notice>
         {error && <Notice tone="danger">{error}</Notice>}
       </form>
+    </Modal>
+  );
+}
+
+
+/** Xato kiritilgan darsni tuzatish. */
+function EditLessonModal({ lesson, onClose, onSubmit, busy }: {
+  // deno-lint-ignore no-explicit-any
+  lesson: any;
+  onClose: () => void;
+  onSubmit: (f: {
+    day: string; hours: string; kind: string; subject: string; reason: string;
+  }) => void;
+  busy: boolean;
+}) {
+  const t = useT();
+  const [f, setF] = useState({
+    day: lesson.day,
+    hours: String(lesson.hours ?? ''),
+    kind: lesson.kind,
+    subject: lesson.subject ?? '',
+    reason: lesson.reason ?? '',
+  });
+  const set = (k: string, v: string) => setF((p) => ({ ...p, [k]: v }));
+
+  return (
+    <Modal
+      open
+      title={t('lessons.edit')}
+      onClose={onClose}
+      footer={
+        <>
+          <Button onClick={onClose}>{t('common.cancel')}</Button>
+          <Button variant="primary" onClick={() => onSubmit(f)}
+                  disabled={busy || Number(f.hours) <= 0}>
+            {busy ? t('common.saving') : t('common.save')}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <Notice tone="neutral">{t('lessons.editHint')}</Notice>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field label={t('common.date')} required>
+            <Input type="date" value={f.day}
+                   onChange={(e) => set('day', e.target.value)} />
+          </Field>
+          <Field label={t('lessons.hours')} required>
+            <Input type="number" step="0.5" min="0.5" value={f.hours}
+                   onChange={(e) => set('hours', e.target.value)} />
+          </Field>
+        </div>
+
+        <Field label={t('lessons.kind')} required>
+          <Select value={f.kind} onChange={(e) => set('kind', e.target.value)}>
+            <option value="held">{t('lessons.kind.held')}</option>
+            <option value="substituted">{t('lessons.kind.substituted')}</option>
+            <option value="not_held">{t('lessons.kind.not_held')}</option>
+          </Select>
+        </Field>
+
+        <Field label={t('lessons.subject')}>
+          <Input value={f.subject} onChange={(e) => set('subject', e.target.value)} />
+        </Field>
+
+        {f.kind === 'not_held' && (
+          <Field label={t('lessons.reason')} required
+                 hint={t('lessons.reasonHint')}>
+            <Input value={f.reason}
+                   onChange={(e) => set('reason', e.target.value)} />
+          </Field>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+/**
+ *  Ishdan bo'shatish yoki o'chirish.
+ *
+ *  Ikkalasi bitta oynada, lekin matni butunlay boshqacha: birinchisi
+ *  odatiy voqea, ikkinchisi esa yozuvning o'zi xato ekanini
+ *  bildiradi. Ularni chalkashtirib yuborish hisobotlarni buzadi.
+ */
+function DismissModal({ mode, name, onClose, onSubmit, busy }: {
+  mode: 'dismiss' | 'delete';
+  name: string;
+  onClose: () => void;
+  onSubmit: (reason: string, day: string) => void;
+  busy: boolean;
+}) {
+  const t = useT();
+  const [reason, setReason] = useState('');
+  const [day, setDay] = useState(isoDate());
+
+  return (
+    <Modal
+      open
+      title={`${mode === 'dismiss' ? t('teachers.dismiss') : t('common.delete')} — ${name}`}
+      onClose={onClose}
+      footer={
+        <>
+          <Button onClick={onClose}>{t('common.cancel')}</Button>
+          <Button variant="danger" onClick={() => onSubmit(reason, day)}
+                  disabled={busy || reason.trim().length < 3}>
+            {busy ? t('common.saving')
+              : mode === 'dismiss' ? t('teachers.dismiss') : t('common.delete')}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <Notice tone="warn">
+          {mode === 'dismiss'
+            ? t('teachers.dismissHint')
+            : t('teachers.deleteHint')}
+        </Notice>
+
+        {mode === 'dismiss' && (
+          <Field label={t('teachers.leftOn')} required>
+            <Input type="date" value={day}
+                   onChange={(e) => setDay(e.target.value)} />
+          </Field>
+        )}
+
+        <Field label={t('pay.cancelReason')} required>
+          <Input value={reason} onChange={(e) => setReason(e.target.value)}
+                 autoFocus />
+        </Field>
+      </div>
     </Modal>
   );
 }

@@ -1519,6 +1519,8 @@ export type Database = {
           created_at: string
           created_by: string | null
           day: string
+          deleted_at: string | null
+          deleted_reason: string | null
           hours: number
           id: string
           kind: Database["public"]["Enums"]["lesson_kind"]
@@ -1534,6 +1536,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           day: string
+          deleted_at?: string | null
+          deleted_reason?: string | null
           hours?: number
           id?: string
           kind?: Database["public"]["Enums"]["lesson_kind"]
@@ -1549,6 +1553,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           day?: string
+          deleted_at?: string | null
+          deleted_reason?: string | null
           hours?: number
           id?: string
           kind?: Database["public"]["Enums"]["lesson_kind"]
@@ -3309,6 +3315,8 @@ export type Database = {
           hired_on: string | null
           id: string
           is_active: boolean
+          leave_reason: string | null
+          left_on: string | null
           note: string | null
           phone: string | null
           rate_factor: number
@@ -3327,6 +3335,8 @@ export type Database = {
           hired_on?: string | null
           id?: string
           is_active?: boolean
+          leave_reason?: string | null
+          left_on?: string | null
           note?: string | null
           phone?: string | null
           rate_factor?: number
@@ -3345,6 +3355,8 @@ export type Database = {
           hired_on?: string | null
           id?: string
           is_active?: boolean
+          leave_reason?: string | null
+          left_on?: string | null
           note?: string | null
           phone?: string | null
           rate_factor?: number
@@ -3600,6 +3612,15 @@ export type Database = {
       }
     }
     Functions: {
+      add_payroll_adjustment: {
+        Args: {
+          p_amount: number
+          p_description: string
+          p_reason?: string
+          p_run_id: string
+        }
+        Returns: Json
+      }
       approve_invoices: {
         Args: { p_branch_id: string; p_period: string }
         Returns: Json
@@ -3643,8 +3664,16 @@ export type Database = {
         Returns: Json
       }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      delete_teacher: {
+        Args: { p_reason: string; p_teacher_id: string }
+        Returns: Json
+      }
       detach_parent: {
         Args: { p_parent_id: string; p_student_id: string }
+        Returns: Json
+      }
+      dismiss_teacher: {
+        Args: { p_left_on?: string; p_reason: string; p_teacher_id: string }
         Returns: Json
       }
       edit_payment: {
@@ -3873,6 +3902,7 @@ export type Database = {
         Args: { p_proof_id: string; p_reason: string }
         Returns: Json
       }
+      remove_payroll_adjustment: { Args: { p_line_id: string }; Returns: Json }
       report_advances: {
         Args: { p_branch_id?: string }
         Returns: {
