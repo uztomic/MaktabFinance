@@ -20,7 +20,7 @@
 // =====================================================================
 
 import { readFile, readdir } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -45,26 +45,29 @@ const MIGRATIONS = join(ROOT, 'supabase', 'migrations');
 //  platforma obyekti qo'shilganda bir marta yangilanadi.
 // ---------------------------------------------------------------------
 
-//  QAYSI MIGRATSIYA BEGONA — VAQT UYASI BO'YICHA.
+//  QAYSI MIGRATSIYA BEGONA.
 //
-//  Versiya `YYYYMMDD` + `HHMMSS`. Ikkala repo bitta tarix jadvaliga
-//  yozadi, shuning uchun raqamlar to'qnashmasligi kerak: platforma
-//  repo HAR DOIM `15` uyasini oladi, bu repo `12`–`14` ni.
+//  Ilgari bu vaqt uyasi bo'yicha aniqlanardi: "platforma repo `15`
+//  ni oladi, bu repo `12`-`14` ni". Kelishuv BUZILDI — 2026-08-31
+//  da bu repo bir kunda `12` dan `23` gacha migratsiya yozdi va
+//  `15` ni ham egalladi.
 //
-//  TO'QNASHUV JIM O'TADI: bir xil versiya raqami `db.mjs` tomonidan
-//  "allaqachon qo'llangan" deb ko'riladi va migratsiya BAJARILMAY
-//  qoladi, xato ham bermaydi. 2026-08-27 da aynan shunday bo'ldi.
-//
-//  Istisno — platforma reposining birinchi o'nta migratsiyasi `12`
-//  uyasida yozilgan, qoida joriy qilinishidan oldin.
-const FOREIGN_LEGACY = new Set([
-  '20260826120000', '20260826120001', '20260826120002', '20260826120003',
-  '20260826120004', '20260826120005', '20260826120006', '20260826120007',
-  '20260826120008', '20260826120009',
-]);
+//  Kelishuvga tayanish noto'g'ri edi: u ikkala repo yozuvchisining
+//  esida turishini talab qiladi. Endi HAQIQAT tekshiriladi — qo'shni
+//  reponing migratsiya papkasiga qaraladi.
+const SIBLING = join(ROOT, '..', 'MaktabFinanceSupperAdmin',
+                     'SupperAdminMaktabFinance', 'supabase', 'migrations');
 
-const isForeignVersion = (v) =>
-  v.slice(8, 10) === '15' || FOREIGN_LEGACY.has(v);
+/** Qo'shni repodagi migratsiya versiyalari. Topilmasa — null. */
+function siblingVersions() {
+  if (!existsSync(SIBLING)) return null;
+  return new Set(
+    readdirSync(SIBLING)
+      .filter((f) => f.endsWith('.sql'))
+      .map((f) => (f.match(/^(\d+)_/) ?? [])[1])
+      .filter(Boolean),
+  );
+}
 
 //  Platforma obyektlari — ularning DDL si boshqa repoda.
 const FOREIGN_OBJECTS = new Set([
@@ -188,12 +191,15 @@ for (const [i, v] of versions.entries()) {
 //  Eng xavflisi shu: baza fayllardan oldinda. Toza bazani qurish
 //  natijasi HOZIRGIDAN BOSHQA bo'ladi.
 const known = new Set(versions);
+const sib = siblingVersions();
 let foreign = 0;
 
 for (const v of [...applied].sort()) {
   if (known.has(v)) continue;
-  if (isForeignVersion(v)) { foreign++; continue; }
-  problems.push(`tarixda bor, fayli yo'q: ${v}`);
+  //  Qo'shni repoda fayli bormi? Bor bo'lsa — begona, hammasi joyida.
+  if (sib && sib.has(v)) { foreign++; continue; }
+  if (!sib) { foreign++; continue; }   // qo'shni repo topilmadi — quyida aytiladi
+  problems.push(`tarixda bor, HECH QAYSI repoda fayli yo'q: ${v}`);
 }
 
 // --- Natija ------------------------------------------------------------
@@ -201,6 +207,10 @@ console.log(`\nMigratsiya fayli: ${files.length}, tarixda: ${applied.size}`);
 
 if (foreign > 0) {
   console.log(`Platforma reposiniki (tekshirilmadi): ${foreign}`);
+}
+
+if (!sib) {
+  console.log("DIQQAT: qo'shni repo topilmadi — begona migratsiyalar tekshirilmadi.");
 }
 
 if (problems.length === 0) {
