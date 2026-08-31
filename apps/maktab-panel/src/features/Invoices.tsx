@@ -122,6 +122,8 @@ export default function Invoices() {
       return data as {
         ok: number; not_started: number; ended: number; left: number;
         summer: number; no_contract: number; first_period: string | null;
+        expected_total: number; expected_tuition: number;
+        expected_service: number; expected_discount: number;
       };
     },
   });
@@ -407,7 +409,6 @@ export default function Invoices() {
   );
 }
 
-/** Sikl qadami — raqami, nomi va nima qilishi ko'rinib turadi. */
 /**
  *  Davr bo'yicha tashxis.
  *
@@ -419,6 +420,8 @@ function PeriodDiagnosis({ d, hasInvoices, onGo }: {
   d: {
     ok: number; not_started: number; ended: number; left: number;
     summer: number; no_contract: number; first_period: string | null;
+    expected_total: number; expected_tuition: number;
+    expected_service: number; expected_discount: number;
   };
   hasInvoices: boolean;
   onGo: (period: string) => void;
@@ -429,9 +432,13 @@ function PeriodDiagnosis({ d, hasInvoices, onGo }: {
   //  Shartnomasizlar — YAGONA haqiqiy muammo. Qolganlari tabiiy hol.
   const problem = d.no_contract > 0;
 
-  //  Hisoblanma bor va hamma joyida — jim turamiz.
+  //  Hisoblanma allaqachon bor — jadvalning o'zida jami qatori bor,
+  //  taxminni takrorlash ortiqcha.
   if (hasInvoices && !problem) return null;
-  if (d.ok > 0 && !problem) return null;
+
+  //  Hisoblanma hali yaratilmagan, lekin yaratiladiganlar bor:
+  //  "qancha yig'iladi?" degan savolga javob shu yerda.
+  const forecast = !hasInvoices && d.ok > 0;
 
   const lines: string[] = [];
   if (d.not_started > 0) lines.push(t('inv.diag.notStarted', { count: d.not_started }));
@@ -439,7 +446,7 @@ function PeriodDiagnosis({ d, hasInvoices, onGo }: {
   if (d.left + d.ended > 0) lines.push(t('inv.diag.gone', { count: d.left + d.ended }));
   if (d.no_contract > 0) lines.push(t('inv.diag.noContract', { count: d.no_contract }));
 
-  if (lines.length === 0) return null;
+  if (lines.length === 0 && !forecast) return null;
 
   const goto = d.first_period && d.ok === 0 && d.not_started > 0
     ? d.first_period.slice(0, 10)
@@ -448,6 +455,30 @@ function PeriodDiagnosis({ d, hasInvoices, onGo }: {
   return (
     <Notice tone={problem ? 'warn' : 'neutral'}>
       <div className="space-y-1">
+        {forecast && (
+          <div className="mb-2">
+            <p className="text-[13px] text-[var(--text-muted)]">
+              {t('inv.expected', { count: d.ok })}
+            </p>
+            <p className="num text-lg font-semibold text-[var(--text)]">
+              {money(d.expected_total, lang)}
+            </p>
+            {(d.expected_service > 0 || d.expected_discount > 0) && (
+              <p className="text-[12px] text-[var(--text-muted)]">
+                {t('inv.expectedParts', {
+                  tuition:  money(d.expected_tuition, lang),
+                  service:  money(d.expected_service, lang),
+                  discount: money(d.expected_discount, lang),
+                })}
+              </p>
+            )}
+            {d.expected_service > 0 && (
+              <p className="text-[12px] text-[var(--text-muted)]">
+                {t('inv.expectedDaily')}
+              </p>
+            )}
+          </div>
+        )}
         {lines.map((l) => <p key={l}>{l}</p>)}
         {goto && (
           <p className="pt-1">
@@ -465,6 +496,7 @@ function PeriodDiagnosis({ d, hasInvoices, onGo }: {
   );
 }
 
+/** Sikl qadami — raqami, nomi va nima qilishi ko'rinib turadi. */
 function StepButton({
   n, label, hint, onClick, disabled, variant = 'secondary',
 }: {
