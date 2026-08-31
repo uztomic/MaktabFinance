@@ -46,6 +46,8 @@ const Settings    = lazyPage(() => import('@/features/Settings'));
 const MyAttendance = lazyPage(() => import('@/features/teacher/MyAttendance'));
 const MyLoad      = lazyPage(() => import('@/features/teacher/MyLoad'));
 const MyPayroll   = lazyPage(() => import('@/features/teacher/MyPayroll'));
+const MyDashboard = lazyPage(() => import('@/features/teacher/MyDashboard'));
+const SchoolAttendance = lazyPage(() => import('@/features/SchoolAttendance'));
 const Subscription = lazyPage(() => import('@/features/Subscription'));
 const SupportChat  = lazyPage(() => import('@/features/SupportChat'));
 
@@ -166,7 +168,15 @@ export default function App() {
       <Suspense fallback={<Loading />}>
         <Routes>
           <Route element={<AppShell />}>
-            <Route index element={<Dashboard />} />
+            {/*  Bosh sahifa ROLGA qarab. O'qituvchi direktorning
+                 panelini ko'rmasligi kerak: u yerda maktab bo'yicha
+                 moliyaviy jamlanma va o'quvchilar soni turadi. */}
+            <Route
+              index
+              element={profile.role === 'teacher'
+                ? <MyDashboard />
+                : <Dashboard />}
+            />
             <Route path="oquvchilar" element={<Students />} />
             <Route path="oquvchilar/:id" element={<StudentCard />} />
             <Route path="sinflar" element={<Classes />} />
@@ -190,7 +200,14 @@ export default function App() {
             <Route path="sozlamalar" element={<Settings />} />
             <Route path="obuna" element={<Subscription />} />
             <Route path="yordam" element={<SupportChat />} />
-            <Route path="davomat" element={<MyAttendance />} />
+            {/*  Manzil bitta, ekran rolga qarab: o'qituvchida faqat
+                 o'z sinflari, qolganlarda butun maktab. */}
+            <Route
+              path="davomat"
+              element={profile.role === 'teacher'
+                ? <MyAttendance />
+                : <SchoolAttendance />}
+            />
             <Route path="yuklamam" element={<MyLoad />} />
             <Route path="oyligim" element={<MyPayroll />} />
             <Route path="*" element={<Navigate to="/" replace />} />

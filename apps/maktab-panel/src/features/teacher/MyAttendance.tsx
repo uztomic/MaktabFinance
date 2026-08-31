@@ -27,7 +27,6 @@ import {
   PageHeader, Select,
 } from '@/ui';
 import { useToast } from '@/ui/Feedback';
-import { AttendanceToday } from '@/features/AttendanceToday';
 
 export default function MyAttendance() {
   const t = useT();
@@ -178,7 +177,6 @@ export default function MyAttendance() {
           title={t('att.overviewTitle')}
           subtitle={t('att.overviewHint')}
         />
-        <AttendanceToday />
       </>
     );
   }
@@ -343,7 +341,6 @@ export default function MyAttendance() {
         <h2 className="mb-3 text-sm font-semibold">
           {t('att.overviewTitle')}
         </h2>
-        <AttendanceToday />
       </div>
     </>
   );

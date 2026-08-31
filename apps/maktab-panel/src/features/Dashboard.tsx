@@ -141,6 +141,7 @@ export default function Dashboard() {
    */
   const setup = useQuery({
     queryKey: ['setup-issues', branchId],
+    enabled: canSeeFinance,
     queryFn: async () => {
       const { data, error } = await supabase.rpc('school_setup_issues', {
         p_branch_id: branchId ?? undefined,
@@ -149,6 +150,25 @@ export default function Dashboard() {
       return (data ?? []) as Array<{
         code: string; severity: string; count: number;
       }>;
+    },
+  });
+
+  /**
+   *  Bugungi davomat — butun maktab bo'yicha.
+   *
+   *  Direktorning ertalabki savoli: nechta bola keldi, qaysi sinf
+   *  davomatni olmagan. Ilgari bu faqat alohida sahifada edi va
+   *  odatda ochilmasdi.
+   */
+  const attendance = useQuery({
+    queryKey: ['dash-attendance', branchId],
+    enabled: canSeeFinance || can('absences.mark'),
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('report_attendance_today', {
+        p_day: isoDate(), p_branch_id: branch,
+      });
+      if (error) throw error;
+      return data ?? [];
     },
   });
 
@@ -168,6 +188,7 @@ export default function Dashboard() {
 
   const students = useQuery({
     queryKey: ['students-count', branchId],
+    enabled: can('students.view') || canSeeFinance,
     queryFn: async () => {
       let q = supabase.from('students')
         .select('id', { count: 'exact', head: true })
@@ -209,6 +230,11 @@ export default function Dashboard() {
         <DateRangePicker range={range} onPreset={setPreset} onCustom={setCustom}
                          compact />
       </Card>
+
+      {/* --- Bugungi davomat --------------------------------------- */}
+      {(attendance.data?.length ?? 0) > 0 && (
+        <TodayAttendance rows={attendance.data!} />
+      )}
 
       {/* --- Ogohlantirishlar ------------------------------------- */}
       <div className="mb-4 space-y-2">
@@ -705,5 +731,106 @@ function SetupIssues({ rows }: {
         ))}
       </div>
     </Notice>
+  );
+}
+
+
+/**
+ *  Bugungi davomat — sinflar kesimida.
+ *
+ *  Eng muhim ustun "olinmagan": davomat olinmasa, kunlik xizmat
+ *  noto'g'ri hisoblanadi va ota-onaga xabar ketmaydi. Shuning uchun
+ *  olinmagan sinflar TEPADA turadi.
+ */
+function TodayAttendance({ rows }: {
+  rows: Array<{
+    class_id: string; class_name: string; teacher_name: string | null;
+    total: number; present: number; absent: number;
+    checked: boolean; marked_at: string | null;
+  }>;
+}) {
+  const t = useT();
+  const { lang } = useI18n();
+
+  const working = rows.filter((r) => r.total > 0);
+  if (working.length === 0) return null;
+
+  const sorted = [...working].sort((a, b) =>
+    Number(a.checked) - Number(b.checked));
+
+  const total   = working.reduce((s, r) => s + r.total, 0);
+  const marked  = working.filter((r) => r.checked);
+  const present = marked.reduce((s, r) => s + r.present, 0);
+  const absent  = marked.reduce((s, r) => s + r.absent, 0);
+  const pending = working.length - marked.length;
+
+  return (
+    <Card
+      title={`${t('att.todayTitle')} · ${date(isoDate(), lang)}`}
+      className="mb-4"
+      padded={false}
+    >
+      <div className="grid gap-3 p-3 sm:grid-cols-4">
+        <Mini label={t('nav.students')} value={String(total)} />
+        <Mini label={t('att.present')} value={String(present)} tone="ok" />
+        <Mini label={t('att.absent')} value={String(absent)}
+              tone={absent > 0 ? 'danger' : undefined} />
+        <Mini label={t('att.notMarked')} value={String(pending)}
+              tone={pending > 0 ? 'warn' : 'ok'} />
+      </div>
+
+      <Table>
+        <thead>
+          <tr>
+            <Th>{t('students.class')}</Th>
+            <Th>{t('cls.teacher')}</Th>
+            <Th align="right">{t('att.expected')}</Th>
+            <Th align="right">{t('att.present')}</Th>
+            <Th align="right">{t('att.absent')}</Th>
+            <Th>{t('common.status')}</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((r) => (
+            <Tr key={r.class_id} className={r.checked ? '' : 'bg-[var(--warn-bg)]'}>
+              <Td>
+                <Link to={`/sinflar/${r.class_id}`}
+                      className="font-medium hover:underline">
+                  {r.class_name}
+                </Link>
+              </Td>
+              <Td className="text-[var(--text-muted)]">
+                {r.teacher_name ?? '—'}
+              </Td>
+              <Td align="right" mono>{r.total}</Td>
+              <Td align="right" mono>{r.checked ? r.present : '—'}</Td>
+              <Td align="right" mono
+                  className={r.absent > 0 ? 'text-[var(--danger)]' : ''}>
+                {r.checked ? r.absent : '—'}
+              </Td>
+              <Td>
+                {r.checked
+                  ? <Badge tone="ok">{t('att.marked')}</Badge>
+                  : <Badge tone="warn">{t('att.notMarked')}</Badge>}
+              </Td>
+            </Tr>
+          ))}
+        </tbody>
+      </Table>
+    </Card>
+  );
+}
+
+function Mini({ label, value, tone }: {
+  label: string; value: string; tone?: 'ok' | 'warn' | 'danger';
+}) {
+  const color = tone === 'ok' ? 'text-[var(--ok)]'
+    : tone === 'warn' ? 'text-[var(--warn)]'
+    : tone === 'danger' ? 'text-[var(--danger)]' : '';
+  return (
+    <div className="rounded-md bg-[var(--bg-subtle)] px-3 py-2">
+      <div className="text-[11px] uppercase text-[var(--text-muted)]">{label}</div>
+      <div className={`num text-lg font-semibold ${color}`}>{value}</div>
+    </div>
   );
 }
