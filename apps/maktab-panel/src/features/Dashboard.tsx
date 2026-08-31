@@ -213,17 +213,6 @@ export default function Dashboard() {
                          compact />
       </Card>
 
-      {/* --- Bugungi davomat ---------------------------------------
-           Alohida jadval yozilmadi: `AttendanceToday` da sinfni
-           bosib ichkariga kirish va kim kelgan / kim kelmaganini
-           ko'rish allaqachon bor. Ikki nusxa saqlansa, biri
-           yangilanib ikkinchisi orqada qolardi. */}
-      {(can('absences.mark') || canSeeFinance) && (
-        <div className="mb-4">
-          <AttendanceToday />
-        </div>
-      )}
-
       {/* --- Ogohlantirishlar ------------------------------------- */}
       <div className="mb-4 space-y-2">
         {(setup.data?.length ?? 0) > 0 && (
@@ -419,6 +408,22 @@ export default function Dashboard() {
             </div>
           </>
         )}
+
+      {/* --- Bugungi davomat — ENG PASTDA -------------------------
+           Moliyaviy manzara oylik savolga javob beradi va shuning
+           uchun tepada turadi. Davomat esa kunlik ish: u kerak
+           bo'lganda pastdan topiladi va yuqoridagi raqamlarni
+           surib yubormaydi.
+
+           Alohida jadval yozilmadi: `AttendanceToday` da sinfni
+           bosib kim kelgan / kim kelmaganini ko'rish allaqachon
+           bor. Ikki nusxa saqlansa, biri yangilanib ikkinchisi
+           orqada qolardi. */}
+      {(can('absences.mark') || canSeeFinance) && (
+        <div className="mt-4">
+          <AttendanceToday />
+        </div>
+      )}
     </>
   );
 }

@@ -3506,6 +3506,48 @@ export type Database = {
           },
         ]
       }
+      user_permissions: {
+        Row: {
+          allowed: boolean
+          granted_at: string
+          granted_by: string | null
+          note: string | null
+          permission: string
+          user_id: string
+        }
+        Insert: {
+          allowed: boolean
+          granted_at?: string
+          granted_by?: string | null
+          note?: string | null
+          permission: string
+          user_id: string
+        }
+        Update: {
+          allowed?: boolean
+          granted_at?: string
+          granted_by?: string | null
+          note?: string | null
+          permission?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_permissions_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_permissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       v_invoice_totals: {
@@ -4218,6 +4260,15 @@ export type Database = {
         }
         Returns: Json
       }
+      set_user_permission: {
+        Args: {
+          p_allowed?: boolean
+          p_note?: string
+          p_permission: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       start_impersonation: {
         Args: {
           p_minutes?: number
@@ -4275,6 +4326,15 @@ export type Database = {
           p_timezone?: string
         }
         Returns: Json
+      }
+      user_permission_matrix: {
+        Args: { p_user_id: string }
+        Returns: {
+          effective: boolean
+          from_role: boolean
+          override: boolean
+          permission: string
+        }[]
       }
     }
     Enums: {

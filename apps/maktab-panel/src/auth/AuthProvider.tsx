@@ -188,6 +188,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (p.school_id !== null) merged.set(p.permission, p.allowed);
     }
 
+    //  Shaxsiy o'zgartirish rol ustiga qo'yiladi — bazadagi
+    //  `app.can` ham aynan shu tartibda ishlaydi. Ikkalasi bir xil
+    //  bo'lishi SHART: aks holda tugma ko'rinadi-yu, bosilganda
+    //  server rad etadi.
+    const { data: own } = await supabase
+      .from('user_permissions')
+      .select('permission, allowed')
+      .eq('user_id', user.id);
+
+    for (const p of own ?? []) merged.set(p.permission, p.allowed);
+
     setPermissions(
       new Set([...merged.entries()].filter(([, ok]) => ok).map(([k]) => k)),
     );

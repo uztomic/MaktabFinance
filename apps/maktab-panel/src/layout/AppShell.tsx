@@ -129,10 +129,17 @@ const TEACHER_NAV: NavItem[] = [
 
 export default function AppShell() {
   const t = useT();
-  const { profile, can, signOut, impersonation } = useAuth();
+  const { profile, can, permissions, signOut, impersonation } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const isTeacher = profile?.role === 'teacher';
+  /**
+   *  Qisqa menyu — faqat ODDIY o'qituvchiga.
+   *
+   *  Rolga qo'shimcha huquq berilgan bo'lsa (masalan navbatchilik
+   *  uchun davomat yoki o'quvchi qo'shish), qisqa menyu o'sha
+   *  bo'limlarni ko'rsatmasdi va berilgan ruxsat amalda ishlamasdi.
+   */
+  const isTeacher = profile?.role === 'teacher' && permissions.size === 0;
 
   const groups: NavGroup[] = isTeacher
     ? [{ labelKey: '', items: TEACHER_NAV }]

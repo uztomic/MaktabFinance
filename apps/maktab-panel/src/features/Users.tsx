@@ -19,6 +19,9 @@ import {
   Modal, Notice, PageHeader, Select, Table, Td, Th, Tr,
 } from '@/ui';
 import { useConfirm, useToast } from '@/ui/Feedback';
+import {
+  RolePermissionList, UserPermissionEditor,
+} from '@/features/user/Permissions';
 
 type Role = 'director' | 'accountant' | 'manager' | 'duty' | 'teacher';
 
@@ -87,6 +90,31 @@ export default function Users() {
       setResetting(null);
       setCreated(data);
     },
+  });
+
+  /**
+   *  Roldan tashqari huquq.
+   *
+   *  Rol asos bo'lib qoladi: bu yerda faqat FARQ saqlanadi. Shuning
+   *  uchun rol o'zgartirilsa, qo'lda qo'shilmagan huquqlar o'z-o'zidan
+   *  yangi rolga moslashadi.
+   */
+  const setPerm = useMutation({
+    mutationFn: async (v: {
+      userId: string; permission: string; allowed: boolean | null;
+    }) => {
+      const { error } = await supabase.rpc('set_user_permission', {
+        p_user_id: v.userId,
+        p_permission: v.permission,
+        p_allowed: v.allowed ?? undefined,
+      });
+      if (error) throw error;
+    },
+    onSuccess: (_r, v) => {
+      qc.invalidateQueries({ queryKey: ['user-permissions', v.userId] });
+      toast.ok(t('ux.saved'));
+    },
+    onError: (e) => toast.error((e as Error).message),
   });
 
   const saveUser = useMutation({
@@ -277,6 +305,10 @@ export default function Users() {
           onSubmit={(f) => saveUser.mutate({ id: editing.id, ...f })}
           busy={saveUser.isPending}
           error={saveUser.error ? (saveUser.error as Error).message : null}
+          canEditPerms={mayWrite('users.manage')}
+          permBusy={setPerm.isPending}
+          onPerm={(permission, allowed) =>
+            setPerm.mutate({ userId: editing.id, permission, allowed })}
         />
       )}
 
@@ -409,6 +441,11 @@ function AddUserModal({
           </Select>
         </Field>
 
+        {/*  Rol NOMI hech narsa aytmaydi. Tanlangan rol aniq nima
+             ruxsat berishi shu yerda ko'rinadi — aks holda odam
+             ehtiyot bo'lib keragidan keng rol tanlaydi. */}
+        <RolePermissionList role={role} />
+
         <Field label={t('auth.password')}
                hint={t('users.passwordHint')}>
           <Input value={password} onChange={(e) => setPassword(e.target.value)}
@@ -529,6 +566,7 @@ function ResetPasswordModal({
 
 function EditUserModal({
   user, branches, onClose, onSubmit, busy, error,
+  canEditPerms, onPerm, permBusy,
 }: {
   // deno-lint-ignore no-explicit-any
   user: any;
@@ -540,6 +578,9 @@ function EditUserModal({
   }) => void;
   busy: boolean;
   error: string | null;
+  canEditPerms: boolean;
+  onPerm: (permission: string, next: boolean | null) => void;
+  permBusy: boolean;
 }) {
   const t = useT();
 
@@ -603,6 +644,22 @@ function EditUserModal({
             ))}
           </Select>
         </Field>
+
+        {/*  Huquqlar DARHOL saqlanadi — formadagi "Saqlash" ni
+             kutmaydi. Sababi: ular alohida jadvalda va alohida
+             tekshiruvdan o'tadi (masalan o'zidan xodim boshqarish
+             huquqini olib bo'lmaydi). Ikkalasini bitta tugmaga
+             bog'lasak, biri o'tib ikkinchisi o'tmagan holat
+             paydo bo'lardi. */}
+        <div>
+          <div className="mb-1 text-[13px] font-medium">{t('perm.title')}</div>
+          <UserPermissionEditor
+            userId={user.id}
+            canEdit={canEditPerms}
+            onToggle={onPerm}
+            busy={permBusy}
+          />
+        </div>
 
         <label className="flex items-center gap-2 text-[13px]">
           <input
