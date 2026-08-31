@@ -20,7 +20,9 @@ import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/auth/AuthProvider';
 import { useI18n, useT } from '@/i18n';
-import { currentPeriod, date, money, periodLabel, shiftPeriod } from '@/lib/format';
+import {
+  currentPeriod, date, dateTime, money, periodLabel, shiftPeriod,
+} from '@/lib/format';
 import { exportTable } from '@/lib/export';
 import { PeriodLockButton } from './PeriodLock';
 import {
@@ -77,6 +79,27 @@ export default function Invoices() {
         .is('deleted_at', null);
       if (error) throw error;
       return new Map((data ?? []).map((s) => [s.id, s]));
+    },
+  });
+
+  /**
+   *  Oxirgi avtomatik shakllantirish.
+   *
+   *  NEGA KERAK: hisoblanmalar endi kechasi o'zi yaratiladi. Buni
+   *  ko'rsatmasak, buxgalter ertalab tayyor ro'yxatni ko'radi va uni
+   *  kim yaratganini bilmaydi — "kimdir mening nomimdan ishlayaptimi"
+   *  degan shubha tug'iladi.
+   */
+  const autoRun = useQuery({
+    queryKey: ['invoices-auto-run'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('school_settings')
+        .select('value')
+        .eq('key', 'invoices.last_auto_run')
+        .maybeSingle();
+      return (data?.value ?? null) as
+        { period: string; at: string; created: number } | null;
     },
   });
 
@@ -261,6 +284,14 @@ export default function Invoices() {
             </Link>
           </Notice>
         )}
+        {autoRun.data?.period === period && (
+          <Notice tone="neutral">
+            {t('inv.autoRun', {
+              date: dateTime(autoRun.data.at, lang),
+              count: autoRun.data.created,
+            })}
+          </Notice>
+        )}
         {hasPreliminary && (
           <Notice tone="neutral">{t('inv.hasPreliminary')}</Notice>
         )}
@@ -274,7 +305,11 @@ export default function Invoices() {
           ? (
             <EmptyState
               title={t('inv.noInvoices')}
-              hint={canRun ? t('inv.generateHint') : ''}
+              hint={period > currentPeriod()
+                ? t('inv.emptyFuture')
+                : canRun
+                  ? t('inv.emptyAuto')
+                  : ''}
               action={canRun && (
                 <Button variant="primary" onClick={() => generate.mutate()}
                         disabled={busy}>
