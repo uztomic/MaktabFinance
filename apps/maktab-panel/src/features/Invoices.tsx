@@ -103,6 +103,29 @@ export default function Invoices() {
     },
   });
 
+  /**
+   *  Nega hisoblanma quriladi yoki qurilmaydi.
+   *
+   *  Ilgari tugma bosilganda "O'tkazib yuborildi: 227" chiqardi va
+   *  tamom. Bu raqam hech narsani tushuntirmaydi: tizim buzilganmi,
+   *  ma'lumot yo'qmi, yoki hammasi to'g'rimi? Sabablar esa butunlay
+   *  boshqa-boshqa va har biriga boshqacha javob kerak.
+   */
+  const diag = useQuery({
+    queryKey: ['invoice-diag', activeBranch, period],
+    enabled: !!activeBranch,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('invoice_skip_reasons', {
+        p_branch_id: activeBranch!, p_period: period,
+      });
+      if (error) throw error;
+      return data as {
+        ok: number; not_started: number; ended: number; left: number;
+        summer: number; no_contract: number; first_period: string | null;
+      };
+    },
+  });
+
   // --- Yo'qlik bo'shliqlari — yakunlashni to'sadi (TZ 4.6.1.2) ------
   const gaps = useQuery({
     queryKey: ['absence-gaps-period', activeBranch, period],
@@ -123,6 +146,7 @@ export default function Invoices() {
   function refresh() {
     qc.invalidateQueries({ queryKey: ['invoices'] });
     qc.invalidateQueries({ queryKey: ['absence-gaps-period'] });
+    qc.invalidateQueries({ queryKey: ['invoice-diag'] });
     qc.invalidateQueries({ queryKey: ['students'] });
   }
 
@@ -137,10 +161,10 @@ export default function Invoices() {
     },
     onSuccess: (d) => {
       refresh();
-      setNote(
-        `${t('inv.created')}: ${d.created} · ${t('inv.rebuilt')}: ${d.rebuilt} · ` +
-        `${t('inv.locked')}: ${d.locked} · ${t('inv.skipped')}: ${d.skipped}`,
-      );
+      //  Hech narsa yaratilmagan bo'lsa raqam ko'rsatishdan foyda yo'q —
+      //  sababi quyidagi tashxis xabarida yoziladi.
+      setNote(d.created + d.rebuilt === 0 ? null : `${t('inv.created')}: ${d.created} · ${t('inv.rebuilt')}: ${d.rebuilt} · ` +
+        `${t('inv.locked')}: ${d.locked} · ${t('inv.skipped')}: ${d.skipped}`);
     },
   });
 
@@ -284,6 +308,13 @@ export default function Invoices() {
             </Link>
           </Notice>
         )}
+        {diag.data && (
+          <PeriodDiagnosis
+            d={diag.data}
+            hasInvoices={list.length > 0}
+            onGo={(pp) => setPeriod(pp)}
+          />
+        )}
         {autoRun.data?.period === period && (
           <Notice tone="neutral">
             {t('inv.autoRun', {
@@ -305,11 +336,13 @@ export default function Invoices() {
           ? (
             <EmptyState
               title={t('inv.noInvoices')}
-              hint={period > currentPeriod()
-                ? t('inv.emptyFuture')
-                : canRun
-                  ? t('inv.emptyAuto')
-                  : ''}
+              hint={(diag.data?.ok ?? 0) === 0
+                ? t('inv.emptyNobody')
+                : period > currentPeriod()
+                  ? t('inv.emptyFuture')
+                  : canRun
+                    ? t('inv.emptyAuto')
+                    : ''}
               action={canRun && (
                 <Button variant="primary" onClick={() => generate.mutate()}
                         disabled={busy}>
@@ -375,6 +408,63 @@ export default function Invoices() {
 }
 
 /** Sikl qadami — raqami, nomi va nima qilishi ko'rinib turadi. */
+/**
+ *  Davr bo'yicha tashxis.
+ *
+ *  Hammasi joyida bo'lsa HECH NARSA ko'rsatilmaydi — ekranni ortiqcha
+ *  xabar bilan to'ldirish foydalanuvchini muhimini payqamaydigan
+ *  qilib qo'yadi.
+ */
+function PeriodDiagnosis({ d, hasInvoices, onGo }: {
+  d: {
+    ok: number; not_started: number; ended: number; left: number;
+    summer: number; no_contract: number; first_period: string | null;
+  };
+  hasInvoices: boolean;
+  onGo: (period: string) => void;
+}) {
+  const t = useT();
+  const { lang } = useI18n();
+
+  //  Shartnomasizlar — YAGONA haqiqiy muammo. Qolganlari tabiiy hol.
+  const problem = d.no_contract > 0;
+
+  //  Hisoblanma bor va hamma joyida — jim turamiz.
+  if (hasInvoices && !problem) return null;
+  if (d.ok > 0 && !problem) return null;
+
+  const lines: string[] = [];
+  if (d.not_started > 0) lines.push(t('inv.diag.notStarted', { count: d.not_started }));
+  if (d.summer > 0)      lines.push(t('inv.diag.summer', { count: d.summer }));
+  if (d.left + d.ended > 0) lines.push(t('inv.diag.gone', { count: d.left + d.ended }));
+  if (d.no_contract > 0) lines.push(t('inv.diag.noContract', { count: d.no_contract }));
+
+  if (lines.length === 0) return null;
+
+  const goto = d.first_period && d.ok === 0 && d.not_started > 0
+    ? d.first_period.slice(0, 10)
+    : null;
+
+  return (
+    <Notice tone={problem ? 'warn' : 'neutral'}>
+      <div className="space-y-1">
+        {lines.map((l) => <p key={l}>{l}</p>)}
+        {goto && (
+          <p className="pt-1">
+            <button
+              type="button"
+              onClick={() => onGo(goto)}
+              className="font-medium underline"
+            >
+              {t('inv.diag.goFirst', { period: periodLabel(goto, lang) })}
+            </button>
+          </p>
+        )}
+      </div>
+    </Notice>
+  );
+}
+
 function StepButton({
   n, label, hint, onClick, disabled, variant = 'secondary',
 }: {

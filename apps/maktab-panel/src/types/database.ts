@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -3663,6 +3663,10 @@ export type Database = {
         Args: { p_rows: Json; p_statement_id: string }
         Returns: Json
       }
+      invoice_skip_reasons: {
+        Args: { p_branch_id: string; p_period: string }
+        Returns: Json
+      }
       issue_subscription_invoice: {
         Args: { p_period?: string; p_school_id: string }
         Returns: Json
@@ -4098,6 +4102,10 @@ export type Database = {
         Returns: Json
       }
       run_billing_cycle: { Args: never; Returns: Json }
+      run_monthly_invoices: {
+        Args: { p_dry_run?: boolean; p_period?: string }
+        Returns: Json
+      }
       school_price: { Args: { p_school_id: string }; Returns: Json }
       school_users: {
         Args: { p_school_id: string }
@@ -4177,6 +4185,21 @@ export type Database = {
           p_months?: number
           p_note?: string
           p_paid_on: string
+        }
+        Returns: Json
+      }
+      update_school_profile: {
+        Args: {
+          p_address?: string
+          p_closing_day?: number
+          p_default_lang?: string
+          p_email?: string
+          p_legal_name?: string
+          p_name?: string
+          p_phone?: string
+          p_school_id: string
+          p_tax_id?: string
+          p_timezone?: string
         }
         Returns: Json
       }
