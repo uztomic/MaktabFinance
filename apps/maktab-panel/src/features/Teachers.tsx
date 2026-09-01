@@ -59,6 +59,8 @@ export default function Teachers() {
       const { data, error } = await supabase
         .from('lessons')
         .select('teacher_id, hours, kind')
+        //  Bekor qilingan dars sanalmaydi — oylik ham unga tayanmaydi.
+        .is('deleted_at', null)
         .gte('day', from)
         .lte('day', to);
       if (error) throw error;

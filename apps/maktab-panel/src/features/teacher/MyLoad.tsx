@@ -37,6 +37,7 @@ export default function MyLoad() {
       const { data, error } = await supabase
         .from('lessons')
         .select('id, day, hours, kind, subject, class_name, reason, branches(name)')
+        .is('deleted_at', null)
         .gte('day', period)
         .lte('day', to)
         .order('day', { ascending: false });

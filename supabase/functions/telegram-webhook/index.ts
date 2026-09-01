@@ -155,19 +155,30 @@ async function showStudent(
       : `\n✅ Qarzdorlik yo'q`);
 
   const rows = [
+    //  Davomat BIRINCHI qatorda: ota-ona botni eng ko'p shu savol
+    //  bilan ochadi — "bugun maktabda bo'ldimi?". Ilgari bu savolga
+    //  javob umuman yo'q edi: kunlik xabar yuborilardi, lekin uni
+    //  o'qimagan odam keyin tekshira olmasdi.
     [
+      { text: await t('menu_attendance', lang), data: `att:${student.id}` },
       { text: await t('menu_debt', lang), data: `debt:${student.id}` },
-      { text: await t('menu_invoice', lang), data: `inv:${student.id}` },
     ],
     [
+      { text: await t('menu_invoice', lang), data: `inv:${student.id}` },
       { text: await t('menu_history', lang), data: `hist:${student.id}` },
+    ],
+    [
       { text: await t('menu_proof', lang), data: `proof:${student.id}` },
+      { text: await t('menu_contact', lang), data: 'contact' },
     ],
   ];
   if (scope.students.length > 1) {
     rows.push([{ text: '⬅️', data: 'menu' }]);
   }
-  rows.push([{ text: await t('menu_lang', lang), data: 'lang' }]);
+  rows.push([
+    { text: await t('menu_notify', lang), data: 'notify' },
+    { text: await t('menu_lang', lang), data: 'lang' },
+  ]);
 
   if (messageId) {
     await tg('editMessageText', {
@@ -176,6 +187,174 @@ async function showStudent(
     });
   } else {
     await sendMessage(chatId, head, { reply_markup: keyboard(rows) });
+  }
+}
+
+// ---------------------------------------------------------------------
+//  DAVOMAT
+//
+//  Shu oy bo'yicha: nechta kun kelgan, nechta kelmagan, nechta kech
+//  kelgan. Kelmagan kunlar sanasi va sababi bilan sanab beriladi —
+//  "kelmadi" degan raqamning o'zi ota-onaga hech narsa aytmaydi,
+//  u qaysi kun ekanini so'raydi.
+//
+//  Kech kelgan KELGAN deb sanaladi (`absence_reasons.is_late`):
+//  bola maktabda bo'lgan.
+// ---------------------------------------------------------------------
+
+async function showAttendance(
+  chatId: number,
+  scope: ParentScope,
+  studentId: string,
+) {
+  const student = scope.student(studentId);
+  if (!student) return;
+
+  const lang = scope.lang;
+  const now = new Date();
+  const from = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+  const to = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    .toISOString().slice(0, 10);
+
+  //  Davomat OLINGAN kunlar — belgilanmagan kun "kelgan" degani
+  //  emas, u shunchaki noma'lum. Shuning uchun asos sifatida
+  //  `attendance_checks` olinadi.
+  const { data: checks } = await db
+    .from('attendance_checks')
+    .select('day')
+    .eq('branch_id', student.branch_id)
+    .eq('class_name', student.class_name ?? '')
+    .gte('day', from)
+    .lte('day', to);
+
+  const marked = (checks ?? []).length;
+
+  if (marked === 0) {
+    await sendMessage(
+      chatId,
+      await t('attendance_none', lang, null, { student: student.full_name }),
+    );
+    return;
+  }
+
+  const { data: abs } = await db
+    .from('absences')
+    .select('day, note, absence_reasons(name, is_late)')
+    .eq('student_id', student.id)
+    .gte('day', from)
+    .lte('day', to)
+    .order('day');
+
+  // deno-lint-ignore no-explicit-any
+  const rows = (abs ?? []) as any[];
+  const late = rows.filter((r) => r.absence_reasons?.is_late);
+  const away = rows.filter((r) => !r.absence_reasons?.is_late);
+
+  const month = new Intl.DateTimeFormat(
+    lang === 'ru' ? 'ru-RU' : 'uz-UZ',
+    { month: 'long', year: 'numeric' },
+  ).format(now);
+
+  let text = await t('attendance_month', lang, null, {
+    student: student.full_name,
+    month,
+    present: marked - away.length,
+    absent: away.length,
+    late: late.length,
+  });
+
+  if (away.length > 0) {
+    const list = away
+      .map((r) => {
+        const d = String(r.day).slice(8, 10) + '.' + String(r.day).slice(5, 7);
+        const why = r.absence_reasons?.name ?? '—';
+        return `  • ${d} — ${why}`;
+      })
+      .join('\n');
+    text += await t('attendance_days', lang, null, { days: list });
+  }
+
+  await sendMessage(chatId, text, {
+    reply_markup: keyboard([[{ text: '⬅️', data: `st:${student.id}` }]]),
+  });
+}
+
+// ---------------------------------------------------------------------
+//  MAKTAB BILAN BOG'LANISH
+//
+//  Telefon va manzil FILIALDAN olinadi: maktabda bir nechta filial
+//  bo'lishi mumkin va ota-onaga o'z farzandi o'qiydigan filialning
+//  raqami kerak, bosh ofisniki emas.
+// ---------------------------------------------------------------------
+
+async function showContact(chatId: number, scope: ParentScope) {
+  const student = scope.students[0];
+  if (!student) return;
+
+  const { data: br } = await db
+    .from('branches')
+    .select('name, phone, address, schools(name)')
+    .eq('id', student.branch_id)
+    .maybeSingle();
+
+  // deno-lint-ignore no-explicit-any
+  const b = br as any;
+
+  await sendMessage(
+    chatId,
+    await t('contact_info', scope.lang, null, {
+      school: b?.schools?.name ?? b?.name ?? '',
+      phone: b?.phone ?? '—',
+      address: b?.address ?? '—',
+    }),
+    { reply_markup: keyboard([[{ text: '⬅️', data: 'menu' }]]) },
+  );
+}
+
+// ---------------------------------------------------------------------
+//  XABARLAR
+//
+//  To'liq bloklashdan ko'ra shu yaxshi: bloklangan botdan MUHIM
+//  xabar ham chiqmaydi va maktab buni bilmaydi.
+// ---------------------------------------------------------------------
+
+async function showNotify(
+  chatId: number,
+  scope: ParentScope,
+  toggle = false,
+  messageId?: number,
+) {
+  const parentId = scope.parents[0]?.id;
+  if (!parentId) return;
+
+  const { data: cur } = await db
+    .from('parents').select('notify').eq('id', parentId).maybeSingle();
+
+  let on = cur?.notify !== false;
+
+  if (toggle) {
+    on = !on;
+    //  Ota-ona doirasi allaqachon tekshirilgan: `scope.parents`
+    //  faqat shu chat egasining yozuvlarini qaytaradi.
+    await db.from('parents').update({ notify: on }).eq('id', parentId);
+  }
+
+  const text = await t(on ? 'notify_status_on' : 'notify_status_off', scope.lang);
+  const rows = [
+    [{
+      text: await t(on ? 'notify_turn_off' : 'notify_turn_on', scope.lang),
+      data: 'notify_toggle',
+    }],
+    [{ text: '⬅️', data: 'menu' }],
+  ];
+
+  if (messageId && !toggle) {
+    await tg('editMessageText', {
+      chat_id: chatId, message_id: messageId, text,
+      parse_mode: 'Markdown', reply_markup: keyboard(rows),
+    });
+  } else {
+    await sendMessage(chatId, text, { reply_markup: keyboard(rows) });
   }
 }
 
@@ -558,6 +737,10 @@ async function route(update: any) {
       await showMenu(chatId, scope);
     } else if (text === '/til' || text === '/lang') {
       await showLanguages(chatId, scope.lang);
+    } else if (text === '/yordam' || text === '/help' || text === '/ёрдам') {
+      await sendMessage(chatId, await t('help_text', scope.lang), {
+        reply_markup: keyboard([[{ text: '⬅️', data: 'menu' }]]),
+      });
     } else {
       await showMenu(chatId, scope);
     }
@@ -587,6 +770,18 @@ async function route(update: any) {
         break;
       case 'hist':
         await showHistory(chatId, scope, arg);
+        break;
+      case 'att':
+        await showAttendance(chatId, scope, arg);
+        break;
+      case 'contact':
+        await showContact(chatId, scope);
+        break;
+      case 'notify':
+        await showNotify(chatId, scope, false, messageId);
+        break;
+      case 'notify_toggle':
+        await showNotify(chatId, scope, true);
         break;
       case 'proof':
         await askProof(chatId, scope, arg);
