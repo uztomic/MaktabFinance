@@ -78,6 +78,48 @@ export function CalendarSettings({ editable }: { editable: boolean }) {
     },
   });
 
+  /**
+   *  Ish haftasi.
+   *
+   *  Ilgari dushanba–juma KODDA qat'iy yozilgan edi. O'zbekistonda
+   *  esa ko'p maktab shanba kuni ham ishlaydi va oqibati jimgina
+   *  edi: shanba kuni dars o'tilsa ham davomat olinmasdi, kunlik
+   *  ovqat o'sha kunga hisoblanmasdi, oylikdagi soat kam chiqardi.
+   */
+  const workweek = useQuery({
+    queryKey: ['workweek'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('school_settings')
+        .select('value')
+        .eq('key', 'calendar.workweek')
+        .maybeSingle();
+      if (error) throw error;
+      const v = data?.value;
+      return Array.isArray(v) ? (v as number[]) : [1, 2, 3, 4, 5];
+    },
+  });
+
+  const saveWeek = useMutation({
+    mutationFn: async (days: number[]) => {
+      const { error } = await supabase.from('school_settings').upsert({
+        school_id: profile!.school_id,
+        key: 'calendar.workweek',
+        value: days.sort((a, b) => a - b) as never,
+        updated_by: profile!.id,
+        updated_at: new Date().toISOString(),
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['workweek'] });
+      //  Ish kunlari soni o'zgardi — unga tayangan hamma narsa
+      //  qayta so'raladi.
+      qc.invalidateQueries({ queryKey: ['workdays'] });
+      qc.invalidateQueries({ queryKey: ['my-classes'] });
+    },
+  });
+
   const add = useMutation({
     mutationFn: async (f: {
       from: string; to: string; day_type: DayType;
@@ -129,9 +171,42 @@ export function CalendarSettings({ editable }: { editable: boolean }) {
   if (rows.isLoading) return <Loading />;
   if (rows.error) return <ErrorState message={(rows.error as Error).message} />;
 
+  const week = workweek.data ?? [1, 2, 3, 4, 5];
+  const DOW = [1, 2, 3, 4, 5, 6, 7];
+
   return (
     <div className="space-y-4">
       <Notice tone="neutral">{t('cal.hint')}</Notice>
+
+      {/*  Ish haftasi — kalendar ISTISNOLARIDAN oldin turadi, chunki
+           u asos: istisnolar shu qoidaning ustiga qo'yiladi. */}
+      <Card title={t('cal.workweek')}>
+        <div className="flex flex-wrap gap-1.5">
+          {DOW.map((d) => {
+            const on = week.includes(d);
+            return (
+              <button
+                key={d}
+                type="button"
+                disabled={!editable || saveWeek.isPending}
+                onClick={() => saveWeek.mutate(
+                  on ? week.filter((x) => x !== d) : [...week, d],
+                )}
+                className={`rounded-md border px-3 py-1.5 text-[13px] ${
+                  on
+                    ? 'border-brand-600 bg-brand-600 font-medium text-white'
+                    : 'text-[var(--text-muted)]'
+                } ${editable ? '' : 'opacity-60'}`}
+              >
+                {t(`cal.dow.${d}`)}
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-2 text-[12px] text-[var(--text-muted)]">
+          {t('cal.workweekHint')}
+        </p>
+      </Card>
 
       <Card
         title={periodLabel(period, lang)}
