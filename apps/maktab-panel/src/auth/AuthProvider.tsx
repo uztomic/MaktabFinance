@@ -18,6 +18,7 @@ import {
 } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { setRemembered } from './remember';
 import type { Database } from '@/types/database';
 
 type UserRole = Database['public']['Enums']['user_role'];
@@ -246,6 +247,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.removeItem(BRANCH_KEY);
     } catch { /* muhim emas */ }
+    //  Ataylab chiqqan odam keyingi safar qayta tanlasin: "eslab
+    //  qol" qurilmaga bog'liq va uni chiqishda tozalash kutilgan
+    //  xatti-harakat.
+    setRemembered(false);
   }, []);
 
   const value = useMemo<AuthValue>(() => {

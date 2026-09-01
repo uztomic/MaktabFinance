@@ -11,19 +11,20 @@
 // =====================================================================
 
 import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Link, useParams } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useI18n, useT } from '@/i18n';
 import { useAuth } from '@/auth/AuthProvider';
 import { date, money } from '@/lib/format';
 import { exportTable } from '@/lib/export';
 import {
-  Badge, Button, Card, EmptyState, ErrorState, Input, Loading, Money,
-  Notice, PageHeader, Table, Td, Th, Tr,
+  Badge, Button, Card, EmptyState, ErrorState, Input, Loading,
+  Money, Notice, PageHeader, Table, Td, Th, Tr,
 } from '@/ui';
 import { formatPhone } from '@/ui/PhoneInput';
-import { useSort } from '@/ui/Feedback';
+import { useSort, useToast } from '@/ui/Feedback';
+import { DeleteConfirmModal } from './StudentCard';
 import { DateRangePicker, useDateRange } from '@/ui/DateRange';
 
 type SortKey = 'full_name' | 'payment_code' | 'charged' | 'paid' | 'balance';
@@ -32,7 +33,35 @@ export default function ClassCard() {
   const { id } = useParams<{ id: string }>();
   const t = useT();
   const { lang } = useI18n();
-  const { can } = useAuth();
+  const { can, mayWrite } = useAuth();
+  const qc = useQueryClient();
+  const toast = useToast();
+  const nav = useNavigate();
+
+  /**
+   *  Sinfni o'chirish.
+   *
+   *  O'quvchilar sinf bilan birga O'CHMAYDI — ular maktabda qoladi,
+   *  faqat sinfsiz bo'ladi. Aks holda bitta noto'g'ri bosish butun
+   *  sinfni yo'q qilardi.
+   */
+  const [deleting, setDeleting] = useState(false);
+
+  const removeClass = useMutation({
+    mutationFn: async (v: { reason: string; force: boolean }) => {
+      const { error } = await supabase.rpc('delete_class', {
+        p_class_id: id!, p_reason: v.reason, p_force: v.force,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['classes-report'] });
+      qc.invalidateQueries({ queryKey: ['students'] });
+      toast.ok(t('ux.saved'));
+      nav('/sinflar');
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
 
   const { range, setPreset, setCustom } = useDateRange();
   const [search, setSearch] = useState('');
@@ -190,6 +219,11 @@ export default function ClassCard() {
             <Link to="/sinflar">
               <Button>← {t('cls.title')}</Button>
             </Link>
+            {mayWrite('students.manage') && (
+              <Button variant="ghost" onClick={() => setDeleting(true)}>
+                {t('common.delete')}
+              </Button>
+            )}
             <Button
               disabled={list.length === 0}
               onClick={() => exportTable(
@@ -378,6 +412,17 @@ export default function ClassCard() {
             </Table>
           )}
       </Card>
+      {deleting && (
+        <DeleteConfirmModal
+          title={`${t('common.delete')} — ${c.name}`}
+          warning={t('cls.deleteWarning')}
+          forceLabel={t('cls.deleteForce')}
+          forceHint={t('cls.deleteForceHint')}
+          onClose={() => setDeleting(false)}
+          onSubmit={(reason, force) => removeClass.mutate({ reason, force })}
+          busy={removeClass.isPending}
+        />
+      )}
     </>
   );
 }

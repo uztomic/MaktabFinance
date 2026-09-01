@@ -22,6 +22,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from './AuthProvider';
 import { useT } from '@/i18n';
 import { Button, Modal } from '@/ui';
+import { isRemembered } from './remember';
 
 /** Harakatsizlik chegarasi. */
 const IDLE_MS = 45 * 60 * 1000;
@@ -51,6 +52,15 @@ function writeLast(t: number) {
 export function IdleGuard() {
   const t = useT();
   const { session, signOut } = useAuth();
+
+  /**
+   *  "Meni eslab qol" belgilangan bo'lsa qo'riqchi ishlamaydi.
+   *
+   *  Qo'riqchining maqsadi — UMUMIY kompyuterda ochiq qolgan panel.
+   *  O'z telefonida ishlaydigan odam uchun esa u shunchaki har kuni
+   *  bir necha marta parol so'raydi va foyda keltirmaydi.
+   */
+  const remembered = isRemembered();
   const [warnLeft, setWarnLeft] = useState<number | null>(null);
   const signingOut = useRef(false);
 
@@ -61,7 +71,7 @@ export function IdleGuard() {
 
   // --- Harakatni kuzatish ------------------------------------------
   useEffect(() => {
-    if (!session) return;
+    if (!session || remembered) return;
 
     // `passive` — sahifa siljishini sekinlashtirmasin.
     const opts = { passive: true } as AddEventListenerOptions;
@@ -88,7 +98,7 @@ export function IdleGuard() {
 
   // --- Chegarani tekshirish ----------------------------------------
   useEffect(() => {
-    if (!session) return;
+    if (!session || remembered) return;
 
     const id = setInterval(() => {
       const idle = Date.now() - readLast();

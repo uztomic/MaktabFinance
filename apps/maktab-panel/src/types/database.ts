@@ -3710,8 +3710,16 @@ export type Database = {
         Returns: Json
       }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      delete_class: {
+        Args: { p_class_id: string; p_force?: boolean; p_reason: string }
+        Returns: Json
+      }
       delete_payroll_run: {
         Args: { p_reason?: string; p_run_id: string }
+        Returns: Json
+      }
+      delete_student: {
+        Args: { p_force?: boolean; p_reason: string; p_student_id: string }
         Returns: Json
       }
       delete_teacher: {

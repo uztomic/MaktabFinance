@@ -13,7 +13,7 @@
 
 import { type FormEvent, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/auth/AuthProvider';
 import { useI18n, useT } from '@/i18n';
@@ -62,6 +62,7 @@ export default function StudentCard() {
   const toast = useToast();
   const confirmDialog = useConfirm();
   const { mayWrite, profile } = useAuth();
+  const nav = useNavigate();
 
   const [payOpen, setPayOpen] = useState(false);
   const [contractOpen, setContractOpen] = useState(false);
@@ -358,6 +359,30 @@ export default function StudentCard() {
     onError: (e) => toast.error((e as Error).message),
   });
 
+  /**
+   *  O'quvchini butunlay o'chirish.
+   *
+   *  "Chiqib ketdi" (`status = expelled`) dan farqi bor: u haqiqiy
+   *  voqea va yozuv qoladi. Bu esa yozuvning O'ZI xato bo'lganda —
+   *  sinov uchun kiritilgan yoki ikki marta qo'shilgan.
+   */
+  const [deleting, setDeleting] = useState(false);
+
+  const removeStudent = useMutation({
+    mutationFn: async (v: { reason: string; force: boolean }) => {
+      const { error } = await supabase.rpc('delete_student', {
+        p_student_id: id!, p_reason: v.reason, p_force: v.force,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['students'] });
+      toast.ok(t('ux.saved'));
+      nav('/oquvchilar');
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
   const detachParent = useMutation({
     mutationFn: async (parentId: string) => {
       const { error } = await supabase.rpc('detach_parent', {
@@ -479,9 +504,14 @@ export default function StudentCard() {
               {t('students.history')}
             </Button>
             {mayWrite('students.manage') && (
-              <Button onClick={() => setEditOpen(true)}>
-                {t('common.edit')}
-              </Button>
+              <>
+                <Button onClick={() => setEditOpen(true)}>
+                  {t('common.edit')}
+                </Button>
+                <Button variant="ghost" onClick={() => setDeleting(true)}>
+                  {t('common.delete')}
+                </Button>
+              </>
             )}
             {mayWrite('payments.create') && (
               <Button variant="accent" onClick={() => setPayOpen(true)}>
@@ -972,6 +1002,18 @@ export default function StudentCard() {
       />
 
       <ReceiptModal data={receipt} onClose={() => setReceipt(null)} />
+
+      {deleting && (
+        <DeleteConfirmModal
+          title={`${t('common.delete')} — ${s.full_name}`}
+          warning={t('students.deleteWarning')}
+          forceLabel={t('students.deleteForce')}
+          forceHint={t('students.deleteForceHint')}
+          onClose={() => setDeleting(false)}
+          onSubmit={(reason, force) => removeStudent.mutate({ reason, force })}
+          busy={removeStudent.isPending}
+        />
+      )}
 
       <ContractModal
         open={contractOpen}
@@ -1646,6 +1688,75 @@ function CashPaymentModal({
         {blocked && <Notice tone="neutral">{blocked}</Notice>}
         {error && <Notice tone="danger">{error}</Notice>}
       </form>
+    </Modal>
+  );
+}
+
+
+/**
+ *  O'chirishni tasdiqlash.
+ *
+ *  Sabab MAJBURIY va `force` ALOHIDA belgi: o'chirish qaytarib
+ *  bo'lmaydigan amal, shuning uchun ikkita ongli harakat talab
+ *  qilinadi.
+ */
+export function DeleteConfirmModal({
+  title, warning, forceLabel, forceHint, onClose, onSubmit, busy,
+}: {
+  title: string;
+  warning: string;
+  forceLabel: string;
+  forceHint: string;
+  onClose: () => void;
+  onSubmit: (reason: string, force: boolean) => void;
+  busy: boolean;
+}) {
+  const t = useT();
+  const [reason, setReason] = useState('');
+  const [force, setForce] = useState(false);
+
+  return (
+    <Modal
+      open
+      title={title}
+      onClose={onClose}
+      footer={
+        <>
+          <Button onClick={onClose}>{t('common.cancel')}</Button>
+          <Button
+            variant="danger"
+            disabled={busy || reason.trim().length < 3}
+            onClick={() => onSubmit(reason, force)}
+          >
+            {busy ? t('common.saving') : t('common.delete')}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <Notice tone="warn">{warning}</Notice>
+
+        <Field label={t('pay.cancelReason')} required>
+          <Input value={reason} onChange={(e) => setReason(e.target.value)}
+                 autoFocus />
+        </Field>
+
+        <label className="flex items-start gap-2 rounded-md border
+          bg-[var(--bg-subtle)] px-3 py-2.5 text-[13px]">
+          <input
+            type="checkbox"
+            checked={force}
+            onChange={(e) => setForce(e.target.checked)}
+            className="mt-0.5 h-4 w-4"
+          />
+          <span>
+            <span className="font-medium">{forceLabel}</span>
+            <span className="block text-[12px] text-[var(--text-muted)]">
+              {forceHint}
+            </span>
+          </span>
+        </label>
+      </div>
     </Modal>
   );
 }

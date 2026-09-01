@@ -30,3 +30,7 @@ yarn-error.log*
 
 # TypeScript build keshi — mashinaga bogliq, repoga kerak emas
 *.tsbuildinfo
+
+# Maktab ma'lumoti nusxasi — ichida bolalarning ismi va to'lov
+# summasi bor, git ga tushmasligi kerak.
+backups/

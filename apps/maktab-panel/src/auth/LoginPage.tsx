@@ -13,6 +13,7 @@ import { looksLikePhone, phoneToEmail, supabase } from '@/lib/supabase';
 import { useT } from '@/i18n';
 import { Button, Field, Input, Notice, Spinner } from '@/ui';
 import { PasswordInput } from '@/ui/PasswordInput';
+import { isRemembered, setRemembered } from './remember';
 import { LangSwitcher, ThemeToggle } from '@/layout/Controls';
 
 export default function LoginPage() {
@@ -22,6 +23,9 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  //  Oldingi tanlov eslab qolinadi: bir marta belgilagan odam har
+  //  safar qayta belgilashi kerak emas.
+  const [remember, setRemember] = useState(isRemembered);
 
   const isPhone = looksLikePhone(login);
 
@@ -38,6 +42,11 @@ export default function LoginPage() {
     // deyarli har doim mobil klaviaturaning ishi (so'z taklifidan
     // keyin avtomatik qo'shiladi) yoki nusxa ko'chirishdagi ortiqcha
     // belgi. Tizim yaratadigan parollarda ham bo'sh joy yo'q.
+    //  Tanlov kirishdan OLDIN yoziladi: `IdleGuard` sessiya
+    //  paydo bo'lishi bilan ishga tushadi va o'sha paytda belgini
+    //  o'qiydi.
+    setRemembered(remember);
+
     const { error: err } = await supabase.auth.signInWithPassword({
       email,
       password: password.trim(),
@@ -125,6 +134,24 @@ export default function LoginPage() {
                   required
                 />
               </Field>
+
+              {/*  Umumiy kompyuterda belgilanmaydi — u yerda panel
+                   ochiq qolsa, xohlagan odam to'lov yozib ketishi
+                   mumkin. Shuning uchun izohi ochiq yozilgan. */}
+              <label className="flex items-start gap-2 text-[13px]">
+                <input
+                  type="checkbox"
+                  checked={remember}
+                  onChange={(e) => setRemember(e.target.checked)}
+                  className="mt-0.5 h-4 w-4"
+                />
+                <span>
+                  {t('auth.remember')}
+                  <span className="block text-[12px] text-[var(--text-muted)]">
+                    {t('auth.rememberHint')}
+                  </span>
+                </span>
+              </label>
             </div>
 
             {error && (
