@@ -341,7 +341,13 @@ export function TeacherModal({
                    value={f.rate_factor}
                    onChange={(e) => set('rate_factor', e.target.value)} />
           </Field>
-          <Field label={t('teachers.weeklyHours')}>
+          {/*  Haqiqiy oylik hisobida ISHLATILMAYDI — u faqat shu
+               formadagi taxminni chizadi. Shuning uchun majburiy
+               emas va izohida shu ochiq yozilgan: soatbay xodimning
+               oyligi "Darslar" bo'limidagi haqiqiy soatdan
+               chiqadi. */}
+          <Field label={t('teachers.weeklyHours')}
+                 hint={t('teachers.weeklyHoursHint')}>
             <Input type="number" step="0.5" min="0" value={f.weekly_hours}
                    onChange={(e) => set('weekly_hours', e.target.value)} />
           </Field>

@@ -99,7 +99,12 @@ export function SalaryPreview({
     formula = `${hoursPerRate} × ${rate} × ${money(price, lang)}`
       + (factor !== 1 ? ` × ${factor}` : '');
   } else if (effectiveType === 'hourly') {
-    // Oyda o'rtacha 4.33 hafta. Haqiqiy soat dars jurnalidan olinadi.
+    //  HAQIQIY oylik "Darslar" bo'limiga kiritilgan soatdan
+    //  hisoblanadi — haftalik yuklama unda umuman ishlatilmaydi.
+    //
+    //  Shuning uchun bu yerdagi raqam BASHORAT: "agar har hafta
+    //  shuncha soat bo'lsa". Uni oddiy oylik kabi ko'rsatish
+    //  aldov bo'lardi — dars kiritilmasa oylik NOL chiqadi.
     base = hours * 4.33 * price * factor;
     formula = `${hours} × 4.33 × ${money(price, lang)}`
       + (factor !== 1 ? ` × ${factor}` : '');
@@ -107,6 +112,9 @@ export function SalaryPreview({
     base = hours * 4.33 * price * factor + salary * rate;
     formula = `${hours} × 4.33 × ${money(price, lang)} + ${money(salary, lang)} × ${rate}`;
   }
+
+  //  Soat hisobga kirsa — raqam bashorat ekani AYTILADI.
+  const projected = effectiveType === 'hourly' || effectiveType === 'mixed';
 
   // --- Ustamalar -----------------------------------------------------
   //  Ustama KIMGA tegishli ekani alohida saqlanadi. Yangi o'qituvchida
@@ -136,7 +144,13 @@ export function SalaryPreview({
     return (
       <div className="rounded-md border border-dashed px-3 py-2.5
         text-[13px] text-[var(--text-muted)]">
-        {t('salary.fillFields')}
+        {/*  Soatbayda haftalik yuklamani to'ldirmaslik odatiy hol:
+             oy oxirida haqiqiy soat kiritiladi va oylik o'shandan
+             chiqadi. "Maydonlarni to'ldiring" deyish noto'g'ri
+             bo'lardi — to'ldiradigan narsa yo'q. */}
+        {projected && price > 0
+          ? t('salary.fromLessons')
+          : t('salary.fillFields')}
       </div>
     );
   }
@@ -176,7 +190,7 @@ export function SalaryPreview({
       )}
 
       <p className="mt-1.5 text-[11px] text-[var(--text-faint)]">
-        {t('salary.estimateNote')}
+        {projected ? t('salary.projectedNote') : t('salary.estimateNote')}
       </p>
     </div>
   );
