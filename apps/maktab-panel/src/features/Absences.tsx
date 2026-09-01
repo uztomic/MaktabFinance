@@ -207,7 +207,13 @@ export default function Absences() {
         const ids = (existing.data ?? [])
           .filter((a) => toRemove.includes(a.student_id))
           .map((a) => a.id);
-        const { error } = await supabase.from('absences').delete().in('id', ids);
+        //  Funksiya orqali: brauzerga DELETE huquqi berilmaydi
+        //  (TZ 5.4.8). Ilgari bu yerda to'g'ridan-to'g'ri o'chirish
+        //  turardi va JIMGINA ishlamasdi — belgi olib tashlanmasdi,
+        //  xato ham chiqmasdi.
+        const { error } = await supabase.rpc('remove_absences', {
+          p_ids: ids,
+        });
         if (error) throw error;
       }
 

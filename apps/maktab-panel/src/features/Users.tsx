@@ -122,17 +122,18 @@ export default function Users() {
       }).eq('id', f.id);
       if (error) throw error;
 
-      // Filial ro'yxati — avval eskilarini olib tashlab, keyin
-      // yangilarini yozamiz. `all_branches` bo'lsa ro'yxat kerak emas.
-      const { error: delErr } = await supabase
-        .from('user_branches').delete().eq('user_id', f.id);
-      if (delErr) throw delErr;
-
-      if (!f.all_branches && f.branch_ids.length > 0) {
-        const { error: insErr } = await supabase.from('user_branches')
-          .insert(f.branch_ids.map((b) => ({ user_id: f.id, branch_id: b })));
-        if (insErr) throw insErr;
-      }
+      //  Filial ro'yxati BITTA amalda almashtiriladi.
+      //
+      //  Ilgari ikkita so'rov edi: avval o'chirish, keyin yozish.
+      //  Birinchisi jadval darajasidagi huquq yo'qligi uchun xato
+      //  berardi ("permission denied for table user_branches") —
+      //  loyihada `authenticated` roliga DELETE hech qayerda
+      //  berilmaydi (TZ 5.4.8).
+      const { error: brErr } = await supabase.rpc('set_user_branches', {
+        p_user_id: f.id,
+        p_branch_ids: f.all_branches ? [] : f.branch_ids,
+      });
+      if (brErr) throw brErr;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['app-users'] });

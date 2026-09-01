@@ -155,11 +155,14 @@ export function CalendarSettings({ editable }: { editable: boolean }) {
 
   const remove = useMutation({
     mutationFn: async (v: { day: string; branch_id: string | null }) => {
-      let q = supabase.from('calendar_days').delete().eq('day', v.day);
-      q = v.branch_id
-        ? q.eq('branch_id', v.branch_id)
-        : q.is('branch_id', null);
-      const { error } = await q;
+      //  Brauzerdan to'g'ridan-to'g'ri o'chirib bo'lmaydi: loyihada
+      //  `authenticated` roliga DELETE huquqi HECH QAYERDA berilmagan
+      //  (TZ 5.4.8). Ilgari bu yerda `.delete()` turardi va jimgina
+      //  ishlamasdi — xato ham chiqmasdi.
+      const { error } = await supabase.rpc('delete_calendar_day', {
+        p_day: v.day,
+        p_branch_id: v.branch_id ?? undefined,
+      });
       if (error) throw error;
     },
     onSuccess: () => {

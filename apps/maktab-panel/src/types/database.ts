@@ -3716,6 +3716,10 @@ export type Database = {
         Returns: Json
       }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      delete_calendar_day: {
+        Args: { p_branch_id?: string; p_day: string }
+        Returns: Json
+      }
       delete_class: {
         Args: { p_class_id: string; p_force?: boolean; p_reason: string }
         Returns: Json
@@ -3798,6 +3802,7 @@ export type Database = {
           branch_id: string
           class_id: string
           class_name: string
+          day_name: string
           is_workday: boolean
           marked_at: string
           students: number
@@ -3966,6 +3971,7 @@ export type Database = {
         Args: { p_proof_id: string; p_reason: string }
         Returns: Json
       }
+      remove_absences: { Args: { p_ids: string[] }; Returns: Json }
       remove_payroll_adjustment: { Args: { p_line_id: string }; Returns: Json }
       report_advances: {
         Args: { p_branch_id?: string }
@@ -4272,6 +4278,18 @@ export type Database = {
           p_status: Database["public"]["Enums"]["support_thread_status"]
           p_thread_id: string
         }
+        Returns: Json
+      }
+      set_teacher_branches: {
+        Args: {
+          p_branch_ids: string[]
+          p_shares?: number[]
+          p_teacher_id: string
+        }
+        Returns: Json
+      }
+      set_user_branches: {
+        Args: { p_branch_ids: string[]; p_user_id: string }
         Returns: Json
       }
       set_user_permission: {

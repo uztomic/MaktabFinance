@@ -193,10 +193,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     //  `app.can` ham aynan shu tartibda ishlaydi. Ikkalasi bir xil
     //  bo'lishi SHART: aks holda tugma ko'rinadi-yu, bosilganda
     //  server rad etadi.
-    const { data: own } = await supabase
+    const { data: own, error: ownErr } = await supabase
       .from('user_permissions')
       .select('permission, allowed')
       .eq('user_id', user.id);
+
+    //  Xatoni JIM YUTMAYMIZ. Aynan shu xato qidirishga vaqt oldi:
+    //  jadvalga ruxsat berilmagani uchun so'rov rad etilardi, kod
+    //  esa faqat `data` ni olardi va shaxsiy huquqlar jimgina
+    //  e'tiborsiz qolardi. Ekranda hammasi joyidek ko'rinardi:
+    //  huquqlar ro'yxatida "qo'shilgan" deb turardi, tugma esa
+    //  paydo bo'lmasdi.
+    if (ownErr) console.error('Shaxsiy huquqlar o‘qilmadi:', ownErr.message);
 
     for (const p of own ?? []) merged.set(p.permission, p.allowed);
 
