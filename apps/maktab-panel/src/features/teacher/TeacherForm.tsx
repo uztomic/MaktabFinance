@@ -12,6 +12,7 @@
 import { type FormEvent, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { invokeFunction } from '@/lib/invokeFunction';
 import { useAuth } from '@/auth/AuthProvider';
 import { useT } from '@/i18n';
 import { isoDate } from '@/lib/format';
@@ -76,18 +77,17 @@ export async function createTeacherLogin(
   phone: string,
   branchId: string,
 ): Promise<NewLogin> {
-  const { data, error } = await supabase.functions.invoke('school-user-ops', {
-    body: {
-      action: 'create',
-      full_name: fullName,
-      login: phone,
-      role: 'teacher',
-      all_branches: false,
-      branch_ids: [branchId],
-    },
+  const data = await invokeFunction<{
+    user_id: string; login: string; password: string;
+  }>('school-user-ops', {
+    action: 'create',
+    full_name: fullName,
+    login: phone,
+    role: 'teacher',
+    all_branches: false,
+    branch_ids: [branchId],
   });
-  if (error) throw error;
-  if (!data?.user_id) throw new Error(data?.error ?? 'Hisob yaratilmadi');
+  if (!data?.user_id) throw new Error('Hisob yaratilmadi');
 
   //  Bog'lanish. Busiz hisob bor, lekin o'qituvchi bilan bog'liq emas
   //  va "mening sinflarim" bo'sh chiqadi.

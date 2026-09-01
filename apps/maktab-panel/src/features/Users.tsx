@@ -11,6 +11,7 @@
 import { type FormEvent, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { invokeFunction } from '@/lib/invokeFunction';
 import { useAuth } from '@/auth/AuthProvider';
 import { useI18n, useT } from '@/i18n';
 import { dateTime } from '@/lib/format';
@@ -61,12 +62,8 @@ export default function Users() {
       full_name: string; login: string; role: Role;
       all_branches: boolean; branch_ids: string[]; password: string;
     }) => {
-      const { data, error } = await supabase.functions.invoke('school-user-ops', {
-        body: { action: 'create', ...f },
-      });
-      if (error) throw new Error(error.message);
-      if (data?.error) throw new Error(data.error);
-      return data as { login: string; password: string };
+      return await invokeFunction<{ login: string; password: string }>(
+        'school-user-ops', { action: 'create', ...f });
     },
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['app-users'] });
@@ -79,12 +76,8 @@ export default function Users() {
   // Edge Function orqali (u chaqiruvchining huquqini tekshiradi).
   const resetPassword = useMutation({
     mutationFn: async (v: { user_id: string; password: string }) => {
-      const { data, error } = await supabase.functions.invoke('school-user-ops', {
-        body: { action: 'reset_password', ...v },
-      });
-      if (error) throw new Error(error.message);
-      if (data?.error) throw new Error(data.error);
-      return data as { login: string; password: string };
+      return await invokeFunction<{ login: string; password: string }>(
+        'school-user-ops', { action: 'reset_password', ...v });
     },
     onSuccess: (data) => {
       setResetting(null);

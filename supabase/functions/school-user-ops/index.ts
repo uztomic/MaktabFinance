@@ -102,7 +102,19 @@ Deno.serve(async (req) => {
     .eq('role', me.role)
     .eq('permission', 'users.manage');
 
+  //  Shaxsiy o'zgartirish rol ustiga qo'yiladi — bazadagi `app.can`
+  //  ham aynan shu tartibda ishlaydi. Uchala joy (baza, panel va shu
+  //  funksiya) bir xil javob berishi SHART: aks holda panelda tugma
+  //  ko'rinadi-yu, funksiya rad etadi.
+  const { data: own } = await caller
+    .from('user_permissions')
+    .select('allowed')
+    .eq('user_id', me.id)
+    .eq('permission', 'users.manage')
+    .maybeSingle();
+
   const allowed = (() => {
+    if (own) return own.allowed;
     const rows = perm ?? [];
     const school = rows.find((r) => r.school_id === me.school_id);
     if (school) return school.allowed;
