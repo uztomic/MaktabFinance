@@ -1189,6 +1189,8 @@
   "teachers.forceDelete": "Darslari va oylik hisoblari bilan birga o'chirilsin",
   "teachers.forceDeleteHint": "Belgilanmasa, darsi yoki hisoblangan oyligi bo'lgan o'qituvchi o'chirilmaydi. Tasdiqlangan oylik baribir to'sadi — pul berilgan, avval uni bekor qiling.",
   "teachers.hiredOn": "Ishga kirgan sana",
+  "teachers.hourPrice": "Shaxsiy soat narxi",
+  "teachers.hourPriceHint": "Bo'sh qoldirilsa maktabning umumiy narxi ishlaydi (Sozlamalar → Oylik formulasi). Faqat shu xodim boshqacha haq olsa to'ldiring.",
   "teachers.leftOn": "Ketgan sana",
   "teachers.lessons": "Darslar",
   "teachers.linkedUser": "Tizim hisobi",

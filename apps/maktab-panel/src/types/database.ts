@@ -1740,6 +1740,7 @@ export type Database = {
           id: string
           is_active: boolean
           lang: string
+          notify: boolean
           phone: string
           school_id: string
           telegram_id: number | null
@@ -1752,6 +1753,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           lang?: string
+          notify?: boolean
           phone: string
           school_id: string
           telegram_id?: number | null
@@ -1764,6 +1766,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           lang?: string
+          notify?: boolean
           phone?: string
           school_id?: string
           telegram_id?: number | null
@@ -3316,6 +3319,7 @@ export type Database = {
           deleted_at: string | null
           full_name: string
           hired_on: string | null
+          hour_price: number | null
           id: string
           is_active: boolean
           leave_reason: string | null
@@ -3336,6 +3340,7 @@ export type Database = {
           deleted_at?: string | null
           full_name: string
           hired_on?: string | null
+          hour_price?: number | null
           id?: string
           is_active?: boolean
           leave_reason?: string | null
@@ -3356,6 +3361,7 @@ export type Database = {
           deleted_at?: string | null
           full_name?: string
           hired_on?: string | null
+          hour_price?: number | null
           id?: string
           is_active?: boolean
           leave_reason?: string | null

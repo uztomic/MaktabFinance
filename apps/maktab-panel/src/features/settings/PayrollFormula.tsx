@@ -125,7 +125,18 @@ export default function PayrollFormula({ editable }: { editable: boolean }) {
   const [saved, setSaved] = useState(false);
 
   const rows = useQuery({
-    queryKey: ['payroll-settings'],
+    //  ATAYLAB BOSHQA KALIT.
+    //
+    //  `usePayrollSettings` (SalaryPreview) ham shu jadvalni o'qiydi,
+    //  lekin ODDIY OBYEKT qaytaradi. Bu yerda esa Map kerak: saqlashda
+    //  har qatorning `id` si ishlatiladi.
+    //
+    //  Ikkalasi bitta kalitda edi va kesh oxirgi yugurgan so'rovga
+    //  tegishli bo'lib qolardi. Natijada o'qituvchilar sahifasidan
+    //  keyin sozlamalarga kirilsa, Map o'rniga obyekt kelib
+    //  "data.get is not a function" xatosi chiqardi — ya'ni xato
+    //  sahifaning O'ZIDA emas, KIRISH TARTIBIDA edi.
+    queryKey: ['payroll-settings-edit'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('payroll_settings')
@@ -232,6 +243,9 @@ export default function PayrollFormula({ editable }: { editable: boolean }) {
       }
     },
     onSuccess: () => {
+      //  Ikkala kesh ham yangilanadi: oylik ko'rinishi (SalaryPreview)
+      //  o'sha sozlamalarga tayanadi.
+      qc.invalidateQueries({ queryKey: ['payroll-settings-edit'] });
       qc.invalidateQueries({ queryKey: ['payroll-settings'] });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);

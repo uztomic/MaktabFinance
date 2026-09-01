@@ -49,7 +49,7 @@ export function usePayrollSettings() {
 }
 
 export function SalaryPreview({
-  baseSalary, rateFactor, weeklyHours, category, baseType,
+  baseSalary, rateFactor, weeklyHours, category, baseType, hourPrice,
 }: {
   baseSalary: string;
   rateFactor: string;
@@ -57,6 +57,8 @@ export function SalaryPreview({
   category: string;
   /** Xodimning o'z turi. Bo'sh bo'lsa maktab sozlamasi. */
   baseType?: string;
+  /** Shaxsiy soat narxi. Bo'sh bo'lsa maktabniki. */
+  hourPrice?: string;
 }) {
   const t = useT();
   const { lang } = useI18n();
@@ -69,7 +71,12 @@ export function SalaryPreview({
   //  `calc_payroll` dagidek bo'lsin, aks holda oldindan ko'rsatilgan
   //  raqam haqiqiy oylikdan farq qiladi va ishonchni yo'qotadi.
   const effectiveType = baseType || (s.base_type as string) || 'fixed';
-  const hourPrice = Number(s.hour_price ?? 0);
+  //  Shaxsiy narx maktabnikidan USTUN — `calc_payroll` da ham
+  //  shunday (`coalesce(t.hour_price, sozlama)`). Ikkalasi bir xil
+  //  bo'lishi shart: aks holda bu yerda ko'rsatilgan raqam oy
+  //  oxirida chiqadigan oylikdan farq qiladi.
+  const schoolHourPrice = Number(s.hour_price ?? 0);
+  const price = Number(hourPrice || 0) || schoolHourPrice;
   const hoursPerRate = Number(s.hours_per_rate ?? 0);
   const factors = (s.category_factors ?? {}) as Record<string, number>;
   const allowances = (s.allowances ?? []) as Allowance[];
@@ -88,17 +95,17 @@ export function SalaryPreview({
     base = salary * rate;
     formula = `${money(salary, lang)} × ${rate}`;
   } else if (effectiveType === 'rate') {
-    base = hoursPerRate * rate * hourPrice * factor;
-    formula = `${hoursPerRate} × ${rate} × ${money(hourPrice, lang)}`
+    base = hoursPerRate * rate * price * factor;
+    formula = `${hoursPerRate} × ${rate} × ${money(price, lang)}`
       + (factor !== 1 ? ` × ${factor}` : '');
   } else if (effectiveType === 'hourly') {
     // Oyda o'rtacha 4.33 hafta. Haqiqiy soat dars jurnalidan olinadi.
-    base = hours * 4.33 * hourPrice * factor;
-    formula = `${hours} × 4.33 × ${money(hourPrice, lang)}`
+    base = hours * 4.33 * price * factor;
+    formula = `${hours} × 4.33 × ${money(price, lang)}`
       + (factor !== 1 ? ` × ${factor}` : '');
   } else {
-    base = hours * 4.33 * hourPrice * factor + salary * rate;
-    formula = `${hours} × 4.33 × ${money(hourPrice, lang)} + ${money(salary, lang)} × ${rate}`;
+    base = hours * 4.33 * price * factor + salary * rate;
+    formula = `${hours} × 4.33 × ${money(price, lang)} + ${money(salary, lang)} × ${rate}`;
   }
 
   // --- Ustamalar -----------------------------------------------------

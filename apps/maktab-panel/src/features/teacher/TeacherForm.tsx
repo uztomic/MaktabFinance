@@ -168,6 +168,8 @@ export function useSaveTeacher(
         category: f.category.trim() || null,
         rate_factor: Number(f.rate_factor || 1),
         base_salary: Number(f.base_salary || 0),
+        //  Bo'sh — maktabning umumiy soat narxi ishlaydi.
+        hour_price: f.hour_price ? Number(f.hour_price) : null,
         weekly_hours: Number(f.weekly_hours || 0),
         //  Bo'sh — maktabning umumiy sozlamasi ishlaydi.
         base_type: f.base_type || null,
@@ -285,6 +287,7 @@ export function TeacherModal({
     branch_id: branches[0]?.id ?? '',
     is_active: existing?.is_active ?? true,
     base_type: existing?.base_type ?? '',
+    hour_price: existing?.hour_price ? String(existing.hour_price) : '',
     //  Yangi o'qituvchiga hisob ham yaratiladi — bu odatiy hol.
     create_login: !existing,
     //  Qaysi sinfga rahbar. Bo'sh — fan o'qituvchisi.
@@ -364,6 +367,19 @@ export function TeacherModal({
                       onChange={(e) => set('base_salary', e.target.value)} />
         </Field>
 
+        {/*  Shaxsiy soat narxi — faqat soat hisobga kirganda.
+             Maktabda umumiy narx bo'ladi, lekin tajribali fan
+             o'qituvchisi bilan to'garak rahbari bir xil haq
+             olmaydi. Ilgari yagona yo'l butun maktabning narxini
+             o'zgartirish edi. */}
+        {(f.base_type === 'hourly' || f.base_type === 'mixed') && (
+          <Field label={t('teachers.hourPrice')}
+                 hint={t('teachers.hourPriceHint')}>
+            <MoneyInput value={f.hour_price}
+                        onChange={(e) => set('hour_price', e.target.value)} />
+          </Field>
+        )}
+
         {/* Kiritilgan raqamlardan oxirida qancha chiqishi DARHOL
             ko'rinadi — aks holda buni faqat oy oxirida bilib olinadi. */}
         <SalaryPreview
@@ -372,6 +388,7 @@ export function TeacherModal({
           weeklyHours={f.weekly_hours}
           category={f.category}
           baseType={f.base_type}
+          hourPrice={f.hour_price}
         />
 
         <Field label={t('teachers.classTeacher')}
