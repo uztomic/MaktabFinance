@@ -35,3 +35,26 @@ export function setRemembered(on: boolean): void {
     else localStorage.removeItem(KEY);
   } catch { /* maxfiy oyna */ }
 }
+
+/**
+ *  Brauzerdan saqlangan sessiyani O'CHIRMASLIKNI so'raydi.
+ *
+ *  Telefonda muammo aynan shu edi: Android Chrome joy yetmasa yoki
+ *  sayt uzoq ochilmasa `localStorage` ni jimgina tozalab yuboradi.
+ *  Kompyuterda bu deyarli bo'lmaydi — shuning uchun panel
+ *  kompyuterda odamni eslab qolardi, telefonda esa yo'q.
+ *
+ *  `persist()` shu saytni "tozalanmaydigan" ro'yxatga qo'yishni
+ *  so'raydi. Brauzer rad qilishi mumkin va bu xato emas: u holda
+ *  avvalgidek ishlaydi, shunchaki kafolat bo'lmaydi.
+ *
+ *  Faqat "eslab qol" belgilanganda so'raladi — bu odamning
+ *  ongli tanlovi, ruxsat so'rash uchun asos aynan o'sha.
+ */
+export async function keepStorage(): Promise<void> {
+  try {
+    if (!navigator.storage?.persist) return;
+    if (await navigator.storage.persisted()) return;
+    await navigator.storage.persist();
+  } catch { /* qo'llab-quvvatlanmasa — muhim emas */ }
+}

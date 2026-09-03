@@ -18,7 +18,6 @@ import {
 } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
-import { setRemembered } from './remember';
 import type { Database } from '@/types/database';
 
 type UserRole = Database['public']['Enums']['user_role'];
@@ -251,14 +250,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadContext]);
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
+    //  FAQAT SHU QURILMA.
+    //
+    //  `signOut()` ning standart qamrovi — `global`: u odamning
+    //  BARCHA qurilmasidagi sessiyani o'chiradi. Ya'ni kanselyariya
+    //  kompyuterida chiqib ketilsa, direktorning telefoni ham
+    //  chiqib qolardi. Telefonda buning sababi ko'rinmaydi — odam
+    //  shunchaki "eslab qol" ishlamadi deb o'ylaydi.
+    //
+    //  `local` qamrovi shu sessiyani serverda ham tugatadi, boshqa
+    //  qurilmalarga tegmaydi — kutilgani aynan shu.
+    await supabase.auth.signOut({ scope: 'local' });
     try {
       localStorage.removeItem(BRANCH_KEY);
     } catch { /* muhim emas */ }
-    //  Ataylab chiqqan odam keyingi safar qayta tanlasin: "eslab
-    //  qol" qurilmaga bog'liq va uni chiqishda tozalash kutilgan
-    //  xatti-harakat.
-    setRemembered(false);
   }, []);
 
   const value = useMemo<AuthValue>(() => {

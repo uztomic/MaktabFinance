@@ -13,7 +13,7 @@ import { looksLikePhone, phoneToEmail, supabase } from '@/lib/supabase';
 import { useT } from '@/i18n';
 import { Button, Field, Input, Notice, Spinner } from '@/ui';
 import { PasswordInput } from '@/ui/PasswordInput';
-import { isRemembered, setRemembered } from './remember';
+import { isRemembered, keepStorage, setRemembered } from './remember';
 import { LangSwitcher, ThemeToggle } from '@/layout/Controls';
 
 export default function LoginPage() {
@@ -46,6 +46,10 @@ export default function LoginPage() {
     //  paydo bo'lishi bilan ishga tushadi va o'sha paytda belgini
     //  o'qiydi.
     setRemembered(remember);
+    //  Belgilangan bo'lsa brauzerdan saqlangan sessiyani
+    //  o'chirmaslikni so'raymiz. Kutib turilmaydi: ruxsat
+    //  berilishi kirishga ta'sir qilmaydi.
+    if (remember) void keepStorage();
 
     const { error: err } = await supabase.auth.signInWithPassword({
       email,

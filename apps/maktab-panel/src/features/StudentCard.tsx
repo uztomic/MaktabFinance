@@ -247,7 +247,23 @@ export default function StudentCard() {
       //  Aralash to'lov: har qism o'z usuli bilan alohida yoziladi,
       //  kvitansiya bitta. Bo'sh bo'lsa — oddiy to'lov.
       parts?: Array<{ method_id: string; amount: number }>;
+      //  Kassada kechirilgan qarz. Shartnomaga tegmaydi — faqat shu
+      //  oyning hisoblanmasi kamayadi.
+      discount?: { amount: number; reason: string };
     }) => {
+      //  CHEGIRMA AVVAL. Aks holda kvitansiyada ko'rsatiladigan
+      //  balans eski hisobdan chiqadi va ota-onaga noto'g'ri qarz
+      //  yuboriladi.
+      if (v.discount) {
+        const { error: dErr } = await supabase.rpc('add_invoice_discount', {
+          p_student_id: id!,
+          p_period: v.paid_on.slice(0, 8) + '01',
+          p_amount: v.discount.amount,
+          p_reason: v.discount.reason,
+        });
+        if (dErr) throw dErr;
+      }
+
       if (v.parts?.length) {
         const { data, error } = await supabase.rpc('register_split_payment', {
           p_student_id: id!,
@@ -285,6 +301,8 @@ export default function StudentCard() {
     onSuccess: (res, vars) => {
       qc.invalidateQueries({ queryKey: ['student-balance', id] });
       qc.invalidateQueries({ queryKey: ['student-payments', id] });
+      //  Chegirma berilgan bo'lsa hisoblanma ham o'zgargan.
+      qc.invalidateQueries({ queryKey: ['student-invoices', id] });
       qc.invalidateQueries({ queryKey: ['students'] });
       setPayOpen(false);
       // TZ 4.7.1.2 — raqamlangan kvitansiya darhol ko'rsatiladi.
@@ -1426,6 +1444,7 @@ function CashPaymentModal({
   onSubmit: (v: {
     amount: number; paid_on: string; note: string; method_id: string;
     parts?: Array<{ method_id: string; amount: number }>;
+    discount?: { amount: number; reason: string };
   }) => void;
   busy: boolean;
   error: string | null;
@@ -1436,6 +1455,12 @@ function CashPaymentModal({
 }) {
   const t = useT();
   const { lang } = useI18n();
+  const { mayWrite } = useAuth();
+
+  //  Kassir to'lovni qabul qiladi, lekin qarzni KECHIRA olmaydi —
+  //  bu alohida ruxsat (`invoices.discount`).
+  const canDiscount = mayWrite('invoices.discount');
+
   const [amount, setAmount] = useState(String(suggested || ''));
   const [paidOn, setPaidOn] = useState(isoDate());
   const [note, setNote] = useState('');
@@ -1456,6 +1481,21 @@ function CashPaymentModal({
    */
   const [mixed, setMixed] = useState(false);
   const [split, setSplit] = useState<Record<string, string>>({});
+
+  /**
+   *  Kassada beriladigan chegirma.
+   *
+   *  Shartnomadagi chegirmadan FARQI: bu bir martalik. Ota-ona
+   *  kelib "shu oy og'ir bo'ldi" deydi, direktor 100 000 ni
+   *  kechiradi — kelasi oy esa avvalgi summa hisoblanadi.
+   *
+   *  Sabab majburiy: qarzni kechirish pul qarori va u kimningdir
+   *  imzosi bilan qolishi kerak.
+   */
+  const [discountOn, setDiscountOn] = useState(false);
+  const [discount, setDiscount] = useState('');
+  const [discountReason, setDiscountReason] = useState('');
+  const discountValue = discountOn ? Number(discount) || 0 : 0;
 
   /**
    *  Oldindan to'lov.
@@ -1514,18 +1554,28 @@ function CashPaymentModal({
   //  hech narsa aytmaydi.
   const blocked = mixed
     ? parts.length < 2 ? t('pay.mixedNeedTwo') : null
-    : Number(amount) <= 0 ? t('pay.editNeedAmount') : null;
+    : Number(amount) <= 0 ? t('pay.editNeedAmount')
+    : discountOn && discountValue <= 0 ? t('pay.discountNeedAmount')
+    : discountOn && discountReason.trim().length < 3
+      ? t('pay.discountNeedReason')
+      : null;
 
   function submit(e: FormEvent) {
     e.preventDefault();
+    const disc = discountValue > 0
+      ? { amount: discountValue, reason: discountReason.trim() }
+      : undefined;
+
     if (mixed) {
       onSubmit({
         amount: splitTotal, paid_on: paidOn, note, method_id: '', parts,
+        discount: disc,
       });
       return;
     }
     onSubmit({
       amount: Number(amount), paid_on: paidOn, note, method_id: method,
+      discount: disc,
     });
   }
 
@@ -1676,6 +1726,44 @@ function CashPaymentModal({
               </p>
             )}
           </div>
+        )}
+
+        {canDiscount && (
+          <>
+            <label className="flex items-center gap-2 text-[13px]">
+              <input
+                type="checkbox"
+                checked={discountOn}
+                onChange={(e) => setDiscountOn(e.target.checked)}
+                className="h-4 w-4"
+              />
+              <span>{t('pay.discount')}</span>
+            </label>
+
+            {discountOn && (
+              <div className="space-y-2 rounded-md border bg-[var(--bg-subtle)] p-3">
+                <p className="text-[12px] text-[var(--text-muted)]">
+                  {t('pay.discountHint')}
+                </p>
+                <Field label={t('pay.discountAmount')} required>
+                  <MoneyInput value={discount}
+                              onChange={(e) => setDiscount(e.target.value)} />
+                </Field>
+                <Field label={t('pay.discountReason')} required>
+                  <Input value={discountReason}
+                         onChange={(e) => setDiscountReason(e.target.value)}
+                         placeholder={t('pay.discountReasonHint')} />
+                </Field>
+                {suggested > 0 && discountValue > 0 && (
+                  <p className="text-[12px] text-[var(--text-muted)]">
+                    {t('pay.discountLeft', {
+                      debt: money(Math.max(0, suggested - discountValue), lang),
+                    })}
+                  </p>
+                )}
+              </div>
+            )}
+          </>
         )}
 
         <Field label={t('common.date')} required>
