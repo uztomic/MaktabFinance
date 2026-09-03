@@ -532,7 +532,7 @@ export default function StudentCard() {
               </>
             )}
             {mayWrite('payments.create') && (
-              <Button variant="accent" onClick={() => setPayOpen(true)}>
+              <Button variant="accent" onClick={() => { pay.reset(); setPayOpen(true); }}>
                 {t('nav.payments')} +
               </Button>
             )}
@@ -1070,18 +1070,23 @@ export default function StudentCard() {
           .filter(Boolean)}
       />
 
-      <CashPaymentModal
-        open={payOpen}
-        onClose={() => setPayOpen(false)}
-        studentId={id!}
-        studentName={s.full_name}
-        suggested={bal > 0 ? bal : 0}
-        onSubmit={(v) => pay.mutate(v)}
-        busy={pay.isPending}
-        error={pay.error ? (pay.error as Error).message : null}
-        result={pay.data ?? null}
-        schoolName={profile?.school_name ?? ''}
-      />
+      {/*  HAR SAFAR TOZA OCHILADI.
+            Oyna doim chizilib turganda ichidagi holat saqlanib
+            qolardi: avvalgi o'quvchining summasi, avvalgi xato.
+            Shartli chizish buni tugatadi — oyna yopilganda
+            komponent ham yo'q bo'ladi. */}
+      {payOpen && (
+        <CashPaymentModal
+          open
+          onClose={() => setPayOpen(false)}
+          studentId={id!}
+          studentName={s.full_name}
+          suggested={bal > 0 ? bal : 0}
+          onSubmit={(v) => pay.mutate(v)}
+          busy={pay.isPending}
+          error={pay.error ? (pay.error as Error).message : null}
+        />
+      )}
 
       {editingPayment && (
         <EditPaymentInline
@@ -1434,7 +1439,6 @@ function EditPaymentInline({
 
 function CashPaymentModal({
   open, onClose, studentId, studentName, suggested, onSubmit, busy, error,
-  result, schoolName,
 }: {
   open: boolean;
   onClose: () => void;
@@ -1448,10 +1452,6 @@ function CashPaymentModal({
   }) => void;
   busy: boolean;
   error: string | null;
-  result: {
-    receipt_code: string; balance: number; method_name: string;
-  } | null;
-  schoolName: string;
 }) {
   const t = useT();
   const { lang } = useI18n();
@@ -1577,36 +1577,6 @@ function CashPaymentModal({
       amount: Number(amount), paid_on: paidOn, note, method_id: method,
       discount: disc,
     });
-  }
-
-  // To'lovdan keyin kvitansiya ko'rsatiladi (TZ 4.7.1.2).
-  if (result) {
-    return (
-      <Modal open={open} title={t('nav.payments')} onClose={onClose}
-             footer={<Button variant="primary" onClick={onClose}>{t('common.close')}</Button>}>
-        <div className="space-y-3 text-center">
-          <div className="text-3xl">✅</div>
-          <div className="text-sm">{schoolName}</div>
-          <div className="text-[13px] text-[var(--text-muted)]">{studentName}</div>
-          <div className="num text-2xl font-semibold">{money(amount, lang)}</div>
-          {result.method_name && (
-            <div className="text-[13px] text-[var(--text-muted)]">
-              {result.method_name}
-            </div>
-          )}
-          <div className="rounded-md bg-[var(--bg-inset)] px-3 py-2">
-            <div className="text-[11px] uppercase text-[var(--text-muted)]">
-              {t('pay.receipt')}
-            </div>
-            <div className="num text-lg font-semibold">{result.receipt_code}</div>
-          </div>
-          <div className="text-[13px] text-[var(--text-muted)]">
-            {t('students.balance')}: <Money value={result.balance} colored />
-          </div>
-          <Notice tone="neutral">{t('receipt.sentToParent')}</Notice>
-        </div>
-      </Modal>
-    );
   }
 
   return (
