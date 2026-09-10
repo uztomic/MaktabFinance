@@ -70,6 +70,17 @@ const ICON: Record<string, string> = {
   calendar: '📅',
   period: '🔒',
   lead: '📞',
+  price: '🏷',
+  paymethod: '💳',
+  expcat: '💸',
+  disctype: '🎁',
+  reason: '📋',
+  allowance: '💼',
+  advance: '💼',
+  branch: '🏢',
+  branchlink: '🏢',
+  permission: '🔑',
+  subscription: '📆',
 };
 
 /** Sukut bo'yicha nechta satr ko'rinadi. */

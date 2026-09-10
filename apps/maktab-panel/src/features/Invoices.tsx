@@ -21,7 +21,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/auth/AuthProvider';
 import { useI18n, useT } from '@/i18n';
 import {
-  currentPeriod, date, dateTime, money, periodLabel, shiftPeriod,
+  currentPeriod, date, dateTime, type Lang, money, periodLabel, shiftPeriod,
 } from '@/lib/format';
 import { exportTable } from '@/lib/export';
 import { PeriodLockButton } from './PeriodLock';
@@ -166,8 +166,36 @@ export default function Invoices() {
     qc.invalidateQueries({ queryKey: ['invoices'] });
     qc.invalidateQueries({ queryKey: ['absence-gaps-period'] });
     qc.invalidateQueries({ queryKey: ['invoice-diag'] });
+    qc.invalidateQueries({ queryKey: ['stale-invoices'] });
     qc.invalidateQueries({ queryKey: ['students'] });
   }
+
+  /**
+   *  ESKIRGAN HISOBLANMA.
+   *
+   *  Shartnoma hisoblanmadan KEYIN tuzatilsa, hisoblanma o'z-o'zidan
+   *  yangilanmaydi. Bu jimgina xato: ro'yxatda hamma narsa joyida
+   *  ko'rinadi, faqat bitta bolaning summasi shartnomadagidan boshqa
+   *  bo'ladi.
+   *
+   *  Avtomatik tuzatilmaydi ham: tungi cron faqat davrda BITTA HAM
+   *  hisoblanma bo'lmagan filialga yozadi — bor joyga ataylab tegmaydi,
+   *  chunki qo'lda kiritilgan qatorni o'chirib yuborardi.
+   *
+   *  Shuning uchun KO'RSATILADI, qaror esa odamniki: "Shakllantirish"
+   *  tugmasi tasdiqlanmagan hisoblanmani qayta quradi.
+   */
+  const stale = useQuery({
+    queryKey: ['stale-invoices', activeBranch, period],
+    enabled: !!activeBranch && can('reports.view'),
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('stale_invoices', {
+        p_branch_id: activeBranch!, p_period: period,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
   // --- Amallar (hammasi server tomonda) -----------------------------
   const generate = useMutation({
@@ -329,6 +357,9 @@ export default function Invoices() {
         )}
         {diag.data && (
           <PeriodDiagnosis d={diag.data} onGo={(pp) => setPeriod(pp)} />
+        )}
+        {(stale.data?.length ?? 0) > 0 && (
+          <StaleInvoices rows={stale.data!} lang={lang} t={t} />
         )}
         {autoRun.data?.period === period && (
           <Notice tone="neutral">
@@ -530,6 +561,49 @@ function PeriodSummary({ d, rows }: {
         </details>
       )}
     </Card>
+  );
+}
+
+/**
+ *  Shartnomadan farq qiladigan hisoblanmalar.
+ *
+ *  Nega ro'yxat bilan: "3 ta hisoblanma farq qiladi" degan yozuv
+ *  odamni butun ro'yxatni ko'zdan kechirishga majbur qilardi. Kim
+ *  ekani va farq qanchaligi shu yerda ko'rinsa, tekshirish bir
+ *  bosishda tugaydi.
+ */
+function StaleInvoices({ rows, lang, t }: {
+  // deno-lint-ignore no-explicit-any
+  rows: any[];
+  lang: Lang;
+  t: (k: string, v?: Record<string, string | number>) => string;
+}) {
+  return (
+    <Notice tone="warn">
+      <strong>{t('inv.stale', { count: rows.length })}</strong>{' '}
+      {t('inv.staleHint')}
+      <ul className="mt-1.5 space-y-0.5">
+        {rows.slice(0, 12).map((r) => (
+          <li key={r.invoice_id} className="text-[13px]">
+            <Link to={`/oquvchilar/${r.student_id}`}
+                  className="font-medium underline">
+              {r.student_name}
+            </Link>
+            {r.class_name && (
+              <span className="text-[var(--text-muted)]"> · {r.class_name}</span>
+            )}
+            <span className="num">
+              {' '}— {money(r.charged, lang)} → {money(r.expected, lang)}
+            </span>
+          </li>
+        ))}
+        {rows.length > 12 && (
+          <li className="text-[12px] text-[var(--text-muted)]">
+            {t('common.andMore', { count: rows.length - 12 })}
+          </li>
+        )}
+      </ul>
+    </Notice>
   );
 }
 
