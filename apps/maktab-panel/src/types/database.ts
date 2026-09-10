@@ -4368,6 +4368,21 @@ export type Database = {
         }
         Returns: Json
       }
+      today_activity: {
+        Args: { p_branch_id?: string; p_day?: string; p_limit?: number }
+        Returns: {
+          act: string
+          actor: string
+          amount: number
+          happened_at: string
+          href: string
+          kind: string
+          n: number
+          obj: string
+          subject: string
+          support: boolean
+        }[]
+      }
       update_school_profile: {
         Args: {
           p_address?: string

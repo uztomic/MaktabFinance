@@ -29,6 +29,7 @@ import {
 } from '@/ui';
 import { DateRangePicker, useDateRange } from '@/ui/DateRange';
 import { AttendanceToday } from '@/features/AttendanceToday';
+import { TodayActivity } from '@/features/TodayActivity';
 
 export default function Dashboard() {
   const t = useT();
@@ -424,6 +425,14 @@ export default function Dashboard() {
           <AttendanceToday />
         </div>
       )}
+
+      {/* --- Bugungi amallar --------------------------------------
+           Kun davomida tizimda nima qilingani. Ichkarida
+           `reports.view` tekshiriladi — o'qituvchi va navbatchi
+           butun maktabning ishini ko'rmasligi kerak. */}
+      <div className="mt-4">
+        <TodayActivity />
+      </div>
     </>
   );
 }
