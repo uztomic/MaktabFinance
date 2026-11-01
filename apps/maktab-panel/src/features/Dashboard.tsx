@@ -16,6 +16,7 @@
 //    · 12 oylik dinamika — o'sish bormi
 // =====================================================================
 
+import { QuickPayButton } from './QuickPay';
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
@@ -205,7 +206,13 @@ export default function Dashboard() {
       <PageHeader
         title={t('dashboard.title')}
         subtitle={`${profile?.school_name} · ${date(from, lang)} — ${date(to, lang)}`}
+        actions={<QuickPayButton />}
       />
+
+      {/* --- Tezkor amallar ------------------------------------------
+          Kundalik ishlar bir bosishda. Ilgari har biri uchun menyudan
+          bo'lim qidirish kerak edi (telefonda — ayniqsa noqulay). */}
+      <QuickActions />
 
       {/* Butun panel shu oraliq bo'yicha. Tanlov saqlanadi va boshqa
           sahifalarga ham o'tadi — buxgalter uni bir marta qo'yadi. */}
@@ -737,3 +744,30 @@ function SetupIssues({ rows }: {
 }
 
 
+
+function QuickActions() {
+  const t = useT();
+  const { can, mayWrite } = useAuth();
+  const items = [
+    { to: '/qarzdorlik', icon: '⏰', label: t('dash.qa.debts'), ok: can('reports.view') },
+    { to: '/oquvchilar', icon: '👤', label: t('dash.qa.students'), ok: can('students.manage') },
+    { to: '/xarajatlar', icon: '🧾', label: t('dash.qa.expense'), ok: mayWrite('expenses.create') },
+    { to: '/yoqlik', icon: '✅', label: t('dash.qa.absences'), ok: can('absences.mark') },
+    { to: '/oylik', icon: '💼', label: t('dash.qa.payroll'), ok: can('payroll.view') },
+    { to: '/hisobotlar', icon: '📊', label: t('dash.qa.reports'), ok: can('reports.view') },
+  ].filter((x) => x.ok).slice(0, 4);
+  if (items.length === 0) return null;
+  return (
+    <div className="mb-4 grid grid-cols-4 gap-2">
+      {items.map((x) => (
+        <Link key={x.to} to={x.to}
+          className="flex min-h-[64px] flex-col items-center justify-center gap-1 rounded-xl border
+            bg-[var(--bg)] px-1 text-center text-[11.5px] font-medium leading-tight
+            hover:bg-[var(--bg-subtle)] active:scale-[0.98]">
+          <span className="text-lg leading-none" aria-hidden>{x.icon}</span>
+          <span className="line-clamp-2">{x.label}</span>
+        </Link>
+      ))}
+    </div>
+  );
+}

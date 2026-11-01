@@ -201,3 +201,78 @@ body {
   .no-print { display: none !important; }
   body { background: #fff; font-size: 12px; }
 }
+
+/* ---------------------------------------------------------------------
+   Telefon: jadval → kartochkalar (`Table` komponenti `data-label` qo'yadi).
+   Gorizontal surish yo'q, har qator bitta kartochka: birinchi ustun
+   sarlavha, qolganlari "yorliq — qiymat" qatorlari.
+   --------------------------------------------------------------------- */
+@media (max-width: 639px) {
+  .table-scroll:has(> .rtable) { overflow-x: visible; }
+  .rtable thead { display: none; }
+  .rtable, .rtable tbody, .rtable tfoot { display: block; width: 100%; }
+  /*  Ikki ustunli kartochka: yorliq tepada, qiymat pastda. Bitta
+      ustunli "yorliq — qiymat" qatorlariga qaraganda ikki baravar
+      ixcham — 140 o'quvchilik ro'yxat telefonda cheksiz cho'zilmaydi. */
+  .rtable tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 14px;
+    row-gap: 6px;
+    margin: 0 0 10px;
+    padding: 10px 14px 12px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg);
+  }
+  .rtable tbody tr:hover { background: var(--bg); }
+  .rtable td {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+    padding: 0;
+    border: 0;
+    text-align: left;
+    white-space: normal;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: 13.5px;
+  }
+  .rtable td > * { max-width: 100%; }
+  .rtable td::before {
+    content: attr(data-label);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.3;
+  }
+  .rtable td[data-label='']::before { display: none; }
+  .rtable td:first-child {
+    grid-column: 1 / -1;
+    font-size: 15px;
+    font-weight: 600;
+    padding-bottom: 8px;
+    margin-bottom: 2px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .rtable td:first-child::before { display: none; }
+  /* Tugmali katak — butun kenglikda, tugmalar yonma-yon. */
+  .rtable td:has(button) {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    padding-top: 4px;
+  }
+  .rtable td:has(button)::before { display: none; }
+  .rtable td:has(button) > div { width: 100%; justify-content: flex-end; }
+  .rtable td:only-child,
+  .rtable td[colspan] { grid-column: 1 / -1; display: block; text-align: center; border: 0; margin: 0; }
+  .rtable td[colspan]::before { display: none; }
+  .rtable td:empty { display: none; }
+  .rtable td:not(:first-child) button { min-height: 36px; }
+  .rtable td:not(:first-child) a { display: inline-flex; align-items: center; min-height: 28px; }
+  .rtable tfoot tr { background: var(--bg-subtle); font-weight: 600; }
+}

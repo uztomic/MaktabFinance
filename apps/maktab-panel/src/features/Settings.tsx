@@ -13,6 +13,7 @@
 // =====================================================================
 
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/auth/AuthProvider';
@@ -31,36 +32,52 @@ type Tab = 'finance' | 'payroll' | 'messaging'
 export default function Settings() {
   const t = useT();
   const { can, mayWrite, profile } = useAuth();
-  const [tab, setTab] = useState<Tab>('finance');
+  //  Tanlangan bo'lim manzilda — "Sozlamalar → Oylik" ga havola berish
+  //  va sahifa yangilanganda joyida qolish uchun.
+  const [params, setParams] = useSearchParams();
+  const ALL: Tab[] = ['finance', 'payroll', 'messaging', 'calendar', 'discounts', 'reasons'];
+  const raw = params.get('b') as Tab | null;
+  const tab: Tab = raw && ALL.includes(raw) ? raw : 'finance';
+  const setTab = (x: Tab) => setParams({ b: x }, { replace: true });
 
   if (!can('users.manage')) {
     return <Notice tone="danger">{t('common.noAccess')}</Notice>;
   }
 
-  const TABS: Array<{ id: Tab; label: string }> = [
-    { id: 'finance', label: t('settings.finance') },
-    { id: 'payroll', label: t('settings.payroll') },
-    { id: 'messaging', label: t('settings.messaging') },
-    { id: 'calendar', label: t('cal.title') },
-    { id: 'discounts', label: t('disc.title') },
-    { id: 'reasons', label: t('reason.title') },
+  //  Har bo'limda bir qatorli izoh: nima uchun kerak. Ilgari faqat
+  //  nomlar bor edi va "Sabablar" yoki "Moliya" ichida nima borligini
+  //  ochib ko'rmaguncha bilib bo'lmasdi.
+  const TABS: Array<{ id: Tab; label: string; hint: string; icon: string }> = [
+    { id: 'finance', label: t('settings.finance'), hint: t('settings.hint.finance'), icon: '💳' },
+    { id: 'payroll', label: t('settings.payroll'), hint: t('settings.hint.payroll'), icon: '🧮' },
+    { id: 'messaging', label: t('settings.messaging'), hint: t('settings.hint.messaging'), icon: '✉️' },
+    { id: 'calendar', label: t('cal.title'), hint: t('settings.hint.calendar'), icon: '📅' },
+    { id: 'discounts', label: t('disc.title'), hint: t('settings.hint.discounts'), icon: '🏷️' },
+    { id: 'reasons', label: t('reason.title'), hint: t('settings.hint.reasons'), icon: '📝' },
   ];
 
   return (
     <>
       <PageHeader title={t('settings.title')} subtitle={profile?.school_name} />
 
-      <div className="mb-4 flex gap-1 border-b">
+      <div className="mb-4 grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
         {TABS.map((x) => (
           <button
             key={x.id}
+            type="button"
             onClick={() => setTab(x.id)}
-            className={`-mb-px border-b-2 px-3 py-2 text-[13px] font-medium transition-colors
+            aria-pressed={tab === x.id}
+            className={`rounded-lg border px-3 py-2.5 text-left transition-colors
               ${tab === x.id
-                ? 'border-brand-700 text-[var(--text)]'
-                : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text)]'}`}
+                ? 'border-[var(--sel-border)] bg-[var(--sel-bg)]'
+                : 'hover:bg-[var(--bg-subtle)]'}`}
           >
-            {x.label}
+            <div className="flex items-center gap-1.5 text-[13px] font-semibold">
+              <span aria-hidden>{x.icon}</span>{x.label}
+            </div>
+            <div className="mt-0.5 line-clamp-2 text-[11.5px] leading-snug text-[var(--text-muted)]">
+              {x.hint}
+            </div>
           </button>
         ))}
       </div>

@@ -7,6 +7,7 @@
 //  jihatdan aniq ajratiladi.
 // =====================================================================
 
+import { QuickPayButton } from './QuickPay';
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
@@ -53,7 +54,7 @@ export default function Payments() {
 
   return (
     <>
-      <PageHeader title={t('pay.title')} />
+      <PageHeader title={t('pay.title')} actions={<QuickPayButton />} />
 
       <div className="mb-4 flex gap-1 border-b">
         {TABS.map((x) => (

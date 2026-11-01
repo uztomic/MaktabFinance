@@ -9,15 +9,17 @@
 //  mobil ekranda pastdagi navigatsiyaga aylanadi.
 // =====================================================================
 
-import { type ReactNode, useState } from 'react';
+import { Fragment, type ReactNode, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthProvider';
 import { SubscriptionBanner } from '@/layout/SubscriptionBanner';
 import { useT } from '@/i18n';
 import { BranchSwitcher, LangSwitcher, ThemeToggle } from './Controls';
-import { Badge, Button } from '@/ui';
+import { Badge } from '@/ui';
 import { CommandPalette } from '@/ui/CommandPalette';
 import { IdleGuard } from '@/auth/IdleGuard';
+import { QuickPayHost } from '@/features/QuickPay';
+import { openQuickPay } from '@/lib/quickPayBus';
 
 interface NavItem {
   to: string;
@@ -127,9 +129,15 @@ const TEACHER_NAV: NavItem[] = [
   { to: '/oyligim', labelKey: 'nav.myPayroll', permission: null, icon: <Icon d={I.cash} /> },
 ];
 
+/** Telefon pastki paneli uchun ustuvorlik tartibi. */
+const BOTTOM_PRIORITY = ['/', '/oquvchilar', '/tolovlar', '/qarzdorlik', '/davomat', '/oylik', '/hisobotlar'];
+
+/** Pastki panelda sig'adigan qisqa nomlar. */
+const SHORT: Record<string, string> = { '/': 'nav.home' };
+
 export default function AppShell() {
   const t = useT();
-  const { profile, can, permissions, signOut, impersonation } = useAuth();
+  const { profile, can, mayWrite, permissions, signOut, impersonation } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
 
   /**
@@ -149,6 +157,32 @@ export default function AppShell() {
         items: g.items.filter((i) => i.permission === null || can(i.permission)),
       }))
       .filter((g) => g.items.length > 0);
+
+  //  Pastki panel: rolga qarab eng kerakli bo'limlar. Kassir/buxgalterda
+  //  o'rtada "+ To'lov" — eng ko'p bajariladigan ish bitta bosishda.
+  const canPay = !isTeacher && mayWrite('payments.create');
+  const flat = groups.flatMap((g) => g.items);
+  const bottomItems = isTeacher
+    ? TEACHER_NAV.slice(0, 4)
+    : BOTTOM_PRIORITY
+      .map((to) => flat.find((i) => i.to === to))
+      .filter((i): i is NavItem => !!i)
+      .filter((i) => !(canPay && i.to === '/tolovlar'))
+      .slice(0, canPay ? 3 : 4);
+
+  const payButton = (
+    <button onClick={() => openQuickPay()} aria-label={t('quickpay.title')}
+      className="flex min-h-14 flex-col items-center justify-center">
+      <span className="-mt-5 flex h-12 w-12 items-center justify-center rounded-full bg-brand-700
+        text-2xl leading-none text-white shadow-lg shadow-black/25 ring-4 ring-[var(--bg)] active:scale-95">+</span>
+      <span className="mt-0.5 text-[10.5px] font-semibold text-[var(--text)]">{t('quickpay.short')}</span>
+    </button>
+  );
+
+  const openSearch = () => {
+    // Palitraning o'zi Ctrl+K ni tinglaydi — bitta manba.
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }));
+  };
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] transition-colors ${
@@ -265,32 +299,13 @@ export default function AppShell() {
                qismda turadi va har doim ko'rinadi. */}
           <header className="no-print z-20 flex shrink-0 items-center gap-2
             border-b bg-[var(--bg)] px-3 py-2 md:px-5">
-            <button
-              onClick={() => setMenuOpen((v) => !v)}
-              className="flex h-9 w-9 items-center justify-center rounded-md border
-                md:hidden"
-              aria-label="menu"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                   stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                <path d="M4 7h16M4 12h16M4 17h16" />
-              </svg>
-            </button>
-
             <div className="flex items-center gap-2 md:hidden">
               <img src="/logo-mark.svg" alt="" className="h-6 w-6" />
               <span className="text-sm font-semibold">MaktabFinance</span>
             </div>
 
             <button
-              onClick={() => {
-                // Palitraning o'zi Ctrl+K ni tinglaydi — shu hodisani
-                // sintetik tarzda yuborish ortiqcha holat saqlashdan
-                // ko'ra sodda va bitta manbani saqlab qoladi.
-                document.dispatchEvent(new KeyboardEvent('keydown', {
-                  key: 'k', ctrlKey: true, bubbles: true,
-                }));
-              }}
+              onClick={openSearch}
               className="ml-2 hidden items-center gap-2 rounded-md border px-2.5
                 py-1.5 text-[13px] text-[var(--text-muted)]
                 hover:bg-[var(--bg-subtle)] sm:flex"
@@ -302,52 +317,106 @@ export default function AppShell() {
             </button>
 
             <div className="ml-auto flex items-center gap-2">
+              {/* Telefonda qidiruv — ikonka (Ctrl K yo'q). */}
+              <button
+                onClick={openSearch}
+                className="flex h-9 w-9 items-center justify-center rounded-md border sm:hidden"
+                aria-label={t('search.short')}
+              >
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+              </button>
               <BranchSwitcher />
-              <LangSwitcher />
+              <span className="hidden sm:block"><LangSwitcher /></span>
               <ThemeToggle />
             </div>
           </header>
 
-          {/* Mobil menyu */}
+          {/* Mobil menyu — pastdan chiqadigan to'liq varaq. */}
           {menuOpen && (
-            <nav className="no-print max-h-[60dvh] shrink-0 overflow-y-auto
-              border-b bg-brand-900 px-2 py-3 md:hidden">
-              {groups.map((g, gi) => (
-                <div key={g.labelKey || gi} className="mb-3 last:mb-0">
-                  {g.labelKey && (
-                    <div className="px-2.5 pb-1 text-[10px] font-semibold uppercase
-                      tracking-wider text-brand-400">
-                      {t(g.labelKey)}
+            <div className="no-print fixed inset-0 z-40 md:hidden" role="dialog" aria-modal="true">
+              <button className="absolute inset-0 bg-black/50" aria-label={t('common.close')}
+                      onClick={() => setMenuOpen(false)} />
+              <nav className="absolute inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto rounded-t-2xl
+                bg-brand-900 px-3 pb-[calc(16px+env(safe-area-inset-bottom))] pt-2 shadow-2xl">
+                <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-brand-700" />
+                <div className="mb-3 flex items-center justify-between gap-3 px-1">
+                  <div className="min-w-0">
+                    <div className="truncate text-[14px] font-semibold text-white">{profile?.full_name}</div>
+                    <div className="truncate text-[12px] text-brand-300">
+                      {profile && t(`role.${profile.role}`)} · {profile?.school_name}
                     </div>
-                  )}
-                  {g.items.map((item) => (
-                    <NavLink
-                      key={item.to} to={item.to} end={item.to === '/'}
-                      className={linkClass}
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      {item.icon}
-                      {t(item.labelKey)}
-                    </NavLink>
-                  ))}
+                  </div>
+                  <LangSwitcher />
                 </div>
-              ))}
-              <div className="mt-3 border-t border-brand-800 px-2.5 pt-3">
-                <div className="text-[13px] text-white">{profile?.full_name}</div>
-                <Button size="sm" variant="ghost" onClick={signOut}
-                        className="mt-1 !text-brand-300">
+                {groups.map((g, gi) => (
+                  <div key={g.labelKey || gi} className="mb-3 last:mb-0">
+                    {g.labelKey && (
+                      <div className="px-1 pb-1.5 text-[10px] font-semibold uppercase
+                        tracking-wider text-brand-400">
+                        {t(g.labelKey)}
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {g.items.map((item) => (
+                        <NavLink
+                          key={item.to} to={item.to} end={item.to === '/'}
+                          onClick={() => setMenuOpen(false)}
+                          className={({ isActive }) => `flex min-h-11 items-center gap-2 rounded-lg px-3
+                            text-[13px] ${isActive ? 'bg-brand-700 font-medium text-white'
+                              : 'bg-brand-800/60 text-brand-100 active:bg-brand-800'}`}
+                        >
+                          {item.icon}
+                          <span className="truncate">{t(item.labelKey)}</span>
+                        </NavLink>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                <button onClick={signOut}
+                        className="mt-2 flex min-h-11 w-full items-center justify-center rounded-lg
+                          border border-brand-700 text-[13px] text-brand-200">
                   {t('auth.logout')}
-                </Button>
-              </div>
-            </nav>
+                </button>
+              </nav>
+            </div>
           )}
 
-          <main className="flex-1 overflow-y-auto px-3 py-4 md:px-5 md:py-5
+          <main className="flex-1 overflow-y-auto px-3 pb-6 pt-4 md:px-5 md:py-5
             print:overflow-visible">
             <Outlet />
           </main>
 
+          {/* --- Pastki navigatsiya (telefon) ------------------------
+               Eng ko'p ishlatiladigan 4 bo'lim + "Menyu". Ilgari
+               telefonda har bir o'tish uchun yuqoridagi menyuni ochib,
+               22 bandli ro'yxatdan qidirish kerak edi. */}
+          <nav className="no-print grid shrink-0 grid-cols-5 border-t bg-[var(--bg)]
+            pb-[env(safe-area-inset-bottom)] md:hidden">
+            {bottomItems.map((item, i) => (
+              <Fragment key={item.to}>
+                {canPay && i === 2 && payButton}
+                <NavLink to={item.to} end={item.to === '/'}
+                  className={({ isActive }) => `flex min-h-14 flex-col items-center justify-center gap-0.5
+                    px-1 text-[10.5px] leading-tight ${isActive ? 'font-semibold text-brand-600 dark:text-accent-400'
+                      : 'text-[var(--text-muted)]'}`}>
+                  {item.icon}
+                  <span className="max-w-full truncate">{t(SHORT[item.to] ?? item.labelKey)}</span>
+                </NavLink>
+              </Fragment>
+            ))}
+            {canPay && bottomItems.length < 3 && payButton}
+            <button onClick={() => setMenuOpen(true)}
+              className="flex min-h-14 flex-col items-center justify-center gap-0.5 text-[10.5px]
+                text-[var(--text-muted)]">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   strokeWidth="2" strokeLinecap="round"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+              <span>{t('nav.menu')}</span>
+            </button>
+          </nav>
+
           <CommandPalette />
+          <QuickPayHost />
           <IdleGuard />
         </div>
       </div>

@@ -263,10 +263,50 @@ export function PageHeader({
 //  Jadval — zich, gorizontal siljish o'z konteynerida
 // ---------------------------------------------------------------------
 
-export function Table({ children }: { children: ReactNode }) {
+/**
+ *  Telefonda jadval kartochkalarga aylanadi.
+ *
+ *  Ilgari 43 ta jadval telefonda gorizontal suriladigan keng jadval
+ *  bo'lib qolardi: ustunlar mayda, summa ko'rinmasdi, qatorni bosish
+ *  qiyin edi. Endi har bir katakka sarlavha nomi `data-label` bilan
+ *  yoziladi va CSS (`.rtable`) tor ekranda har qatorni "yorliq — qiymat"
+ *  ko'rinishidagi kartochka qilib chizadi. Katta ekranda hech narsa
+ *  o'zgarmaydi.
+ *
+ *  Yorliqlar DOM dan olinadi — 43 ta jadvalning har birini qayta
+ *  yozish shart emas, yangi ustun qo'shilsa ham o'zi ishlaydi.
+ */
+export function Table({ children, stack = true }: { children: ReactNode; stack?: boolean }) {
+  const ref = useRef<HTMLTableElement | null>(null);
+
+  useEffect(() => {
+    const table = ref.current;
+    if (!table || !stack) return;
+    const label = () => {
+      const heads = Array.from(table.querySelectorAll('thead th')).map(
+        (th) => (th.textContent ?? '').trim(),
+      );
+      table.querySelectorAll('tbody tr').forEach((tr) => {
+        let col = 0;
+        Array.from(tr.children).forEach((cell) => {
+          const td = cell as HTMLTableCellElement;
+          const text = heads[col] ?? '';
+          if (td.getAttribute('data-label') !== text) td.setAttribute('data-label', text);
+          col += td.colSpan || 1;
+        });
+      });
+    };
+    label();
+    const obs = new MutationObserver(label);
+    obs.observe(table, { childList: true, subtree: true });
+    return () => obs.disconnect();
+  }, [stack]);
+
   return (
     <div className="table-scroll">
-      <table className="w-full border-collapse text-sm">{children}</table>
+      <table ref={ref} className={`w-full border-collapse text-sm ${stack ? 'rtable' : ''}`}>
+        {children}
+      </table>
     </div>
   );
 }

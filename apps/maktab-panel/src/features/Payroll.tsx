@@ -16,6 +16,8 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/auth/AuthProvider';
 import { useI18n, useT } from '@/i18n';
 import { currentPeriod, money, periodLabel, shiftPeriod } from '@/lib/format';
+import { exportTable } from '@/lib/export';
+import { useConfirm } from '@/ui/Feedback';
 import {
   Badge, Button, Card, EmptyState, ErrorState, Field, Input, Loading,
   Modal, Notice, PageHeader, Table, Td, Th, Tr,
@@ -27,7 +29,9 @@ export default function Payroll() {
   const qc = useQueryClient();
   const { can, mayWrite } = useAuth();
 
+  const confirm = useConfirm();
   const [period, setPeriod] = useState(currentPeriod());
+  const [filter, setFilter] = useState<'all' | 'draft' | 'approved'>('all');
 
   const rows = useQuery({
     queryKey: ['payroll', period],
@@ -100,6 +104,32 @@ export default function Payroll() {
   });
 
   /**
+   *  Hammasini tasdiqlash — oy oxirida 20+ o'qituvchini bittalab
+   *  bosish o'rniga. Har biri alohida RPC: bittasi xato bersa
+   *  qolganlari to'xtamaydi, xatolar ro'yxati ko'rsatiladi.
+   */
+  const approveAll = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const failed: string[] = [];
+      //  Birinchisi YOLG'IZ: u kerak bo'lsa "Ish haqi" xarajat
+      //  turkumini yaratadi — parallel so'rovlar uni ikki marta
+      //  yaratib qo'ymasligi uchun. Qolganlari 4 tadan parallel.
+      const first = await supabase.rpc('approve_payroll', { p_run_id: ids[0] });
+      if (first.error) failed.push(first.error.message);
+      for (let i = 1; i < ids.length; i += 4) {
+        const res = await Promise.all(ids.slice(i, i + 4).map((id) =>
+          supabase.rpc('approve_payroll', { p_run_id: id })));
+        for (const r of res) if (r.error) failed.push(r.error.message);
+      }
+      return { done: ids.length - failed.length, failed };
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['payroll', period] });
+      qc.invalidateQueries({ queryKey: ['pnl'] });
+    },
+  });
+
+  /**
    *  Oylikni bekor qilish.
    *
    *  Uchala ehtiyojni bitta amal qoplaydi: berilgan pulni qaytarish,
@@ -148,6 +178,44 @@ export default function Payroll() {
   const notCalculated = (teachers.data ?? []).filter(
     (te) => !data.some((r) => r.teacher_id === te.id),
   );
+  const drafts = data.filter((r) => r.status !== 'approved');
+  const approvedCount = data.length - drafts.length;
+  const totalTeachers = Math.max(teachers.data?.length ?? 0, data.length);
+  const shown = filter === 'all' ? data
+    : filter === 'draft' ? drafts : data.filter((r) => r.status === 'approved');
+
+  //  Oylik jarayoni 3 bosqich — foydalanuvchi qaysi bosqichda
+  //  ekanini darhol ko'radi. Ilgari "Hisoblangan" holati tasdiqlangan
+  //  deb o'ylanib, xarajat yozilmay qolardi.
+  //  4 — hammasi tugagan: uchala bosqich ham ✓.
+  const step = data.length === 0 ? 1 : drafts.length > 0 ? 2 : 4;
+
+  const doExport = () => exportTable(
+    `oylik-${period.slice(0, 7)}`,
+    [
+      { header: t('common.fullName'), value: (r: (typeof data)[number]) => r.teacher_name },
+      { header: t('lessons.hours'), value: (r) => Number(r.hours ?? 0), numeric: true },
+      { header: t('payroll.gross'), value: (r) => Number(r.gross_total ?? 0), numeric: true },
+      { header: t('payroll.deductions'), value: (r) => Number(r.deductions ?? 0), numeric: true },
+      { header: t('payroll.net'), value: (r) => Number(r.net_total ?? 0), numeric: true },
+      { header: t('common.status'), value: (r) => r.status === 'approved' ? t('payroll.approved') : t('payroll.draft') },
+    ],
+    data,
+    [`${t('payroll.title')} — ${periodLabel(period, lang)}`],
+  );
+
+  const doApproveAll = async () => {
+    const ok = await confirm({
+      title: t('payroll.approveAll'),
+      message: t('payroll.approveAllConfirm', {
+        count: drafts.length,
+        amount: money(drafts.reduce((a, r) => a + Number(r.net_total ?? 0), 0), lang),
+      }),
+      warning: t('payroll.approveWarning'),
+      confirmLabel: t('payroll.approveAll'),
+    });
+    if (ok) approveAll.mutate(drafts.map((r) => r.payroll_run_id!));
+  };
 
   return (
     <>
@@ -156,8 +224,13 @@ export default function Payroll() {
         subtitle={periodLabel(period, lang)}
         actions={
           <>
-            <Button size="sm" onClick={() => setPeriod(shiftPeriod(period, -1))}>←</Button>
-            <Button size="sm" onClick={() => setPeriod(shiftPeriod(period, 1))}>→</Button>
+            <Button size="sm" onClick={() => setPeriod(shiftPeriod(period, -1))}
+                    aria-label={t('payroll.prevMonth')}>←</Button>
+            <Button size="sm" onClick={() => setPeriod(shiftPeriod(period, 1))}
+                    aria-label={t('payroll.nextMonth')}>→</Button>
+            {data.length > 0 && (
+              <Button size="sm" onClick={doExport}>{t('common.export')}</Button>
+            )}
             {mayWrite('payroll.manage') && (
               <Button variant="primary" onClick={() => calcAll.mutate()}
                       disabled={calcAll.isPending}>
@@ -167,6 +240,62 @@ export default function Payroll() {
           </>
         }
       />
+
+      {/* --- Bosqichlar: 1 Hisoblash → 2 Tekshirish → 3 Tasdiqlash ---- */}
+      <ol className="mb-3 grid grid-cols-3 gap-1.5 text-[12px]">
+        {[
+          { n: 1, label: t('payroll.step1'), sub: `${data.length}/${totalTeachers}` },
+          { n: 2, label: t('payroll.step2'), sub: drafts.length > 0 ? t('payroll.waiting', { count: drafts.length }) : '✓' },
+          { n: 3, label: t('payroll.step3'), sub: `${approvedCount}/${data.length || 0}` },
+        ].map((x) => (
+          <li key={x.n}
+              className={`rounded-lg border px-2.5 py-2 ${x.n === step
+                ? 'border-[var(--sel-border)] bg-[var(--sel-bg)]'
+                : x.n < step ? 'opacity-80' : 'opacity-60'}`}>
+            <div className="flex items-center gap-1.5 font-semibold">
+              <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px]
+                ${x.n < step ? 'bg-[var(--ok)] text-white' : 'border'}`}>
+                {x.n < step ? '✓' : x.n}
+              </span>
+              <span className="truncate">{x.label}</span>
+            </div>
+            <div className="mt-0.5 pl-6 text-[11px] text-[var(--text-muted)]">{x.sub}</div>
+          </li>
+        ))}
+      </ol>
+
+      {data.length > 0 && (
+        <div className="mb-3 grid grid-cols-2 gap-2 md:grid-cols-4">
+          {[
+            { label: t('payroll.gross'), value: money(totals.gross, lang) },
+            { label: t('payroll.deductions'), value: `−${money(totals.deductions, lang)}`, tone: 'text-[var(--danger)]' },
+            { label: t('payroll.net'), value: money(totals.net, lang), tone: 'font-semibold' },
+            { label: t('payroll.toApprove'), value: String(drafts.length), tone: drafts.length ? 'text-[var(--warn)]' : 'text-[var(--ok)]' },
+          ].map((x) => (
+            <Card key={x.label}>
+              <div className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">{x.label}</div>
+              <div className={`mt-1 font-mono text-[17px] tabular-nums ${x.tone ?? ''}`}>{x.value}</div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {drafts.length > 0 && mayWrite('payroll.approve') && (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border
+          border-[var(--sel-border)] bg-[var(--sel-bg)] px-3 py-2.5">
+          <span className="text-[13px]">{t('payroll.approveHint', { count: drafts.length })}</span>
+          <Button variant="accent" onClick={doApproveAll} disabled={approveAll.isPending}>
+            {approveAll.isPending ? t('common.saving') : t('payroll.approveAll')}
+          </Button>
+        </div>
+      )}
+      {approveAll.data && approveAll.data.failed.length > 0 && (
+        <div className="mb-3">
+          <Notice tone="danger">
+            {t('payroll.approveAllFailed', { count: approveAll.data.failed.length })}: {approveAll.data.failed.join('; ')}
+          </Notice>
+        </div>
+      )}
 
       {(issues.data?.length ?? 0) > 0 && (
         <div className="mb-3 space-y-2">
@@ -231,6 +360,20 @@ export default function Payroll() {
         </div>
       )}
 
+      {data.length > 0 && (
+        <div className="mb-2 flex gap-1.5">
+          {(['all', 'draft', 'approved'] as const).map((f) => (
+            <button key={f} type="button" onClick={() => setFilter(f)}
+              className={`rounded-full border px-3 py-1 text-[12px] ${filter === f
+                ? 'border-[var(--sel-border)] bg-[var(--sel-bg)] font-medium' : 'text-[var(--text-muted)]'}`}>
+              {f === 'all' ? `${t('common.all')} · ${data.length}`
+                : f === 'draft' ? `${t('payroll.draft')} · ${drafts.length}`
+                : `${t('payroll.approved')} · ${approvedCount}`}
+            </button>
+          ))}
+        </div>
+      )}
+
       <Card padded={false}>
         {data.length === 0
           ? (
@@ -257,7 +400,7 @@ export default function Payroll() {
                 </tr>
               </thead>
               <tbody>
-                {data.map((r) => (
+                {shown.map((r) => (
                   <Tr key={r.payroll_run_id}>
                     <Td>
                       <Link to={`/oylik/${r.payroll_run_id}`}

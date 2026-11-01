@@ -47,9 +47,14 @@ export function date(value: string | Date | null | undefined, lang: Lang = 'uz')
   if (!value) return '—';
   const d = typeof value === 'string' ? new Date(value) : value;
   if (Number.isNaN(d.getTime())) return '—';
-  return new Intl.DateTimeFormat(LOCALE[lang], {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-  }).format(d);
+  void lang;
+  //  Qo'lda: "uz" lokalsiz brauzerda Intl "2026-08-22" chiqaradi —
+  //  bir ekranda ikki xil sana ko'rinishi chalkashtiradi.
+  return `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()}`;
+}
+
+function pad2(n: number): string {
+  return String(n).padStart(2, '0');
 }
 
 /** Sana va vaqt: 22.08.2026, 14:30 */
@@ -57,16 +62,24 @@ export function dateTime(value: string | Date | null | undefined, lang: Lang = '
   if (!value) return '—';
   const d = typeof value === 'string' ? new Date(value) : value;
   if (Number.isNaN(d.getTime())) return '—';
-  return new Intl.DateTimeFormat(LOCALE[lang], {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  }).format(d);
+  return `${date(d, lang)}, ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
 
 /** Davr sarlavhasi: "Avgust 2026" */
+//  O'zbekcha oy nomlari qo'lda: ba'zi brauzerlar (Android WebView,
+//  Electron) "uz" lokal ma'lumotisiz keladi va "2026 M11" chiqaradi.
+const MONTHS: Partial<Record<Lang, string[]>> = {
+  uz: ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust',
+    'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr'],
+  'uz-cyrl': ['Январ', 'Феврал', 'Март', 'Апрел', 'Май', 'Июн', 'Июл', 'Август',
+    'Сентябр', 'Октябр', 'Ноябр', 'Декабр'],
+};
+
 export function periodLabel(period: string, lang: Lang = 'uz'): string {
   const d = new Date(period);
   if (Number.isNaN(d.getTime())) return period;
+  const names = MONTHS[lang];
+  if (names) return `${names[d.getMonth()]} ${d.getFullYear()}`;
   const s = new Intl.DateTimeFormat(LOCALE[lang], {
     month: 'long', year: 'numeric',
   }).format(d);

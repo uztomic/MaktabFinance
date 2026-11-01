@@ -16,6 +16,8 @@ import { useAuth } from '@/auth/AuthProvider';
 import { useI18n, useT } from '@/i18n';
 import { date, money } from '@/lib/format';
 import { exportTable } from '@/lib/export';
+import { openQuickPay } from '@/lib/quickPayBus';
+import { DebtReminderModal, type DebtTarget } from './DebtReminder';
 import {
   Badge, Button, Card, EmptyState, ErrorState, Input, Loading, Money,
   Notice, PageHeader, Select, Table, Td, Th, Tr,
@@ -24,7 +26,8 @@ import {
 export default function Debts() {
   const t = useT();
   const { lang } = useI18n();
-  const { branchId, can } = useAuth();
+  const { branchId, can, mayWrite } = useAuth();
+  const [remind, setRemind] = useState<DebtTarget | null>(null);
 
   const [search, setSearch] = useState('');
   const [onlyOverdue, setOnlyOverdue] = useState(false);
@@ -156,6 +159,7 @@ export default function Debts() {
                 <Th align="right">{t('debt.title')}</Th>
                 <Th align="right">{t('debt.overdue')}</Th>
                 <Th>{t('debt.oldestDue')}</Th>
+                <Th align="right">{t('common.actions')}</Th>
               </tr>
             </thead>
             <tbody>
@@ -197,6 +201,26 @@ export default function Debts() {
                       )
                       : '—'}
                   </Td>
+                  <Td align="right">
+                    <div className="flex justify-end gap-1.5">
+                      <Button size="sm" onClick={() => setRemind({
+                        student_id: d.student_id!, full_name: d.full_name ?? '',
+                        class_name: d.class_name, payment_code: d.payment_code,
+                        balance: Number(d.balance ?? 0), oldest_due: d.oldest_due,
+                      })}>
+                        {t('remind.button')}
+                      </Button>
+                      {mayWrite('payments.create') && (
+                        <Button size="sm" variant="primary" onClick={() => openQuickPay({
+                          student_id: d.student_id!, full_name: d.full_name ?? '',
+                          class_name: d.class_name ?? null, payment_code: d.payment_code ?? null,
+                          balance: Number(d.balance ?? 0),
+                        })}>
+                          {t('quickpay.payButton')}
+                        </Button>
+                      )}
+                    </div>
+                  </Td>
                 </Tr>
               ))}
             </tbody>
@@ -210,7 +234,7 @@ export default function Debts() {
                 <Td align="right" mono className="text-[var(--danger)]">
                   {money(totalOverdue, lang)}
                 </Td>
-                <Td />
+                <Td /><Td />
               </tr>
             </tfoot>
           </Table>
@@ -247,6 +271,7 @@ export default function Debts() {
           </Table>
         </Card>
       )}
+      {remind && <DebtReminderModal target={remind} onClose={() => setRemind(null)} />}
     </>
   );
 }

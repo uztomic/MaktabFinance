@@ -28,6 +28,7 @@ import {
   ContractModal, type ParentLink, ParentModal, ServiceModal, StudentEditModal,
 } from './student/StudentModals';
 import { ReceiptModal, type ReceiptData } from './Receipt';
+import { submitStudentPayment, type StudentPaymentInput } from '@/lib/studentPayment';
 import {
   defaultMethodId,
   PaymentMethodPicker,
@@ -242,62 +243,7 @@ export default function StudentCard() {
 
   // --- Kassa to'lovi (TZ 4.7.1) — server tomonda (TZ 5.4.6) --------
   const pay = useMutation({
-    mutationFn: async (v: {
-      amount: number; paid_on: string; note: string; method_id: string;
-      //  Aralash to'lov: har qism o'z usuli bilan alohida yoziladi,
-      //  kvitansiya bitta. Bo'sh bo'lsa — oddiy to'lov.
-      parts?: Array<{ method_id: string; amount: number }>;
-      //  Kassada kechirilgan qarz. Shartnomaga tegmaydi — faqat shu
-      //  oyning hisoblanmasi kamayadi.
-      discount?: { amount: number; reason: string };
-    }) => {
-      //  CHEGIRMA AVVAL. Aks holda kvitansiyada ko'rsatiladigan
-      //  balans eski hisobdan chiqadi va ota-onaga noto'g'ri qarz
-      //  yuboriladi.
-      if (v.discount) {
-        const { error: dErr } = await supabase.rpc('add_invoice_discount', {
-          p_student_id: id!,
-          p_period: v.paid_on.slice(0, 8) + '01',
-          p_amount: v.discount.amount,
-          p_reason: v.discount.reason,
-        });
-        if (dErr) throw dErr;
-      }
-
-      if (v.parts?.length) {
-        const { data, error } = await supabase.rpc('register_split_payment', {
-          p_student_id: id!,
-          p_parts: v.parts,
-          p_paid_on: v.paid_on,
-          p_note: v.note || undefined,
-        });
-        if (error) throw error;
-        const r = data as unknown as {
-          receipt_code: string; balance: number;
-          parts: Array<{ method_name: string; amount: number }>;
-        };
-        return {
-          receipt_code: r.receipt_code,
-          balance: r.balance,
-          //  Kvitansiyada usul o'rniga qismlar ro'yxati chiqadi.
-          method_name: r.parts
-            .map((x) => `${x.method_name} ${Number(x.amount).toLocaleString()}`)
-            .join(' + '),
-        };
-      }
-
-      const { data, error } = await supabase.rpc('register_cash_payment', {
-        p_student_id: id!,
-        p_amount: v.amount,
-        p_paid_on: v.paid_on,
-        p_note: v.note || undefined,
-        p_method_id: v.method_id || undefined,
-      });
-      if (error) throw error;
-      return data as {
-        receipt_code: string; balance: number; method_name: string;
-      };
-    },
+    mutationFn: (v: StudentPaymentInput) => submitStudentPayment(id!, v),
     onSuccess: (res, vars) => {
       qc.invalidateQueries({ queryKey: ['student-balance', id] });
       qc.invalidateQueries({ queryKey: ['student-payments', id] });
@@ -1437,7 +1383,7 @@ function EditPaymentInline({
 //  Kassa to'lovi (TZ 4.7.1)
 // ---------------------------------------------------------------------
 
-function CashPaymentModal({
+export function CashPaymentModal({
   open, onClose, studentId, studentName, suggested, onSubmit, busy, error,
 }: {
   open: boolean;
