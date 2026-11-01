@@ -60,8 +60,9 @@ export function Button({
   const pad = size === 'sm' ? 'h-7 px-2.5 text-[13px]' : 'h-9 px-3.5 text-sm';
   return (
     <button
-      className={`inline-flex items-center justify-center gap-1.5 rounded-md
-        font-medium transition-colors disabled:cursor-not-allowed
+      className={`inline-flex items-center justify-center gap-1.5 rounded-lg
+        font-medium transition-[background-color,color,transform] active:scale-[0.98]
+        disabled:cursor-not-allowed disabled:active:scale-100
         ${pad} ${BTN[variant]} ${className}`}
       {...rest}
     >
@@ -102,8 +103,16 @@ export function Field({
   );
 }
 
+//  Kenglik chaqiruvchidan kelsa (`w-auto`, `max-w-xs` ...) `w-full`
+//  qo'yilmaydi: ikkala sinf bir vaqtda turganda Tailwind CSS tartibi
+//  bo'yicha `w-full` yutardi va masalan kirish sahifasidagi til
+//  tanlagich butun ekran kengligiga cho'zilib ketardi.
+function fieldBase(className: string): string {
+  return /(^|\s)w-/.test(className) ? FIELD_BASE : `w-full ${FIELD_BASE}`;
+}
+
 const FIELD_BASE =
-  'w-full rounded-md border bg-[var(--bg)] px-2.5 text-sm text-[var(--text)] ' +
+  'rounded-md border bg-[var(--bg)] px-2.5 text-sm text-[var(--text)] ' +
   'placeholder:text-[var(--text-faint)] transition-colors ' +
   'focus:border-brand-500 disabled:bg-[var(--bg-inset)] disabled:text-[var(--text-faint)]';
 
@@ -111,7 +120,7 @@ const FIELD_BASE =
 //  bo'lgan maydonlar (masalan telefon) shu orqali ishlaydi.
 //  React 19 da bu oddiy prop — `forwardRef` kerak emas.
 export function Input({ className = '', ...rest }: ComponentPropsWithRef<'input'>) {
-  return <input className={`${FIELD_BASE} h-9 ${className}`} {...rest} />;
+  return <input className={`${fieldBase(className)} h-9 ${className}`} {...rest} />;
 }
 
 /**
@@ -185,7 +194,7 @@ export function MoneyInput({
         value={display}
         onChange={handleChange}
         disabled={disabled}
-        className={`${FIELD_BASE} num h-9 pr-12 text-right ${className}`}
+        className={`${fieldBase(className)} num h-9 pr-12 text-right ${className}`}
         {...rest}
       />
       <span
@@ -203,7 +212,7 @@ export function Select({
   className = '', children, ...rest
 }: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
-    <select className={`${FIELD_BASE} h-9 pr-8 ${className}`} {...rest}>
+    <select className={`${fieldBase(className)} h-9 pr-8 ${className}`} {...rest}>
       {children}
     </select>
   );
@@ -224,7 +233,7 @@ export function Card({
 }) {
   return (
     <section
-      className={`rounded-lg border bg-[var(--bg)] ${className}`}
+      className={`rounded-xl border bg-[var(--bg)] shadow-[var(--shadow-card)] ${className}`}
     >
       {(title || action) && (
         <header className="flex items-center justify-between gap-3 border-b px-4 py-2.5">

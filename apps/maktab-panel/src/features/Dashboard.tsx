@@ -531,8 +531,8 @@ function Stat({
     : invertDelta ? delta <= 0 : delta >= 0;
 
   return (
-    <div className={`rounded-lg border bg-[var(--bg)] px-4 py-3
-      ${big ? 'ring-1 ring-brand-200' : ''}`}>
+    <div className={`rounded-xl border bg-[var(--bg)] px-4 py-3 shadow-[var(--shadow-card)]
+      ${big ? 'ring-1 ring-brand-200 dark:ring-brand-600' : ''}`}>
       <div className="text-[11px] font-medium uppercase tracking-wide
         text-[var(--text-muted)]">
         {label}
@@ -758,13 +758,15 @@ function QuickActions() {
   ].filter((x) => x.ok).slice(0, 4);
   if (items.length === 0) return null;
   return (
-    <div className="mb-4 grid grid-cols-4 gap-2">
+    <div className="mb-4 grid grid-cols-4 gap-2 md:flex md:flex-wrap">
       {items.map((x) => (
         <Link key={x.to} to={x.to}
           className="flex min-h-[64px] flex-col items-center justify-center gap-1 rounded-xl border
             bg-[var(--bg)] px-1 text-center text-[11.5px] font-medium leading-tight
-            hover:bg-[var(--bg-subtle)] active:scale-[0.98]">
-          <span className="text-lg leading-none" aria-hidden>{x.icon}</span>
+            shadow-[var(--shadow-card)] hover:border-[var(--sel-border)] hover:bg-[var(--bg-subtle)]
+            active:scale-[0.98] md:min-h-0 md:flex-row md:gap-2 md:rounded-full md:px-4 md:py-2
+            md:text-[13px]">
+          <span className="text-lg leading-none md:text-base" aria-hidden>{x.icon}</span>
           <span className="line-clamp-2">{x.label}</span>
         </Link>
       ))}

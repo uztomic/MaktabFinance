@@ -185,9 +185,9 @@ export default function AppShell() {
   };
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
-    `flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] transition-colors ${
+    `relative flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] transition-colors ${
       isActive
-        ? 'bg-brand-800 font-medium text-white'
+        ? 'bg-brand-800 font-medium text-white before:absolute before:-left-2 before:top-1.5 before:bottom-1.5 before:w-[3px] before:rounded-r before:bg-accent-400'
         : 'text-brand-200 hover:bg-brand-800/60 hover:text-white'
     }`;
 
