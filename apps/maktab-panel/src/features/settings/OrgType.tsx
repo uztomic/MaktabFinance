@@ -17,6 +17,7 @@ import { useConfirm, useToast } from '@/ui/Feedback';
 const TYPES = [
   { id: 'school', icon: '🏫' },
   { id: 'learning_center', icon: '🎓' },
+  { id: 'kindergarten', icon: '🧸' },
 ] as const;
 
 export function OrgTypeCard() {
@@ -42,7 +43,7 @@ export function OrgTypeCard() {
   return (
     <Card title={t('org.title')} className="mb-4">
       <p className="mb-3 text-[13px] text-[var(--text-muted)]">{t('org.hint')}</p>
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid gap-2 sm:grid-cols-3">
         {TYPES.map((x) => {
           const on = profile.org_type === x.id;
           return (

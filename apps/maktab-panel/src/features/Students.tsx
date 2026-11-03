@@ -18,6 +18,7 @@ import {
   Badge, Button, Card, EmptyState, ErrorState, Field, Input, Loading,
   Modal, Money, Notice, PageHeader, Select, Table, Td, Th, Tr,
 } from '@/ui';
+import { usesGroups } from '@/lib/org';
 
 type Status = 'active' | 'academic_leave' | 'expelled';
 
@@ -55,7 +56,7 @@ export default function Students() {
   });
 
   //  O'quv markazida sinf o'rniga guruhlar ko'rsatiladi.
-  const isLC = profile?.org_type === 'learning_center';
+  const isLC = usesGroups(profile?.org_type);
   const groupNames = useQuery({
     queryKey: ['students-groups', branchId],
     enabled: isLC,
@@ -267,7 +268,7 @@ function AddStudentModal({
 }) {
   const t = useT();
   const { profile } = useAuth();
-  const isLC = profile?.org_type === 'learning_center';
+  const isLC = usesGroups(profile?.org_type);
   const [fullName, setFullName] = useState('');
   const [classId, setClassId] = useState<string | null>(null);
   const [grade, setGrade] = useState('');

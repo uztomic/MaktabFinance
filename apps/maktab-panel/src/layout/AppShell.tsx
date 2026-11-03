@@ -20,6 +20,7 @@ import { CommandPalette } from '@/ui/CommandPalette';
 import { IdleGuard } from '@/auth/IdleGuard';
 import { QuickPayHost } from '@/features/QuickPay';
 import { openQuickPay } from '@/lib/quickPayBus';
+import { usesGroups } from '@/lib/org';
 
 interface NavItem {
   to: string;
@@ -173,7 +174,7 @@ export default function AppShell() {
    *  bo'limlarni ko'rsatmasdi va berilgan ruxsat amalda ishlamasdi.
    */
   const isTeacher = profile?.role === 'teacher' && permissions.size === 0;
-  const isLC = profile?.org_type === 'learning_center';
+  const isLC = usesGroups(profile?.org_type);
   const teacherNav = isLC ? TEACHER_NAV_LC : TEACHER_NAV;
 
   const groups: NavGroup[] = isTeacher
@@ -274,7 +275,7 @@ export default function AppShell() {
             <img src="/logo-mark.svg" alt="" className="h-7 w-7" width={28} height={28} />
             <div className="min-w-0">
               <div className="truncate text-sm font-semibold leading-tight text-white">
-                {isLC ? 'Markaz' : 'Maktab'}<span className="text-accent-400">Finance</span>
+                Uztomic <span className="text-accent-400">Edu</span>
               </div>
               <div className="truncate text-[11px] leading-tight text-brand-300">
                 {profile?.school_name}
@@ -328,7 +329,7 @@ export default function AppShell() {
             border-b bg-[var(--bg)] px-3 py-2 md:px-5">
             <div className="flex items-center gap-2 md:hidden">
               <img src="/logo-mark.svg" alt="" className="h-6 w-6" />
-              <span className="text-sm font-semibold">{isLC ? 'MarkazFinance' : 'MaktabFinance'}</span>
+              <span className="text-sm font-semibold">Uztomic Edu</span>
             </div>
 
             <button

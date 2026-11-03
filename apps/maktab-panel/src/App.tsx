@@ -20,6 +20,7 @@ import SuspendedShell from '@/layout/SuspendedShell';
 import { Button, Loading, Notice } from '@/ui';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { lazyPage } from '@/lib/lazyPage';
+import { usesGroups } from '@/lib/org';
 
 const Dashboard   = lazyPage(() => import('@/features/Dashboard'));
 const Students    = lazyPage(() => import('@/features/Students'));
@@ -167,7 +168,7 @@ export default function App() {
   //  Arxiv — boshqa hol: to'lov bilan bog'liq emas.
   if (profile.school_status === 'archived') return <ArchivedSchool />;
 
-  const isLC = profile.org_type === 'learning_center';
+  const isLC = usesGroups(profile.org_type);
 
   return (
     //  Har bir sahifa alohida chegara ichida: bittasida xato chiqsa

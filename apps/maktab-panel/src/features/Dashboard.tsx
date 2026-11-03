@@ -32,6 +32,7 @@ import { DateRangePicker, useDateRange } from '@/ui/DateRange';
 import { AttendanceToday } from '@/features/AttendanceToday';
 import { TodayActivity } from '@/features/TodayActivity';
 import { LcOverview } from '@/features/lc/LcOverview';
+import { usesGroups } from '@/lib/org';
 
 export default function Dashboard() {
   const t = useT();
@@ -216,7 +217,7 @@ export default function Dashboard() {
       <QuickActions />
 
       {/* --- O'quv markazi: guruhlar, bugungi darslar, voronka ---- */}
-      {profile?.org_type === 'learning_center' && <LcOverview />}
+      {usesGroups(profile?.org_type) && <LcOverview />}
 
       {/* Butun panel shu oraliq bo'yicha. Tanlov saqlanadi va boshqa
           sahifalarga ham o'tadi — buxgalter uni bir marta qo'yadi. */}
@@ -431,7 +432,7 @@ export default function Dashboard() {
            bosib kim kelgan / kim kelmaganini ko'rish allaqachon
            bor. Ikki nusxa saqlansa, biri yangilanib ikkinchisi
            orqada qolardi. */}
-      {(can('absences.mark') || canSeeFinance) && profile?.org_type !== 'learning_center' && (
+      {(can('absences.mark') || canSeeFinance) && !usesGroups(profile?.org_type) && (
         <div className="mt-4">
           <AttendanceToday />
         </div>
@@ -752,7 +753,7 @@ function SetupIssues({ rows }: {
 function QuickActions() {
   const t = useT();
   const { can, mayWrite, profile } = useAuth();
-  const lc = profile?.org_type === 'learning_center';
+  const lc = usesGroups(profile?.org_type);
   const items = [
     { to: '/qarzdorlik', icon: '⏰', label: t('dash.qa.debts'), ok: can('reports.view') },
     { to: '/guruhlar', icon: '👥', label: t('nav.groups'), ok: lc && can('students.manage') },

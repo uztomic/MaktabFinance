@@ -23,7 +23,7 @@ const I18N = join(ROOT, 'apps', 'maktab-panel', 'src', 'i18n');
 
 /** Lotin holida qoladigan so'zlar. */
 const KEEP = [
-  'MaktabFinance', 'Excel', 'Email', 'Telegram', 'PWA',
+  'Uztomic Edu', 'MaktabFinance', 'Excel', 'Email', 'Telegram', 'PWA',
   'Uztomic', 'CRM', 'SMS', 'ID',
 ];
 

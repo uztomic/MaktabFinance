@@ -38,11 +38,12 @@ alter table public.schools
 alter table public.schools drop constraint if exists schools_org_type_check;
 alter table public.schools
   add constraint schools_org_type_check
-  check (org_type in ('school', 'learning_center'));
+  check (org_type in ('school', 'learning_center', 'kindergarten'));
 
 comment on column public.schools.org_type is
   'Tashkilot turi: school — xususiy maktab, learning_center — o''quv '
-  'markazi. Panel menyusi va atamalar shunga qarab moslashadi.';
+  'markazi, kindergarten — bog''cha (guruh dvigatelidan foydalanadi). '
+  'Panel menyusi va atamalar shunga qarab moslashadi.';
 
 create or replace function public.set_org_type(p_type text)
 returns text
@@ -53,7 +54,7 @@ as $$
 declare
   v_school uuid := app.school_id();
 begin
-  if p_type not in ('school', 'learning_center') then
+  if p_type not in ('school', 'learning_center', 'kindergarten') then
     raise exception 'Noma''lum tashkilot turi: %', p_type using errcode = '22023';
   end if;
   if v_school is null or app.role() <> 'director' then
