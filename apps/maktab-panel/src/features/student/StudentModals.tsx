@@ -318,6 +318,8 @@ export function ServiceModal({
         .eq('branch_id', branchId)
         .eq('is_active', true)
         .is('deleted_at', null)
+        // Guruh to'lovi faqat guruhga yozish orqali ulanadi.
+        .not('code', 'like', 'grp_%')
         .order('sort_order');
       if (error) throw error;
       return data ?? [];

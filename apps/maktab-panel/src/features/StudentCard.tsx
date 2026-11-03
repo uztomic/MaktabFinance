@@ -34,6 +34,7 @@ import {
   PaymentMethodPicker,
   usePaymentMethods,
 } from '@/ui/PaymentMethodPicker';
+import { StudentGroups } from '@/features/lc/StudentGroups';
 
 /** Tug'ilgan sanadan yosh. */
 function ageFrom(birth: string | null | undefined): number | null {
@@ -537,6 +538,9 @@ export default function StudentCard() {
           )}
         </div>
       </div>
+
+      {/* --- O'quv markazi: guruhlar ---------------------------- */}
+      {profile?.org_type === 'learning_center' && id && <StudentGroups studentId={id} />}
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* --- To'liq ma'lumot (TZ 4.1) ------------------------- */}

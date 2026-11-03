@@ -39,6 +39,8 @@ export interface Profile {
   all_branches: boolean;
   school_name: string;
   school_status: string;
+  /** Tashkilot turi: maktab yoki o'quv markazi. Menyu va atamalar shunga qarab. */
+  org_type: 'school' | 'learning_center';
 }
 
 export interface Impersonation {
@@ -113,7 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // --- Profil + maktab -------------------------------------------
     const { data: user, error: uErr } = await supabase
       .from('app_users')
-      .select('id, school_id, role, full_name, email, phone, lang, all_branches, schools!inner(name, status)')
+      .select('id, school_id, role, full_name, email, phone, lang, all_branches, schools!inner(name, status, org_type)')
       .eq('id', uid)
       .is('deleted_at', null)
       .maybeSingle();
@@ -143,6 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       all_branches: user.all_branches,
       school_name: school?.name ?? '',
       school_status: school?.status ?? 'active',
+      org_type: school?.org_type === 'learning_center' ? 'learning_center' : 'school',
     });
 
     // --- Filiallar (RLS o'zi faqat ruxsat etilganlarini beradi) ----

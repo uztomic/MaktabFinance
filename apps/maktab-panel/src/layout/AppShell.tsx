@@ -49,6 +49,9 @@ const I = {
   gear: <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z" />,
   grid: <path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" />,
   inbox: <path d="M3 12h5l2 3h4l2-3h5M3 12V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6M3 12v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6" />,
+  layers: <path d="m12 3 9 5-9 5-9-5 9-5ZM3 13l9 5 9-5M3 17.5l9 5 9-5" />,
+  clock: <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 7v5l3 2" />,
+  book: <path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2V5ZM4 19a2 2 0 0 1 2-2h13v4H6a2 2 0 0 1-2-2Z" />,
 };
 
 function Icon({ d }: { d: ReactNode }) {
@@ -65,7 +68,28 @@ function Icon({ d }: { d: ReactNode }) {
   );
 }
 
-const GROUPS: NavGroup[] = [
+/** Maktab: sinflar, kunlik yo'qlik. */
+const PEOPLE_SCHOOL: NavItem[] = [
+  { to: '/oquvchilar', labelKey: 'nav.students', permission: 'students.manage', icon: <Icon d={I.users} /> },
+  { to: '/sinflar', labelKey: 'nav.classes', permission: 'students.manage', icon: <Icon d={I.grid} /> },
+  { to: '/xizmatlar', labelKey: 'nav.services', permission: 'services.manage', icon: <Icon d={I.doc} /> },
+  { to: '/davomat', labelKey: 'nav.attendance', permission: null, icon: <Icon d={I.calendar} /> },
+  { to: '/yoqlik', labelKey: 'nav.absences', permission: 'absences.mark', icon: <Icon d={I.calendar} /> },
+  { to: '/murojaatlar', labelKey: 'nav.leads', permission: 'leads.manage', icon: <Icon d={I.inbox} /> },
+];
+
+/** O'quv markazi: guruhlar, dars jadvali, kurslar, sotuv voronkasi. */
+const PEOPLE_LC: NavItem[] = [
+  { to: '/oquvchilar', labelKey: 'nav.students', permission: 'students.manage', icon: <Icon d={I.users} /> },
+  { to: '/guruhlar', labelKey: 'nav.groups', permission: 'students.manage', icon: <Icon d={I.layers} /> },
+  { to: '/jadval', labelKey: 'nav.schedule', permission: 'students.manage', icon: <Icon d={I.clock} /> },
+  { to: '/davomat', labelKey: 'nav.lessons', permission: null, icon: <Icon d={I.calendar} /> },
+  { to: '/murojaatlar', labelKey: 'nav.leadsFunnel', permission: 'leads.manage', icon: <Icon d={I.inbox} /> },
+  { to: '/kurslar', labelKey: 'nav.courses', permission: 'students.manage', icon: <Icon d={I.book} /> },
+  { to: '/xizmatlar', labelKey: 'nav.services', permission: 'services.manage', icon: <Icon d={I.doc} /> },
+];
+
+const groupsFor = (lc: boolean): NavGroup[] => [
   {
     labelKey: '',
     items: [
@@ -73,15 +97,8 @@ const GROUPS: NavGroup[] = [
     ],
   },
   {
-    labelKey: 'nav.groupPeople',
-    items: [
-      { to: '/oquvchilar', labelKey: 'nav.students', permission: 'students.manage', icon: <Icon d={I.users} /> },
-      { to: '/sinflar', labelKey: 'nav.classes', permission: 'students.manage', icon: <Icon d={I.grid} /> },
-      { to: '/xizmatlar', labelKey: 'nav.services', permission: 'services.manage', icon: <Icon d={I.doc} /> },
-      { to: '/davomat', labelKey: 'nav.attendance', permission: null, icon: <Icon d={I.calendar} /> },
-      { to: '/yoqlik', labelKey: 'nav.absences', permission: 'absences.mark', icon: <Icon d={I.calendar} /> },
-      { to: '/murojaatlar', labelKey: 'nav.leads', permission: 'leads.manage', icon: <Icon d={I.inbox} /> },
-    ],
+    labelKey: lc ? 'nav.groupStudy' : 'nav.groupPeople',
+    items: lc ? PEOPLE_LC : PEOPLE_SCHOOL,
   },
   {
     labelKey: 'nav.groupFinance',
@@ -129,8 +146,16 @@ const TEACHER_NAV: NavItem[] = [
   { to: '/oyligim', labelKey: 'nav.myPayroll', permission: null, icon: <Icon d={I.cash} /> },
 ];
 
+/** O'quv markazi o'qituvchisi: bugungi darslar va davomat. */
+const TEACHER_NAV_LC: NavItem[] = [
+  { to: '/', labelKey: 'nav.dashboard', permission: null, icon: <Icon d={I.home} /> },
+  { to: '/davomat', labelKey: 'nav.myLessons', permission: null, icon: <Icon d={I.calendar} /> },
+  { to: '/oyligim', labelKey: 'nav.myPayroll', permission: null, icon: <Icon d={I.cash} /> },
+];
+
 /** Telefon pastki paneli uchun ustuvorlik tartibi. */
 const BOTTOM_PRIORITY = ['/', '/oquvchilar', '/tolovlar', '/qarzdorlik', '/davomat', '/oylik', '/hisobotlar'];
+const BOTTOM_PRIORITY_LC = ['/', '/guruhlar', '/tolovlar', '/davomat', '/oquvchilar', '/qarzdorlik'];
 
 /** Pastki panelda sig'adigan qisqa nomlar. */
 const SHORT: Record<string, string> = { '/': 'nav.home' };
@@ -148,10 +173,12 @@ export default function AppShell() {
    *  bo'limlarni ko'rsatmasdi va berilgan ruxsat amalda ishlamasdi.
    */
   const isTeacher = profile?.role === 'teacher' && permissions.size === 0;
+  const isLC = profile?.org_type === 'learning_center';
+  const teacherNav = isLC ? TEACHER_NAV_LC : TEACHER_NAV;
 
   const groups: NavGroup[] = isTeacher
-    ? [{ labelKey: '', items: TEACHER_NAV }]
-    : GROUPS
+    ? [{ labelKey: '', items: teacherNav }]
+    : groupsFor(isLC)
       .map((g) => ({
         ...g,
         items: g.items.filter((i) => i.permission === null || can(i.permission)),
@@ -163,8 +190,8 @@ export default function AppShell() {
   const canPay = !isTeacher && mayWrite('payments.create');
   const flat = groups.flatMap((g) => g.items);
   const bottomItems = isTeacher
-    ? TEACHER_NAV.slice(0, 4)
-    : BOTTOM_PRIORITY
+    ? teacherNav.slice(0, 4)
+    : (isLC ? BOTTOM_PRIORITY_LC : BOTTOM_PRIORITY)
       .map((to) => flat.find((i) => i.to === to))
       .filter((i): i is NavItem => !!i)
       .filter((i) => !(canPay && i.to === '/tolovlar'))
@@ -247,7 +274,7 @@ export default function AppShell() {
             <img src="/logo-mark.svg" alt="" className="h-7 w-7" width={28} height={28} />
             <div className="min-w-0">
               <div className="truncate text-sm font-semibold leading-tight text-white">
-                Maktab<span className="text-accent-400">Finance</span>
+                {isLC ? 'Markaz' : 'Maktab'}<span className="text-accent-400">Finance</span>
               </div>
               <div className="truncate text-[11px] leading-tight text-brand-300">
                 {profile?.school_name}
@@ -301,7 +328,7 @@ export default function AppShell() {
             border-b bg-[var(--bg)] px-3 py-2 md:px-5">
             <div className="flex items-center gap-2 md:hidden">
               <img src="/logo-mark.svg" alt="" className="h-6 w-6" />
-              <span className="text-sm font-semibold">MaktabFinance</span>
+              <span className="text-sm font-semibold">{isLC ? 'MarkazFinance' : 'MaktabFinance'}</span>
             </div>
 
             <button

@@ -50,6 +50,13 @@ const MyDashboard = lazyPage(() => import('@/features/teacher/MyDashboard'));
 const SchoolAttendance = lazyPage(() => import('@/features/SchoolAttendance'));
 const Subscription = lazyPage(() => import('@/features/Subscription'));
 const SupportChat  = lazyPage(() => import('@/features/SupportChat'));
+// O'quv markazi
+const Groups       = lazyPage(() => import('@/features/lc/Groups'));
+const GroupCard    = lazyPage(() => import('@/features/lc/GroupCard'));
+const Courses      = lazyPage(() => import('@/features/lc/Courses'));
+const Schedule     = lazyPage(() => import('@/features/lc/Schedule'));
+const Lessons      = lazyPage(() => import('@/features/lc/Lessons'));
+const LeadsFunnel  = lazyPage(() => import('@/features/lc/LeadsFunnel'));
 
 /**
  *  Arxivga olingan maktab.
@@ -160,6 +167,8 @@ export default function App() {
   //  Arxiv — boshqa hol: to'lov bilan bog'liq emas.
   if (profile.school_status === 'archived') return <ArchivedSchool />;
 
+  const isLC = profile.org_type === 'learning_center';
+
   return (
     //  Har bir sahifa alohida chegara ichida: bittasida xato chiqsa
     //  butun ilova emas, faqat o'sha sahifa to'xtaydi. Yo'l o'zgarganda
@@ -174,7 +183,7 @@ export default function App() {
             <Route
               index
               element={profile.role === 'teacher'
-                ? <MyDashboard />
+                ? (isLC ? <Lessons /> : <MyDashboard />)
                 : <Dashboard />}
             />
             <Route path="oquvchilar" element={<Students />} />
@@ -183,7 +192,11 @@ export default function App() {
             <Route path="sinflar/:id" element={<ClassCard />} />
             <Route path="xizmatlar" element={<Services />} />
             <Route path="yoqlik" element={<Absences />} />
-            <Route path="murojaatlar" element={<Leads />} />
+            <Route path="murojaatlar" element={isLC ? <LeadsFunnel /> : <Leads />} />
+            <Route path="guruhlar" element={<Groups />} />
+            <Route path="guruhlar/:id" element={<GroupCard />} />
+            <Route path="kurslar" element={<Courses />} />
+            <Route path="jadval" element={<Schedule />} />
             <Route path="hisoblanma" element={<Invoices />} />
             <Route path="tolovlar" element={<Payments />} />
             <Route path="qarzdorlik" element={<Debts />} />
@@ -204,9 +217,11 @@ export default function App() {
                  o'z sinflari, qolganlarda butun maktab. */}
             <Route
               path="davomat"
-              element={profile.role === 'teacher'
-                ? <MyAttendance />
-                : <SchoolAttendance />}
+              element={isLC
+                ? <Lessons />
+                : profile.role === 'teacher'
+                  ? <MyAttendance />
+                  : <SchoolAttendance />}
             />
             <Route path="yuklamam" element={<MyLoad />} />
             <Route path="oyligim" element={<MyPayroll />} />

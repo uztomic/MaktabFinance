@@ -54,6 +54,29 @@ export default function Students() {
     },
   });
 
+  //  O'quv markazida sinf o'rniga guruhlar ko'rsatiladi.
+  const isLC = profile?.org_type === 'learning_center';
+  const groupNames = useQuery({
+    queryKey: ['students-groups', branchId],
+    enabled: isLC,
+    queryFn: async () => {
+      let q = supabase.from('group_members')
+        .select('student_id, status, study_groups(name)')
+        .neq('status', 'left');
+      if (branchId) q = q.eq('branch_id', branchId);
+      const { data, error } = await q;
+      if (error) throw error;
+      const m = new Map<string, string[]>();
+      // deno-lint-ignore no-explicit-any
+      for (const r of (data ?? []) as any[]) {
+        const name = r.study_groups?.name;
+        if (!name) continue;
+        m.set(r.student_id, [...(m.get(r.student_id) ?? []), r.status === 'trial' ? `${name} (${t('lc.trialShort')})` : name]);
+      }
+      return m;
+    },
+  });
+
   // Qidiruv mijoz tomonda — 1000 tagacha o'quvchi (TZ 5.7) uchun bu
   // serverga borishdan tezroq va buxgalter yozayotganda darhol javob beradi.
   const rows = useMemo(() => {
@@ -62,9 +85,10 @@ export default function Students() {
     return (list.data ?? []).filter((s) =>
       s.full_name?.toLowerCase().includes(needle) ||
       s.class_name?.toLowerCase().includes(needle) ||
+      (isLC && (groupNames.data?.get(s.student_id ?? '') ?? []).join(' ').toLowerCase().includes(needle)) ||
       s.payment_code?.toLowerCase().includes(needle)
     );
-  }, [list.data, search]);
+  }, [list.data, search, isLC, groupNames.data]);
 
   const totals = useMemo(() =>
     rows.reduce((acc, r) => {
@@ -157,7 +181,7 @@ export default function Students() {
               <thead>
                 <tr>
                   <Th>{t('common.fullName')}</Th>
-                  <Th>{t('students.class')}</Th>
+                  <Th>{isLC ? t('lc.groups') : t('students.class')}</Th>
                   <Th>{t('students.paymentCode')}</Th>
                   <Th align="right">{t('dashboard.charged')}</Th>
                   <Th align="right">{t('dashboard.collected')}</Th>
@@ -174,7 +198,11 @@ export default function Students() {
                         {s.full_name}
                       </Link>
                     </Td>
-                    <Td className="text-[var(--text-muted)]">{s.class_name ?? '—'}</Td>
+                    <Td className="text-[var(--text-muted)]">
+                      {isLC
+                        ? (groupNames.data?.get(s.student_id ?? '') ?? []).join(', ') || '—'
+                        : s.class_name ?? '—'}
+                    </Td>
                     <Td mono className="text-[var(--text-muted)]">{s.payment_code}</Td>
                     <Td align="right" mono><Money value={s.charged} /></Td>
                     <Td align="right" mono><Money value={s.paid} /></Td>
@@ -238,6 +266,8 @@ function AddStudentModal({
   error: string | null;
 }) {
   const t = useT();
+  const { profile } = useAuth();
+  const isLC = profile?.org_type === 'learning_center';
   const [fullName, setFullName] = useState('');
   const [classId, setClassId] = useState<string | null>(null);
   const [grade, setGrade] = useState('');
@@ -275,14 +305,14 @@ function AddStudentModal({
                  autoFocus required />
         </Field>
 
-        <ClassPicker
+        {!isLC && <ClassPicker
           value={classId}
           branchId={branch || defaultBranch}
           onChange={(c) => {
             setClassId(c.class_id);
             if (c.grade_level !== null) setGrade(String(c.grade_level));
           }}
-        />
+        />}
 
         <Field label={t('students.birthDate')}>
           <Input type="date" value={birth} onChange={(e) => setBirth(e.target.value)} />

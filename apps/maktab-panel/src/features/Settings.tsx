@@ -19,6 +19,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/auth/AuthProvider';
 import { useT } from '@/i18n';
 import PayrollFormula from './settings/PayrollFormula';
+import { OrgTypeCard } from './settings/OrgType';
 import {
   CalendarSettings, DiscountSettings, ReasonSettings,
 } from './settings/Catalogs';
@@ -59,6 +60,8 @@ export default function Settings() {
   return (
     <>
       <PageHeader title={t('settings.title')} subtitle={profile?.school_name} />
+
+      <OrgTypeCard />
 
       <div className="mb-4 grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
         {TABS.map((x) => (

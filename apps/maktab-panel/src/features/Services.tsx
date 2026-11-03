@@ -49,6 +49,8 @@ export default function Services() {
         .from('services')
         .select('id, code, name, billing_type, is_active, branch_id, branches(name), service_prices(price, valid_from, valid_to)')
         .is('deleted_at', null)
+        // Guruh to'lovlari guruh kartochkasidan boshqariladi.
+        .not('code', 'like', 'grp_%')
         .order('sort_order')
         .order('name');
       if (branchId) q = q.eq('branch_id', branchId);

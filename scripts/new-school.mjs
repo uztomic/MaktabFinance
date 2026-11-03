@@ -45,15 +45,20 @@ if (!REF || !TOKEN || !SERVICE_KEY) {
   process.exit(1);
 }
 
-const [schoolName, login, branchName] = process.argv.slice(2);
+//  `--oquv-markaz` bayrog'i — tashkilot o'quv markazi sifatida ochiladi
+//  (kurs, guruh, dars jadvali). Bayroq istalgan joyda turishi mumkin.
+const rawArgs = process.argv.slice(2);
+const isLearningCenter = rawArgs.includes('--oquv-markaz');
+const [schoolName, login, branchName] = rawArgs.filter((a) => a !== '--oquv-markaz');
 
 if (!schoolName || !login) {
   console.log(
     '\nFoydalanish:\n' +
-    '  node scripts/new-school.mjs "Maktab nomi" <email yoki telefon> [filial nomi]\n\n' +
+    '  node scripts/new-school.mjs "Maktab nomi" <email yoki telefon> [filial nomi] [--oquv-markaz]\n\n' +
     'Misol:\n' +
     '  node scripts/new-school.mjs "Nur maktabi" direktor@nur.uz\n' +
-    '  node scripts/new-school.mjs "Nur maktabi" 998901234567 "Chilonzor filiali"\n',
+    '  node scripts/new-school.mjs "Nur maktabi" 998901234567 "Chilonzor filiali"\n' +
+    '  node scripts/new-school.mjs "Smart Academy" 998901234567 --oquv-markaz\n',
   );
   process.exit(1);
 }
@@ -94,6 +99,11 @@ const [prov] = await sql(`
 `);
 
 const { school_id, branch_id } = prov.result;
+
+if (isLearningCenter) {
+  await sql(`update public.schools set org_type = 'learning_center' where id = ${lit(school_id)}`);
+  console.log('  ✓ Tur: O\'quv markazi (kurslar, guruhlar, dars jadvali)');
+}
 console.log(`  ✓ Maktab yaratildi   ${school_id}`);
 console.log(`  ✓ Filial yaratildi   ${branch_id}`);
 console.log('  ✓ Shablon sozlamalar yuklandi (xarajat kategoriyalari,');
