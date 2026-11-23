@@ -34,3 +34,5 @@ yarn-error.log*
 # Maktab ma'lumoti nusxasi — ichida bolalarning ismi va to'lov
 # summasi bor, git ga tushmasligi kerak.
 backups/
+
+.vercel
