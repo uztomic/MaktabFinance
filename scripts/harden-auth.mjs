@@ -27,7 +27,8 @@ async function loadEnv() {
   const text = await readFile(path, 'utf8');
   for (const line of text.split('\n')) {
     const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
-    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].trim();
+    const fileWins = m && (m[1] === 'SUPABASE_ACCESS_TOKEN' || m[1] === 'SUPABASE_PROJECT_REF');
+    if (m && (fileWins || !process.env[m[1]])) process.env[m[1]] = m[2].trim();
   }
 }
 await loadEnv();
@@ -40,7 +41,7 @@ if (!TOKEN || !REF) {
 }
 
 /** Sayt manzili — parol tiklash havolasi shu yerga qaytadi. */
-const SITE = process.env.PANEL_SITE_URL || 'https://maktab.uztomic.uz';
+const SITE = process.env.PANEL_SITE_URL || 'https://edu.uztomic.uz';
 const DEV = 'http://localhost:5173';
 
 // =====================================================================
@@ -98,7 +99,7 @@ const WANTED = {
   //  Bu ro'yxatda bo'lmagan manzilga tiklash havolasi qaytmaydi —
   //  ochiq yo'naltirish (open redirect) hujumining oldini oladi.
   site_url: SITE,
-  uri_allow_list: [`${SITE}/**`, `${DEV}/**`].join(','),
+  uri_allow_list: [`${SITE}/**`, 'https://uztomic-edu.vercel.app/**', `${DEV}/**`].join(','),
 };
 
 // =====================================================================

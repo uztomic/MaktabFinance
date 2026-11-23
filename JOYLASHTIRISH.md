@@ -1,4 +1,4 @@
-# Joylashtirish: GitHub Pages → maktab.uztomic.uz
+# Joylashtirish: GitHub Pages → edu.uztomic.uz
 
 `uztomic.uz` allaqachon GitHub Pages'da turadi (DNS'dagi
 `185.199.108–111.153` — aynan GitHub Pages manzillari). Shuning uchun
@@ -29,7 +29,7 @@ Domen panelingizda (skrinshotdagi jadval) **Add Record**:
 
 | Maydon | Qiymat |
 |---|---|
-| Name | `maktab` |
+| Name | `edu` |
 | Type | `CNAME` |
 | TTL | `14400` |
 | RDATA | `uztomic.github.io` |
@@ -45,7 +45,7 @@ ham buzilmaydi.
 
 Birinchi chiqarish tugagandan keyin: **Settings → Pages → Custom domain**
 
-`maktab.uztomic.uz` yozilgan bo'lishi kerak — uni repozitoriydagi
+`edu.uztomic.uz` yozilgan bo'lishi kerak — uni repozitoriydagi
 [apps/maktab-panel/public/CNAME](apps/maktab-panel/public/CNAME) fayli
 avtomatik qo'yadi. Bo'sh bo'lsa qo'lda yozing va **Save**.
 
@@ -66,8 +66,8 @@ Supabase → **Authentication → URL Configuration**:
 
 | Maydon | Qiymat |
 |---|---|
-| Site URL | `https://maktab.uztomic.uz` |
-| Redirect URLs | `https://maktab.uztomic.uz/**` va `http://localhost:5173/**` |
+| Site URL | `https://edu.uztomic.uz` |
+| Redirect URLs | `https://edu.uztomic.uz/**` va `http://localhost:5173/**` |
 
 ---
 
@@ -83,7 +83,7 @@ Supabase → **Authentication → URL Configuration**:
 | HTTPS | GitHub avtomatik |
 
 **404.html haqida.** GitHub Pages'da server yo'naltirishlari yo'q.
-`maktab.uztomic.uz/oquvchilar` — haqiqiy fayl emas, shuning uchun
+`edu.uztomic.uz/oquvchilar` — haqiqiy fayl emas, shuning uchun
 Pages `404.html` ni beradi. Biz uni `index.html` nusxasi qilamiz:
 ilova yuklanadi va React Router yo'lni o'zi hal qiladi. Foydalanuvchi
 farqni sezmaydi.

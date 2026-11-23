@@ -29,7 +29,7 @@ bir-birini **umuman ko'rmaydi**.
 | Cron | 3 ta |
 | Panel | React 19 + TypeScript + Vite 7 + Tailwind 4, PWA |
 | Til | uz / uz-cyrl / ru — 882 ta kalit |
-| Joylashuv | GitHub Pages, `maktab.uztomic.uz` |
+| Joylashuv | GitHub Pages, `edu.uztomic.uz` |
 
 Kod: `github.com/uztomic/MaktabFinance` (ochiq).
 
