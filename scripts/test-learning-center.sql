@@ -460,6 +460,7 @@ begin
 end $$;
 
 -- Xavfsizlik invariantlari.
+reset role;
 select tekshiruv, holat from app.security_invariants();
 
 select 'O''QUV MARKAZI SINOVI TUGADI — xato bo''lmasa hammasi o''tdi' as natija;

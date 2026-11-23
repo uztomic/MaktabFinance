@@ -33,7 +33,12 @@ async function loadEnv() {
   const text = await readFile(path, 'utf8');
   for (const line of text.split('\n')) {
     const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
-    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].trim();
+    //  Supabase kaliti va loyiha FAYLDAN olinadi, hatto Windows'da shu
+    //  nomli o'zgaruvchi bo'lsa ham: u yerda eskirgan token qolib ketib,
+    //  yangisi e'tiborsiz qolardi ("privileges" xatosi). Qolgan
+    //  o'zgaruvchilarda tizimniki ustun (CI uchun).
+    const fileWins = m && (m[1] === 'SUPABASE_ACCESS_TOKEN' || m[1] === 'SUPABASE_PROJECT_REF');
+    if (m && (fileWins || !process.env[m[1]])) process.env[m[1]] = m[2].trim();
   }
 }
 
