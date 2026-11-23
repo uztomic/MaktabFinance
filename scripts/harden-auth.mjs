@@ -99,7 +99,7 @@ const WANTED = {
   //  Bu ro'yxatda bo'lmagan manzilga tiklash havolasi qaytmaydi —
   //  ochiq yo'naltirish (open redirect) hujumining oldini oladi.
   site_url: SITE,
-  uri_allow_list: [`${SITE}/**`, 'https://uztomic-edu.vercel.app/**', `${DEV}/**`].join(','),
+  uri_allow_list: [`${SITE}/**`, 'https://uztomic-edu.vercel.app/**', 'https://uztomic-edu-admin.vercel.app/**', 'https://maktabfinanceadmin.uztomic.uz/**', `${DEV}/**`].join(','),
 };
 
 // =====================================================================
