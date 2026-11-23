@@ -539,8 +539,8 @@ function FinancialSummary({ row, from, to }: {
               hint={t('dm.rate', { rate })} />
         <Stat label={t('home.expenses')} value={M(row.total_expenses)}
               hint={t('home.expensesHint', { amount: M(row.payroll) })} />
-        <Stat label={t('fin.netProfit')} value={M(row.profit_net)}
-              tone={net >= 0 ? 'ok' : 'danger'} hint={t('home.profitHint')} />
+        <Stat label={t('home.profit')} value={M(row.cash_position)}
+              tone={cash >= 0 ? 'ok' : 'danger'} hint={t('home.profitHint')} />
       </div>
 
       <Card
@@ -583,7 +583,7 @@ function FinancialSummary({ row, from, to }: {
           <Line label={t('fin.otherExpenses')} value={M(row.other_expenses)} />
           <Line label={t('fin.totalExpenses')} value={M(row.total_expenses)} strong />
           <Line label={t('fin.netProfit')} value={M(row.profit_net)} strong
-                tone={net >= 0 ? 'ok' : 'danger'} />
+                tone={net >= 0 ? 'ok' : 'danger'} hint={t('fin.netProfitHint')} />
           <Line label={t('fin.cashPosition')} value={M(row.cash_position)}
                 tone={cash >= 0 ? 'ok' : 'danger'} hint={t('fin.cashPositionHint')} />
           <Line label={t('cls.totalDebt')} value={M(row.total_debt)}

@@ -25,6 +25,7 @@ import {
   Card, EmptyState, ErrorState, Loading, PageHeader, Progress, Stat,
 } from '@/ui';
 import { MonthPicker, periodEnd } from '@/ui/MonthPicker';
+import { type ClassMonth, loadMonthlyDebts } from '@/lib/monthlyDebts';
 import { QuickPayButton } from './QuickPay';
 import { AttendanceToday } from '@/features/AttendanceToday';
 import { TodayActivity } from '@/features/TodayActivity';
@@ -68,16 +69,11 @@ export default function Dashboard() {
     },
   });
 
-  const classes = useQuery({
-    queryKey: ['dash-classes', from, to, branchId],
-    enabled: canSeeFinance && !isLC,
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('report_by_class', {
-        p_from: from, p_to: to, p_branch_id: branch,
-      });
-      if (error) throw error;
-      return data ?? [];
-    },
+  //  Qarzdorlik sahifasi bilan bir xil kalit — kesh bo'lishiladi.
+  const monthly = useQuery({
+    queryKey: ['debts-monthly', period, branchId],
+    enabled: canSeeFinance,
+    queryFn: () => loadMonthlyDebts(period, branchId),
   });
 
   const trend = useQuery({
@@ -144,9 +140,22 @@ export default function Dashboard() {
   const delta = (cur: unknown, old: unknown) => {
     const c = N(cur), o = N(old);
     if (!o) return null;
-    return Math.round(((c - o) / Math.abs(o)) * 100);
+    const d = Math.round(((c - o) / Math.abs(o)) * 100);
+    return d === 0 ? null : d;
   };
   const rate = N(s?.collection_rate);
+
+  //  Tanlangan OY qarzi — qarzdorlik sahifasi bilan bir xil hisob (FIFO).
+  //  Ilgari bu yerda barcha oylar qarzi turardi va oy tanlovi unga
+  //  ta'sir qilmasdi.
+  const classesM = monthly.data ?? [];
+  const mSum = (f: (c: ClassMonth) => number) => classesM.reduce((a, c) => a + f(c), 0);
+  const month = {
+    remaining: mSum((c) => c.remaining),
+    unpaid: mSum((c) => c.count.unpaid),
+    partial: mSum((c) => c.count.partial),
+    paid: mSum((c) => c.count.paid),
+  };
 
   return (
     <>
@@ -183,11 +192,15 @@ export default function Dashboard() {
             </Stat>
             <Link to="/qarzdorlik" className="block rounded-2xl transition-transform hover:-translate-y-px">
               <Stat
-                label={t('home.debt')}
-                value={money(s.total_debt, lang)}
-                tone={N(s.total_debt) > 0 ? 'danger' : 'neutral'}
-                hint={t('home.debtHint', { paid: N(s.paid_students), total: N(s.students) })}
-              />
+                label={t('home.debtMonth')}
+                value={monthly.isLoading ? '…' : money(month.remaining, lang)}
+                tone={month.remaining > 0 ? 'danger' : 'neutral'}
+                hint={t('dm.counts', { unpaid: month.unpaid, partial: month.partial })}
+              >
+                <div className="mt-1 truncate text-[12px] text-[var(--text-faint)]">
+                  {t('home.debtAll')}: <span className="num">{money(s.total_debt, lang)}</span>
+                </div>
+              </Stat>
             </Link>
             <Stat
               label={t('home.expenses')}
@@ -198,9 +211,9 @@ export default function Dashboard() {
             />
             <Stat
               label={t('home.profit')}
-              value={money(s.profit_net, lang)}
-              tone={N(s.profit_net) >= 0 ? 'ok' : 'danger'}
-              delta={delta(s.profit_net, p?.profit_net)}
+              value={money(s.cash_position, lang)}
+              tone={N(s.cash_position) > 0 ? 'ok' : N(s.cash_position) < 0 ? 'danger' : 'neutral'}
+              delta={delta(s.cash_position, p?.cash_position)}
               hint={t('home.profitHint')}
             />
           </div>
@@ -215,11 +228,11 @@ export default function Dashboard() {
                   {t('home.byMonth')} →
                 </Link>}
               >
-                <ClassList rows={classes.data ?? []} />
+                <ClassList rows={classesM} loading={monthly.isLoading} />
               </Card>
             )}
             <Card className={isLC ? 'lg:col-span-5' : 'lg:col-span-2'} title={t('home.trend')}>
-              <TrendChart rows={trend.data ?? []} />
+              <TrendChart rows={trend.data ?? []} selected={period} onPick={setPeriod} />
             </Card>
           </div>
         </>
@@ -271,93 +284,122 @@ function Alerts({ setup, gaps, proofs }: {
   );
 }
 
-/** Sinflar — nom, yig'ish foizi chizig'i, qoldiq. Bosilsa sinf kartasi. */
-function ClassList({ rows }: {
-  // deno-lint-ignore no-explicit-any
-  rows: any[];
-}) {
+/** Sinflar — tanlangan oy: to'langan / hisoblangan, holatlar, qoldiq. */
+function ClassList({ rows, loading }: { rows: ClassMonth[]; loading: boolean }) {
   const t = useT();
   const { lang } = useI18n();
-  if (rows.length === 0) return <EmptyState hint="" />;
+  if (loading) return <Loading />;
+  const list = rows.filter((c) => c.charged > 0 || c.students.length > 0);
+  if (list.length === 0) return <EmptyState hint="" />;
   return (
-    <div className="max-h-[420px] overflow-y-auto">
-      {rows.map((c) => {
-        const r = Number(c.collection_rate ?? 0);
-        const left = Number(c.remaining ?? 0);
-        return (
-          <Link key={c.class_id} to={`/sinflar/${c.class_id}`}
-            className="flex items-center gap-4 border-b border-[var(--border-soft)] px-5 py-3 last:border-b-0 hover:bg-[var(--bg-subtle)]">
-            <div className="w-24 min-w-0 shrink-0">
-              <div className="truncate text-[14px] font-medium">{c.class_name}</div>
+    <div className="max-h-[440px] overflow-y-auto">
+      {list.map((c) => {
+        const r = c.charged > 0 ? Math.round((c.paid / c.charged) * 100) : 0;
+        const inner = (
+          <>
+            <div className="w-36 min-w-0 shrink-0">
+              <div className="truncate text-[14px] font-medium" title={c.name}>{c.name}</div>
               <div className="text-[11.5px] text-[var(--text-faint)]">
-                {t('dm.studentsCount', { count: c.students })}
+                {t('dm.studentsCount', { count: c.students.length })}
               </div>
             </div>
             <div className="min-w-0 flex-1">
               <Progress value={r} />
-              <div className="num mt-1 text-[11.5px] text-[var(--text-faint)]">
-                {money(c.collected, lang)} / {money(c.charged, lang)}
+              <div className="mt-1 flex flex-wrap gap-x-3 text-[11.5px] text-[var(--text-faint)]">
+                <span className="num">{money(c.paid, lang)} / {money(c.charged, lang)}</span>
+                {c.count.unpaid > 0 && (
+                  <span className="text-[var(--danger)]">{c.count.unpaid} {t('dm.state.unpaid').toLowerCase()}</span>
+                )}
               </div>
             </div>
-            <div className={`num w-28 shrink-0 text-right text-[13px] font-medium ${left > 0 ? 'text-[var(--danger)]' : 'text-[var(--ok)]'}`}>
-              {left > 0 ? `−${money(left, lang)}` : `${r}%`}
+            <div className={`num w-28 shrink-0 text-right text-[13px] font-medium
+              ${c.remaining > 0 ? 'text-[var(--danger)]' : 'text-[var(--ok)]'}`}>
+              {c.charged <= 0 ? '—' : c.remaining > 0 ? `−${money(c.remaining, lang)}` : '✓'}
             </div>
-          </Link>
+          </>
         );
+        const cls = 'flex items-center gap-4 border-b border-[var(--border-soft)] px-5 py-3 ' +
+          'last:border-b-0 hover:bg-[var(--bg-subtle)]';
+        return c.class_id
+          ? <Link key={c.key} to={`/sinflar/${c.class_id}`} className={cls}>{inner}</Link>
+          : <div key={c.key} className={cls}>{inner}</div>;
       })}
     </div>
   );
 }
 
-/** 12 oylik dinamika: tushum va xarajat ustunlari, ustiga borsa tafsilot. */
+/**
+ *  12 oylik dinamika. Har oy bitta ustun: kulrang — hisoblangan (reja),
+ *  ichidagi yashil — yig'ilgan. Shunda "rejaning qanchasi yig'ildi"
+ *  bir qarashda ko'rinadi. Ustunni bossa — o'sha oy tanlanadi.
+ */
 function TrendChart({
-  rows,
+  rows, selected, onPick,
 }: {
   // deno-lint-ignore no-explicit-any
   rows: any[];
+  selected: string;
+  onPick: (period: string) => void;
 }) {
   const t = useT();
   const { lang } = useI18n();
   const data = useMemo(() => rows.map((r) => ({
-    period: String(r.period),
+    period: String(r.period).slice(0, 10),
+    charged: Number(r.charged ?? 0),
     collected: Number(r.collected ?? 0),
     expenses: Number(r.payroll ?? 0) + Number(r.other_expenses ?? 0),
-    profit: Number(r.net_profit ?? 0),
   })), [rows]);
-  const max = Math.max(1, ...data.map((d) => Math.max(d.collected, d.expenses)));
+  const max = Math.max(1, ...data.map((d) => Math.max(d.charged, d.collected)));
   if (data.length === 0) return <EmptyState hint="" />;
+  const short = (p: string) => periodLabel(p, lang).slice(0, 3);
 
   return (
     <div>
-      <div className="flex items-end gap-1" style={{ height: 180 }}>
-        {data.map((d) => (
-          <div key={d.period} className="group relative flex h-full flex-1 items-end justify-center gap-[2px]">
-            <div className="w-1/2 max-w-3 rounded-t-[3px] bg-accent-500"
-                 style={{ height: `${(d.collected / max) * 100}%`, minHeight: 2 }} />
-            <div className="w-1/2 max-w-3 rounded-t-[3px] bg-[var(--border)]"
-                 style={{ height: `${(d.expenses / max) * 100}%`, minHeight: 2 }} />
-            <div className="pointer-events-none absolute bottom-full z-10 mb-2 hidden w-44 rounded-xl border
-              bg-[var(--bg)] p-2.5 text-[12px] shadow-[var(--shadow-pop)] group-hover:block">
-              <div className="mb-1 font-medium">{periodLabel(d.period, lang)}</div>
-              <Row label={t('home.collected')} value={money(d.collected, lang)} />
-              <Row label={t('home.expenses')} value={money(d.expenses, lang)} />
-              <div className="mt-1 border-t pt-1">
-                <Row label={t('home.profit')} value={money(d.profit, lang)} />
+      <div className="flex items-end gap-1.5" style={{ height: 200 }}>
+        {data.map((d) => {
+          const active = d.period === selected;
+          return (
+            <button
+              type="button"
+              key={d.period}
+              onClick={() => onPick(d.period)}
+              className="group relative flex h-full flex-1 flex-col items-center justify-end"
+            >
+              <div className={`relative w-full max-w-7 overflow-hidden rounded-md
+                ${active ? 'bg-[var(--text-faint)]' : 'bg-[var(--bg-inset)]'}`}
+                   style={{ height: `${(Math.max(d.charged, d.collected) / max) * 100}%`, minHeight: 3 }}>
+                <div className="absolute inset-x-0 bottom-0 rounded-md bg-accent-500"
+                     style={{ height: `${Math.max(d.charged, d.collected) > 0
+                       ? (d.collected / Math.max(d.charged, d.collected)) * 100 : 0}%` }} />
               </div>
-            </div>
-          </div>
+              <div className="pointer-events-none absolute bottom-full z-10 mb-2 hidden w-48 rounded-xl border
+                bg-[var(--bg)] p-2.5 text-left text-[12px] shadow-[var(--shadow-pop)] group-hover:block">
+                <div className="mb-1 font-medium">{periodLabel(d.period, lang)}</div>
+                <Row label={t('dm.charged')} value={money(d.charged, lang)} />
+                <Row label={t('home.collected')} value={money(d.collected, lang)} />
+                <Row label={t('home.expenses')} value={money(d.expenses, lang)} />
+                <div className="mt-1 border-t pt-1">
+                  <Row label={t('home.profit')} value={money(d.collected - d.expenses, lang)} />
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      <div className="mt-2 flex gap-1.5">
+        {data.map((d) => (
+          <span key={d.period} className={`flex-1 text-center text-[10.5px]
+            ${d.period === selected ? 'font-semibold text-[var(--text)]' : 'text-[var(--text-faint)]'}`}>
+            {short(d.period)}
+          </span>
         ))}
       </div>
-      <div className="mt-2 flex justify-between text-[11px] text-[var(--text-faint)]">
-        <span>{periodLabel(data[0].period, lang)}</span>
-        <span>{periodLabel(data[data.length - 1].period, lang)}</span>
-      </div>
-      <div className="mt-3 flex gap-4 text-[12px] text-[var(--text-muted)]">
+      <div className="mt-4 flex gap-4 text-[12px] text-[var(--text-muted)]">
         <span className="flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full bg-accent-500" />{t('home.collected')}
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-[var(--border)]" />{t('home.expenses')}
+          <span className="h-2 w-2 rounded-full bg-[var(--bg-inset)] ring-1 ring-[var(--border)]" />{t('dm.charged')}
         </span>
       </div>
     </div>

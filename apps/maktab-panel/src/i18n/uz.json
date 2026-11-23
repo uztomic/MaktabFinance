@@ -1698,7 +1698,7 @@
   "home.expenses": "Xarajat",
   "home.expensesHint": "shundan oylik: {amount}",
   "home.profit": "Sof foyda",
-  "home.profitHint": "hisoblangan − xarajat",
+  "home.profitHint": "tushum − xarajat",
   "home.classes": "Sinflar",
   "home.byMonth": "Oylar bo'yicha",
   "home.trend": "Oxirgi 12 oy",
@@ -1722,5 +1722,7 @@
   "dm.advance": "Avans",
   "dm.noDebt": "Qarzi yo'q",
   "dm.noInvoices": "Bu oy uchun hisoblanma yo'q.",
-  "dm.noInvoicesHint": "Hisoblanmalar bo'limida shu oy uchun hisoblanma yarating."
+  "dm.noInvoicesHint": "Hisoblanmalar bo'limida shu oy uchun hisoblanma yarating.",
+  "home.debtMonth": "Shu oy qarzi",
+  "home.debtAll": "Barcha oylar"
 }

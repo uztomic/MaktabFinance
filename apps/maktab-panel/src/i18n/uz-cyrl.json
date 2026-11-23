@@ -1698,7 +1698,7 @@
   "home.expenses": "Харажат",
   "home.expensesHint": "шундан ойлик: {amount}",
   "home.profit": "Соф фойда",
-  "home.profitHint": "ҳисобланган − харажат",
+  "home.profitHint": "тушум − харажат",
   "home.classes": "Синфлар",
   "home.byMonth": "Ойлар бўйича",
   "home.trend": "Охирги 12 ой",
@@ -1722,5 +1722,7 @@
   "dm.advance": "Аванс",
   "dm.noDebt": "Қарзи йўқ",
   "dm.noInvoices": "Бу ой учун ҳисобланма йўқ.",
-  "dm.noInvoicesHint": "Ҳисобланмалар бўлимида шу ой учун ҳисобланма яратинг."
+  "dm.noInvoicesHint": "Ҳисобланмалар бўлимида шу ой учун ҳисобланма яратинг.",
+  "home.debtMonth": "Шу ой қарзи",
+  "home.debtAll": "Барча ойлар"
 }

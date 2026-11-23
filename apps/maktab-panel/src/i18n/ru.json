@@ -1698,7 +1698,7 @@
   "home.expenses": "Расходы",
   "home.expensesHint": "в т.ч. зарплата: {amount}",
   "home.profit": "Чистая прибыль",
-  "home.profitHint": "начислено − расходы",
+  "home.profitHint": "поступления − расходы",
   "home.classes": "Классы",
   "home.byMonth": "По месяцам",
   "home.trend": "Последние 12 месяцев",
@@ -1722,5 +1722,7 @@
   "dm.advance": "Аванс",
   "dm.noDebt": "Долга нет",
   "dm.noInvoices": "За этот месяц начислений нет.",
-  "dm.noInvoicesHint": "Создайте начисления в разделе «Начисления»."
+  "dm.noInvoicesHint": "Создайте начисления в разделе «Начисления».",
+  "home.debtMonth": "Долг за месяц",
+  "home.debtAll": "За все месяцы"
 }
