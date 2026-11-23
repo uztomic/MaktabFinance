@@ -23,6 +23,7 @@ import {
   Button, Field, Input, Modal, MoneyInput, Notice, Segmented, Select,
 } from '@/ui';
 import { PhoneInput } from '@/ui/PhoneInput';
+import { useTuitionPlans } from '@/ui/TuitionPicker';
 
 // =====================================================================
 //  SHARTNOMA (TZ 4.3)
@@ -35,6 +36,7 @@ interface ContractRow {
   starts_on: string;
   ends_on: string | null;
   tuition_amount: number;
+  tuition_plan_id?: string | null;
   discount_type_id: string | null;
   discount_kind: 'percent' | 'amount' | null;
   discount_value: number | null;
@@ -56,6 +58,8 @@ export function ContractModal({
   const { lang } = useI18n();
   const qc = useQueryClient();
   const { profile } = useAuth();
+
+  const plans = useTuitionPlans();
 
   const discountTypes = useQuery({
     queryKey: ['discount-types'],
@@ -81,6 +85,7 @@ export function ContractModal({
     starts_on: existing?.starts_on ?? isoDate(),
     ends_on: existing?.ends_on ?? '',
     tuition: String(existing?.tuition_amount ?? ''),
+    plan_id: existing?.tuition_plan_id ?? '',
     discount: initialDiscount,
     //  Kiritish usuli: foiz, chegirma summasi yoki TO'LANADIGAN summa.
     //  Bazada baribir foiz yoki summa saqlanadi — "to'lanadi" usuli
@@ -133,6 +138,7 @@ export function ContractModal({
         starts_on: f.starts_on,
         ends_on: f.ends_on || null,
         tuition_amount: Number(f.tuition) || 0,
+        tuition_plan_id: f.plan_id && f.plan_id !== 'custom' ? f.plan_id : null,
         discount_type_id: f.discount && f.discount !== 'manual' ? f.discount : null,
         discount_kind: f.discount === 'manual'
           ? (f.discount_mode === 'percent' ? 'percent' as const : 'amount' as const)
@@ -218,9 +224,29 @@ export function ContractModal({
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label={t('contracts.tuition')} required>
-            <MoneyInput value={f.tuition}
-                        onChange={(e) => set('tuition', e.target.value)} required />
+          {/*  Narx tarifdan olinadi; "Boshqa narx" tanlansagina qo'lda. */}
+          <Field label={t('tp.plan')} required>
+            <Select value={f.plan_id || (f.tuition ? 'custom' : '')}
+                    onChange={(e) => {
+                      const id = e.target.value;
+                      const pl = (plans.data ?? []).find((x) => x.id === id);
+                      setF((p) => ({ ...p, plan_id: id,
+                        tuition: pl ? String(pl.monthly_amount) : id === 'custom' ? p.tuition : '' }));
+                    }}>
+              <option value="">—</option>
+              {(plans.data ?? []).map((pl) => (
+                <option key={pl.id} value={pl.id}>
+                  {pl.name}{pl.academic_year ? ` (${pl.academic_year})` : ''} — {money(pl.monthly_amount, lang)}
+                </option>
+              ))}
+              <option value="custom">{t('tp.custom')}</option>
+            </Select>
+            {(f.plan_id === 'custom' || (!f.plan_id && f.tuition !== '')) && (
+              <div className="mt-2">
+                <MoneyInput value={f.tuition}
+                            onChange={(e) => set('tuition', e.target.value)} required />
+              </div>
+            )}
           </Field>
           <Field label={t('contracts.dueDay')} required
                  hint={t('contracts.dueDayHint')}>

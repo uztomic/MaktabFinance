@@ -14,6 +14,7 @@
 
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { TuitionPlans } from './settings/TuitionPlans';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/auth/AuthProvider';
@@ -27,7 +28,7 @@ import {
   Button, Card, ErrorState, Field, Input, Loading, Notice, PageHeader, Select,
 } from '@/ui';
 
-type Tab = 'finance' | 'payroll' | 'messaging'
+type Tab = 'tariffs' | 'finance' | 'payroll' | 'messaging'
   | 'calendar' | 'discounts' | 'reasons';
 
 export default function Settings() {
@@ -36,9 +37,9 @@ export default function Settings() {
   //  Tanlangan bo'lim manzilda — "Sozlamalar → Oylik" ga havola berish
   //  va sahifa yangilanganda joyida qolish uchun.
   const [params, setParams] = useSearchParams();
-  const ALL: Tab[] = ['finance', 'payroll', 'messaging', 'calendar', 'discounts', 'reasons'];
+  const ALL: Tab[] = ['tariffs', 'finance', 'payroll', 'messaging', 'calendar', 'discounts', 'reasons'];
   const raw = params.get('b') as Tab | null;
-  const tab: Tab = raw && ALL.includes(raw) ? raw : 'finance';
+  const tab: Tab = raw && ALL.includes(raw) ? raw : 'tariffs';
   const setTab = (x: Tab) => setParams({ b: x }, { replace: true });
 
   if (!can('users.manage')) {
@@ -49,6 +50,7 @@ export default function Settings() {
   //  nomlar bor edi va "Sabablar" yoki "Moliya" ichida nima borligini
   //  ochib ko'rmaguncha bilib bo'lmasdi.
   const TABS: Array<{ id: Tab; label: string; hint: string; icon: string }> = [
+    { id: 'tariffs', label: t('tp.title'), hint: t('tp.hint'), icon: '💰' },
     { id: 'finance', label: t('settings.finance'), hint: t('settings.hint.finance'), icon: '💳' },
     { id: 'payroll', label: t('settings.payroll'), hint: t('settings.hint.payroll'), icon: '🧮' },
     { id: 'messaging', label: t('settings.messaging'), hint: t('settings.hint.messaging'), icon: '✉️' },
@@ -73,7 +75,7 @@ export default function Settings() {
         </Link>
       </div>
 
-      <div className="mb-4 grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
+      <div className="mb-4 grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-7">
         {TABS.map((x) => (
           <button
             key={x.id}
@@ -95,6 +97,7 @@ export default function Settings() {
         ))}
       </div>
 
+      {tab === 'tariffs' && <TuitionPlans editable={mayWrite('services.manage')} />}
       {tab === 'payroll' && <PayrollFormula editable={mayWrite('payroll.manage')} />}
       {tab === 'calendar' && <CalendarSettings editable={mayWrite('services.manage')} />}
       {tab === 'discounts' && <DiscountSettings editable={mayWrite('services.manage')} />}

@@ -19,6 +19,11 @@ import {
   Modal, Money, Notice, PageHeader, Select, Table, Td, Th, Tr,
 } from '@/ui';
 import { usesGroups } from '@/lib/org';
+import { PhoneInput } from '@/ui/PhoneInput';
+import {
+  emptyTuition, resolveTuition, TuitionPicker, type TuitionValue,
+  useDiscountTypes, useTuitionPlans,
+} from '@/ui/TuitionPicker';
 
 type Status = 'active' | 'academic_leave' | 'expelled';
 type Issue = 'no_contract' | 'no_parent' | 'no_class' | 'parent_no_telegram';
@@ -143,10 +148,7 @@ export default function Students() {
     }, { debt: 0, advance: 0 }), [rows]);
 
   const create = useMutation({
-    mutationFn: async (form: {
-      full_name: string; class_id: string | null; grade_level: string;
-      branch_id: string; birth_date: string;
-    }) => {
+    mutationFn: async (form: NewStudent) => {
       // `class_name` triggerdan keladi — bu yerda yozilmaydi.
       const { data, error } = await supabase.from('students').insert({
         school_id: profile!.school_id,
@@ -159,10 +161,48 @@ export default function Students() {
         // payment_code ni baza triggeri o'zi beradi (TZ 4.3.1).
       }).select('id, payment_code').single();
       if (error) throw error;
+
+      //  Shartnoma — tarif narxi bilan. Raqam to'lov kodidan: qo'lda
+      //  o'ylab topish shart emas va har doim noyob.
+      if (form.contract) {
+        const { error: cErr } = await supabase.from('contracts').insert({
+          school_id: profile!.school_id,
+          student_id: data.id,
+          number: `SH-${data.payment_code}`,
+          signed_on: isoDate(),
+          ...form.contract,
+          is_active: true,
+        });
+        if (cErr) throw cErr;
+      }
+
+      //  Ota-ona: shu raqam bo'lsa yangisi yaratilmaydi (TZ 4.9.2).
+      if (form.parent) {
+        const { data: found } = await supabase.from('parents').select('id')
+          .eq('phone', form.parent.phone).is('deleted_at', null).maybeSingle();
+        let parentId = found?.id;
+        if (!parentId) {
+          const { data: np, error: pErr } = await supabase.from('parents').insert({
+            school_id: profile!.school_id,
+            full_name: form.parent.full_name,
+            phone: form.parent.phone,
+            lang: 'uz',
+          }).select('id').single();
+          if (pErr) throw pErr;
+          parentId = np.id;
+        }
+        const { error: lErr } = await supabase.from('student_parents').insert({
+          student_id: data.id, parent_id: parentId,
+          relation: form.parent.relation, is_primary: true,
+        });
+        if (lErr) throw lErr;
+      }
       return data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['students'] });
+      qc.invalidateQueries({ queryKey: ['debts-monthly'] });
+      qc.invalidateQueries({ queryKey: ['setup-issues'] });
       qc.invalidateQueries({ queryKey: ['classes-report'] });
       setAdding(false);
     },
@@ -304,6 +344,25 @@ export default function Students() {
 
 // ---------------------------------------------------------------------
 
+export interface NewStudent {
+  full_name: string; class_id: string | null; grade_level: string;
+  branch_id: string; birth_date: string;
+  contract: null | {
+    starts_on: string; due_day: number; billing_months: number;
+    tuition_amount: number; tuition_plan_id: string | null;
+    discount_type_id: string | null; discount_kind: 'percent' | 'amount' | null;
+    discount_value: number | null; discount_reason: string | null;
+  };
+  parent: null | { full_name: string; phone: string; relation: string };
+}
+
+/**
+ *  O'quvchi qo'shish — BITTA OYNADA hammasi: o'quvchi, to'lov (tarif va
+ *  chegirma) va ota-ona. Ilgari faqat ism va sinf so'ralardi, keyin
+ *  kartochkaga kirib shartnoma va ota-onani alohida qo'shish kerak
+ *  edi — 9 ta o'quvchi shartnomasiz, 230 tasi ota-onasiz qolgani
+ *  shundan.
+ */
 function AddStudentModal({
   open, onClose, branches, defaultBranch, onSubmit, busy, error,
 }: {
@@ -311,66 +370,106 @@ function AddStudentModal({
   onClose: () => void;
   branches: Array<{ id: string; name: string }>;
   defaultBranch: string;
-  onSubmit: (f: {
-    full_name: string; class_id: string | null; grade_level: string;
-    branch_id: string; birth_date: string;
-  }) => void;
+  onSubmit: (f: NewStudent) => void;
   busy: boolean;
   error: string | null;
 }) {
   const t = useT();
-  const { profile } = useAuth();
+  const { profile, mayWrite } = useAuth();
   const isLC = usesGroups(profile?.org_type);
+  const canContract = mayWrite('students.manage');
   const [fullName, setFullName] = useState('');
   const [classId, setClassId] = useState<string | null>(null);
   const [grade, setGrade] = useState('');
   const [branch, setBranch] = useState(defaultBranch);
   const [birth, setBirth] = useState('');
 
+  const [tuition, setTuition] = useState<TuitionValue>(emptyTuition);
+  const [startsOn, setStartsOn] = useState(isoDate());
+  const [months, setMonths] = useState('12');
+  const [dueDay, setDueDay] = useState('10');
+
+  const [pName, setPName] = useState('');
+  const [pPhone, setPPhone] = useState('');
+  const [pRel, setPRel] = useState('mother');
+
+  const plans = useTuitionPlans();
+  const types = useDiscountTypes();
+  const r = resolveTuition(tuition, plans.data ?? [],
+    (types.data ?? []).map((d) => ({ id: d.id, kind: d.kind, value: Number(d.value) })));
+
+  const phoneDigits = pPhone.replace(/\D/g, '');
+  const parentPartial = (pName.trim() !== '') !== (phoneDigits.length >= 9);
+  const blocked = !fullName.trim() || r.reasonMissing || r.paysTooHigh || parentPartial;
+
   function submit(e: FormEvent) {
     e.preventDefault();
+    if (blocked) return;
     onSubmit({
       full_name: fullName,
       class_id: classId,
       grade_level: grade,
       branch_id: branch || defaultBranch,
       birth_date: birth,
+      contract: r.base > 0 ? {
+        starts_on: startsOn,
+        due_day: Math.min(28, Math.max(1, Number(dueDay) || 10)),
+        billing_months: Number(months) || 12,
+        tuition_amount: r.base,
+        tuition_plan_id: r.plan_id,
+        discount_type_id: r.discount_type_id,
+        discount_kind: r.discount_kind,
+        discount_value: r.discount_value,
+        discount_reason: r.discount_reason,
+      } : null,
+      parent: pName.trim() && phoneDigits.length >= 9
+        ? { full_name: pName.trim(), phone: phoneDigits, relation: pRel }
+        : null,
     });
   }
+
+  const Section = ({ n, title }: { n: number; title: string }) => (
+    <div className="flex items-center gap-2 pt-1">
+      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--primary)]
+        text-[11px] font-semibold text-[var(--on-primary)]">{n}</span>
+      <span className="text-[14px] font-semibold">{title}</span>
+    </div>
+  );
 
   return (
     <Modal
       open={open}
       title={t('students.add')}
       onClose={onClose}
+      wide
       footer={
         <>
           <Button onClick={onClose}>{t('common.cancel')}</Button>
-          <Button variant="primary" form="add-student" type="submit" disabled={busy || !fullName}>
+          <Button variant="primary" form="add-student" type="submit" disabled={busy || blocked}>
             {busy ? t('common.saving') : t('common.save')}
           </Button>
         </>
       }
     >
-      <form id="add-student" onSubmit={submit} className="space-y-3">
+      <form id="add-student" onSubmit={submit} className="space-y-4">
+        <Section n={1} title={t('ns.student')} />
         <Field label={t('common.fullName')} required>
           <Input value={fullName} onChange={(e) => setFullName(e.target.value)}
                  autoFocus required />
         </Field>
-
-        {!isLC && <ClassPicker
-          value={classId}
-          branchId={branch || defaultBranch}
-          onChange={(c) => {
-            setClassId(c.class_id);
-            if (c.grade_level !== null) setGrade(String(c.grade_level));
-          }}
-        />}
-
-        <Field label={t('students.birthDate')}>
-          <Input type="date" value={birth} onChange={(e) => setBirth(e.target.value)} />
-        </Field>
-
+        <div className="grid gap-3 sm:grid-cols-2">
+          {!isLC && <ClassPicker
+            value={classId}
+            branchId={branch || defaultBranch}
+            onChange={(c) => {
+              setClassId(c.class_id);
+              setGrade(c.grade_level !== null ? String(c.grade_level) : '');
+            }}
+          />}
+          <Field label={t('students.birthDate')}>
+            <Input type="date" value={birth} onChange={(e) => setBirth(e.target.value)} />
+          </Field>
+        </div>
         {branches.length > 1 && (
           <Field label={t('common.branch')} required>
             <Select value={branch} onChange={(e) => setBranch(e.target.value)}>
@@ -381,9 +480,46 @@ function AddStudentModal({
           </Field>
         )}
 
-        <Notice tone="neutral">
-          {t('students.paymentCode')} — tizim avtomatik beradi.
-        </Notice>
+        {canContract && (
+          <>
+            <Section n={2} title={t('ns.payment')} />
+            <TuitionPicker value={tuition} onChange={setTuition}
+                           grade={grade === '' ? null : Number(grade)} />
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Field label={t('contracts.startsOn')}>
+                <Input type="date" value={startsOn} onChange={(e) => setStartsOn(e.target.value)} />
+              </Field>
+              <Field label={t('contracts.billingMonths')}>
+                <Select value={months} onChange={(e) => setMonths(e.target.value)}>
+                  <option value="12">{t('contracts.months12')}</option>
+                  <option value="9">{t('contracts.months9')}</option>
+                </Select>
+              </Field>
+              <Field label={t('contracts.dueDay')}>
+                <Input type="number" min={1} max={28} value={dueDay}
+                       onChange={(e) => setDueDay(e.target.value)} className="num" />
+              </Field>
+            </div>
+          </>
+        )}
+
+        <Section n={canContract ? 3 : 2} title={t('ns.parent')} />
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Field label={t('common.fullName')}>
+            <Input value={pName} onChange={(e) => setPName(e.target.value)} />
+          </Field>
+          <Field label={t('common.phone')}
+                 error={parentPartial ? t('ns.parentBoth') : undefined}>
+            <PhoneInput value={pPhone} onChange={setPPhone} />
+          </Field>
+          <Field label={t('parents.relation')}>
+            <Select value={pRel} onChange={(e) => setPRel(e.target.value)}>
+              <option value="mother">{t('parents.relation.mother')}</option>
+              <option value="father">{t('parents.relation.father')}</option>
+              <option value="guardian">{t('parents.relation.guardian')}</option>
+            </Select>
+          </Field>
+        </div>
 
         {error && <Notice tone="danger">{error}</Notice>}
       </form>

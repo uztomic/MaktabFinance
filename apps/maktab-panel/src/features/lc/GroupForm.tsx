@@ -65,8 +65,8 @@ export function GroupForm({ open, group, currentPrice, onClose, onSaved }: Props
         p_days: f.days,
         p_start: f.start_time,
         p_end: f.end_time,
-        p_teacher_id: f.teacher_id || null,
-        p_room_id: f.room_id || null,
+        p_teacher_id: (f.teacher_id || null) as unknown as string,
+        p_room_id: (f.room_id || null) as unknown as string,
         p_except_id: group?.id ?? undefined,
       });
       if (error) throw error;
