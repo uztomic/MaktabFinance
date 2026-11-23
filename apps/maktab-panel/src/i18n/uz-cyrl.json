@@ -251,7 +251,7 @@
   "cls.capacityHint": "Нечта ўқувчи сиғади. Бўш қолдирса чеклов йўқ.",
   "cls.charged": "Ҳисобланган",
   "cls.chargedHint": "Шу даврда ҳисобланган сумма",
-  "cls.collected": "Йиғилган",
+  "cls.collected": "Тўланган",
   "cls.create": "Синф яратиш",
   "cls.created": "\"{name}\" синфи яратилди",
   "cls.createFirst": "Биринчи синфни яратинг",
@@ -1800,5 +1800,9 @@
   "ns.student": "Ўқувчи",
   "ns.payment": "Тўлов",
   "ns.parent": "Ота-она",
-  "ns.parentBoth": "Исм ва телефонни бирга киритинг"
+  "ns.parentBoth": "Исм ва телефонни бирга киритинг",
+  "home.charged": "Ҳисобланган",
+  "cls.remainingMonth": "Қолди",
+  "dm.tab.classes": "Синфлар",
+  "dm.thisMonthDebt": "Шу ой қарзи"
 }

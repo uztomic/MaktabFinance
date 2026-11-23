@@ -251,7 +251,7 @@
   "cls.capacityHint": "Nechta o'quvchi sig'adi. Bo'sh qoldirsa cheklov yo'q.",
   "cls.charged": "Hisoblangan",
   "cls.chargedHint": "Shu davrda hisoblangan summa",
-  "cls.collected": "Yig'ilgan",
+  "cls.collected": "To'langan",
   "cls.create": "Sinf yaratish",
   "cls.created": "\"{name}\" sinfi yaratildi",
   "cls.createFirst": "Birinchi sinfni yarating",
@@ -1800,5 +1800,9 @@
   "ns.student": "O'quvchi",
   "ns.payment": "To'lov",
   "ns.parent": "Ota-ona",
-  "ns.parentBoth": "Ism va telefonni birga kiriting"
+  "ns.parentBoth": "Ism va telefonni birga kiriting",
+  "home.charged": "Hisoblangan",
+  "cls.remainingMonth": "Qoldi",
+  "dm.tab.classes": "Sinflar",
+  "dm.thisMonthDebt": "Shu oy qarzi"
 }

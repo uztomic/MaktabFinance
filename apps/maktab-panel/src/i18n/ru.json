@@ -251,7 +251,7 @@
   "cls.capacityHint": "Сколько учеников помещается. Пусто — без ограничения.",
   "cls.charged": "Начислено",
   "cls.chargedHint": "Начислено за этот период",
-  "cls.collected": "Собрано",
+  "cls.collected": "Оплачено",
   "cls.create": "Создать класс",
   "cls.created": "Класс «{name}» создан",
   "cls.createFirst": "Создайте первый класс",
@@ -1800,5 +1800,9 @@
   "ns.student": "Ученик",
   "ns.payment": "Оплата",
   "ns.parent": "Родитель",
-  "ns.parentBoth": "Укажите и имя, и телефон"
+  "ns.parentBoth": "Укажите и имя, и телефон",
+  "home.charged": "Начислено",
+  "cls.remainingMonth": "Остаток",
+  "dm.tab.classes": "Классы",
+  "dm.thisMonthDebt": "Долг за месяц"
 }

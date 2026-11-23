@@ -31,6 +31,7 @@ import {
   PageHeader, Progress, Segmented, Stat,
 } from '@/ui';
 import { MonthPicker } from '@/ui/MonthPicker';
+import { MonthClose } from './MonthClose';
 
 type Filter = 'all' | 'unpaid' | 'partial' | 'paid';
 
@@ -47,6 +48,8 @@ export default function Debts() {
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [remind, setRemind] = useState<DebtTarget | null>(null);
+  //  "Oylar" — ota-onaga eslatma va oyni yopish (Hisobotlar o'rniga).
+  const [tab, setTab] = useState<'classes' | 'months'>('classes');
 
   const q = useQuery({
     queryKey: ['debts-monthly', period, branchId],
@@ -124,11 +127,23 @@ export default function Debts() {
         subtitle={t('dm.subtitle', { month, count: totals.students })}
         actions={
           <>
-            <MonthPicker value={period} onChange={(p) => { setPeriod(p); setOpen(new Set()); }} />
-            <Button onClick={doExport} disabled={view.length === 0}>{t('common.export')}</Button>
+            <Segmented<'classes' | 'months'>
+              value={tab}
+              onChange={setTab}
+              options={[
+                { value: 'classes', label: t('dm.tab.classes') },
+                { value: 'months', label: t('mc.tab') },
+              ]}
+            />
+            {tab === 'classes' && <>
+              <MonthPicker value={period} onChange={(p) => { setPeriod(p); setOpen(new Set()); }} />
+              <Button onClick={doExport} disabled={view.length === 0}>{t('common.export')}</Button>
+            </>}
           </>
         }
       />
+
+      {tab === 'months' ? <MonthClose /> : <>
 
       {q.isLoading ? <Loading /> : q.error ? (
         <ErrorState message={(q.error as Error).message} onRetry={() => q.refetch()} />
@@ -204,6 +219,7 @@ export default function Debts() {
         </>
       )}
 
+      </>}
       {remind && <DebtReminderModal target={remind} onClose={() => setRemind(null)} />}
     </>
   );
@@ -272,7 +288,7 @@ function ClassRow({
             {' · '}<span className="text-[var(--danger)]">{c.count.unpaid}</span>
           </div>
           <div className="hidden text-[11.5px] text-[var(--text-faint)] md:block">
-            {t('dm.remaining')}
+            {t('dm.totalDebt')}: <span className="num">{money(c.totalDebt, lang)}</span>
           </div>
         </div>
       </button>
@@ -313,34 +329,43 @@ function StudentRow({ s, onRemind }: { s: StudentMonth; onRemind: (t: DebtTarget
         </div>
       </div>
 
-      {/* Shu oy: to'langan / hisoblangan */}
-      <div className="w-[46%] md:w-44">
-        <div className="text-[11.5px] text-[var(--text-faint)]">{t('dm.thisMonth')}</div>
-        <div className="num text-[13px]">
-          {s.charged > 0
-            ? <><span className={s.state === 'paid' ? 'text-[var(--ok)]' : ''}>{money(s.paid, lang)}</span>
-                <span className="text-[var(--text-faint)]"> / {money(s.charged, lang)}</span></>
-            : <span className="text-[var(--text-faint)]">—</span>}
-        </div>
+      {/* Shu oy qarzi (to'langan / hisoblangan) */}
+      <div className="w-[46%] md:w-40">
+        <div className="text-[11.5px] text-[var(--text-faint)]">{t('dm.thisMonthDebt')}</div>
+        {s.charged > 0 ? (
+          <>
+            <div className={`num text-[14px] font-semibold ${s.remaining > 0.009 ? 'text-[var(--danger)]' : 'text-[var(--ok)]'}`}>
+              {s.remaining > 0.009 ? money(s.remaining, lang) : '✓'}
+            </div>
+            <div className="num text-[11.5px] text-[var(--text-faint)]">
+              {money(s.paid, lang)} / {money(s.charged, lang)}
+            </div>
+          </>
+        ) : <div className="text-[13px] text-[var(--text-faint)]">—</div>}
       </div>
 
-      {/* Qarz oylari */}
+      {/* Har bir qarz oyi va summasi */}
       <div className="min-w-0 flex-1">
-        <div className="text-[11.5px] text-[var(--text-faint)]">
-          {owes ? <>{t('dm.totalDebt')}: <span className="num font-medium text-[var(--danger)]">{money(s.totalDebt, lang)}</span></>
-            : s.totalDebt < -0.009
-            ? <>{t('dm.advance')}: <span className="num font-medium text-[var(--ok)]">{money(-s.totalDebt, lang)}</span></>
-            : t('dm.noDebt')}
-        </div>
-        {s.unpaidPeriods.length > 0 && (
+        <div className="text-[11.5px] text-[var(--text-faint)]">{t('dm.debtMonths')}</div>
+        {s.unpaidMonths.length > 0 ? (
           <div className="mt-1 flex flex-wrap gap-1">
-            {s.unpaidPeriods.map((p) => (
-              <span key={p} className="rounded-md bg-[var(--danger-bg)] px-1.5 py-0.5 text-[11px] text-[var(--danger)]">
-                {periodLabel(p, lang)}
+            {s.unpaidMonths.map((m) => (
+              <span key={m.period} className="rounded-md bg-[var(--danger-bg)] px-1.5 py-0.5 text-[11.5px] text-[var(--danger)]">
+                {periodLabel(m.period, lang)} · <span className="num font-medium">{money(m.owed, lang)}</span>
               </span>
             ))}
           </div>
-        )}
+        ) : <div className="text-[13px] text-[var(--text-faint)]">—</div>}
+      </div>
+
+      {/* Jami qarz */}
+      <div className="w-[46%] text-right md:w-36">
+        <div className="text-[11.5px] text-[var(--text-faint)]">
+          {s.totalDebt < -0.009 ? t('dm.advance') : t('dm.totalDebt')}
+        </div>
+        <div className={`num text-[15px] font-semibold ${owes ? 'text-[var(--danger)]' : 'text-[var(--ok)]'}`}>
+          {owes ? money(s.totalDebt, lang) : s.totalDebt < -0.009 ? money(-s.totalDebt, lang) : '✓'}
+        </div>
       </div>
 
       {/* Amallar */}

@@ -255,13 +255,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (alive) setLoading(false);
     });
 
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_evt, s) => {
+    //  MUHIM: bu callback ichida supabase so'rovini KUTIB bo'lmaydi —
+    //  supabase-js qulfi ushlanib qoladi. Shuning uchun kontekst
+    //  keyingi tikda yuklanadi. Token yangilanganda (TOKEN_REFRESHED)
+    //  profil qayta yuklanmaydi — u o'zgarmagan.
+    const { data: sub } = supabase.auth.onAuthStateChange((evt, s) => {
       if (!alive) return;
       setSession(s);
       if (s?.user?.id) {
-        await loadContext(s.user.id);
+        if (evt === 'TOKEN_REFRESHED' || evt === 'INITIAL_SESSION') return;
+        const uid = s.user.id;
+        setTimeout(() => { if (alive) void loadContext(uid).finally(() => { if (alive) setLoading(false); }); }, 0);
+        return;
       } else {
         setProfile(null);
+        setError(null);
         setBranches([]);
         setPermissions(new Set());
       }

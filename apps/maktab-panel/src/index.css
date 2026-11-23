@@ -71,13 +71,13 @@
 
 :root {
   --bg:          #ffffff;
-  --bg-subtle:   #f7f7f8;
-  --bg-inset:    #f0f1f3;
-  --border:      #e6e7eb;
-  --border-soft: #f0f1f3;
+  --bg-subtle:   #f4f5f7;
+  --bg-inset:    #e9ebef;
+  --border:      #d3d7de;
+  --border-soft: #e3e6eb;
   --text:        #0b0d11;
-  --text-muted:  #5d6574;
-  --text-faint:  #9aa1ad;
+  --text-muted:  #454c59;
+  --text-faint:  #6b7280;
 
   --brand-text:  #0b0d11;
 
@@ -87,7 +87,7 @@
   --on-primary:    #ffffff;
 
   /* TANLANGAN holat: faol menyu, chip, tanlangan qator. */
-  --sel-bg:      #f0f1f3;
+  --sel-bg:      #e9ebef;
   --sel-text:    #0b0d11;
   --sel-border:  #0b0d11;
 

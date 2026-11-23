@@ -25,9 +25,11 @@ import {
 import { formatPhone } from '@/ui/PhoneInput';
 import { useSort, useToast } from '@/ui/Feedback';
 import { DeleteConfirmModal } from './StudentCard';
-import { DateRangePicker, useDateRange } from '@/ui/DateRange';
+import { MonthPicker, periodEnd } from '@/ui/MonthPicker';
+import { loadMonthlyDebts } from '@/lib/monthlyDebts';
+import { currentPeriod as curPeriod } from '@/lib/format';
 
-type SortKey = 'full_name' | 'payment_code' | 'charged' | 'paid' | 'balance';
+type SortKey = 'full_name' | 'payment_code' | 'charged' | 'paid' | 'remaining' | 'balance';
 
 export default function ClassCard() {
   const { id } = useParams<{ id: string }>();
@@ -63,12 +65,14 @@ export default function ClassCard() {
     onError: (e) => toast.error((e as Error).message),
   });
 
-  const { range, setPreset, setCustom } = useDateRange();
+  //  Hammasi TANLANGAN OY bo'yicha; "Jami qarz" — barcha oylar.
+  const [period, setPeriod] = useState(curPeriod);
   const [search, setSearch] = useState('');
   const [onlyDebt, setOnlyDebt] = useState(false);
   const sort = useSort<SortKey>('full_name');
 
-  const { from, to } = range;
+  const from = period;
+  const to = periodEnd(period);
 
   // --- sinf va rahbari ----------------------------------------------
   const cls = useQuery({
@@ -89,17 +93,13 @@ export default function ClassCard() {
   });
 
   // --- moliyaviy jamlanma (sinf kesimidagi hisobotdan) --------------
-  const fin = useQuery({
-    queryKey: ['class-fin', id, from, to],
+  const monthly = useQuery({
+    queryKey: ['debts-monthly', period, null],
     enabled: !!id,
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('report_by_class', {
-        p_from: from, p_to: to,
-      });
-      if (error) throw error;
-      return (data ?? []).find((r) => r.class_id === id) ?? null;
-    },
+    queryFn: () => loadMonthlyDebts(period, null),
   });
+  const fin = monthly.data?.find((c) => c.class_id === id) ?? null;
+  const mBy = new Map((fin?.students ?? []).map((s) => [s.student_id, s] as const));
 
   // --- o'quvchilar ---------------------------------------------------
   const students = useQuery({
@@ -118,15 +118,13 @@ export default function ClassCard() {
 
       const { data: bal, error: be } = await supabase
         .from('v_student_balances')
-        .select('student_id, charged, paid, balance, overdue_charged, oldest_unpaid_due')
+        .select('student_id, balance, overdue_charged, oldest_unpaid_due')
         .in('student_id', list.map((s) => s.id));
       if (be) throw be;
 
       const byId = new Map((bal ?? []).map((b) => [b.student_id, b] as const));
       return list.map((s) => ({
         ...s,
-        charged: Number(byId.get(s.id)?.charged ?? 0),
-        paid: Number(byId.get(s.id)?.paid ?? 0),
         balance: Number(byId.get(s.id)?.balance ?? 0),
         overdue: Number(byId.get(s.id)?.overdue_charged ?? 0),
         oldest_due: byId.get(s.id)?.oldest_unpaid_due ?? null,
@@ -157,7 +155,10 @@ export default function ClassCard() {
   });
 
   const list = useMemo(() => {
-    let rows = students.data ?? [];
+    let rows = (students.data ?? []).map((s) => {
+      const m = mBy.get(s.id);
+      return { ...s, charged: m?.charged ?? 0, paid: m?.paid ?? 0, remaining: m?.remaining ?? 0 };
+    });
     const q = search.trim().toLowerCase();
     if (q) {
       rows = rows.filter((s) =>
@@ -167,7 +168,8 @@ export default function ClassCard() {
     if (onlyDebt) rows = rows.filter((s) => s.balance > 0);
     // deno-lint-ignore no-explicit-any
     return sort.apply(rows, (r: any, k) => r[k]);
-  }, [students.data, search, onlyDebt, sort.apply]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [students.data, monthly.data, search, onlyDebt, sort.apply]);
 
   if (!can('students.manage')) {
     return <Notice tone="danger">{t('common.noAccess')}</Notice>;
@@ -185,8 +187,8 @@ export default function ClassCard() {
   // deno-lint-ignore no-explicit-any
   const branch = c.branches as any;
 
-  const f = fin.data;
-  const rate = Number(f?.collection_rate ?? 0);
+  const f = fin;
+  const rate = f && f.charged > 0 ? Math.round(1000 * f.paid / f.charged) / 10 : 0;
   const active = (students.data ?? []).filter((s) => s.status === 'active').length;
   //  "Qarzdor" — muddati O'TGANI. Ilgari bu `balance > 0` edi va
   //  1-sentabrda hisoblanma qurilishi bilan butun maktab qarzdor
@@ -263,8 +265,7 @@ export default function ClassCard() {
           O'quvchilar ro'yxati esa bugungi holat — u sanaga bog'liq
           emas, chunki sinf tarkibi tarixi saqlanmaydi. --- */}
       <div className="mb-4">
-        <DateRangePicker range={range} onPreset={setPreset} onCustom={setCustom}
-                         compact />
+        <MonthPicker value={period} onChange={setPeriod} />
       </div>
 
       {/* --- Jamlanma: 3 raqam ----------------------------------
@@ -278,17 +279,17 @@ export default function ClassCard() {
           hint={debtors > 0 ? `${t('cls.debtors')}: ${debtors}` : undefined}
           tone={debtors > 0 ? 'neutral' : 'neutral'}
         />
-        <Stat label={t('cls.collected')} value={money(f?.collected, lang)} tone="ok"
+        <Stat label={t('cls.collected')} value={money(f?.paid ?? 0, lang)} tone="ok"
               hint={`${t('cls.charged')}: ${money(f?.charged, lang)}`}>
           <div className="mt-3 flex items-center gap-2">
             <Progress value={rate} />
             <span className="num shrink-0 text-[11.5px] text-[var(--text-muted)]">{rate}%</span>
           </div>
         </Stat>
-        <Stat label={t('cls.remaining')} value={money(f?.remaining, lang)}
-              tone={Number(f?.remaining ?? 0) > 0 ? 'danger' : 'neutral'}
-              hint={Number(f?.overdue ?? 0) > 0
-                ? `${t('cls.overdue')}: ${money(f?.overdue, lang)}` : undefined} />
+        <Stat label={t('dm.thisMonthDebt')} value={money(f?.remaining ?? 0, lang)}
+              tone={(f?.remaining ?? 0) > 0 ? 'danger' : 'neutral'}
+              hint={(f?.totalDebt ?? 0) > 0
+                ? `${t('dm.totalDebt')}: ${money(f?.totalDebt, lang)}` : undefined} />
       </div>
 
       {/* --- Sinf rahbari — alohida karta emas, bitta qator ------- */}
@@ -346,7 +347,8 @@ export default function ClassCard() {
                   <SortTh k="payment_code">{t('students.paymentCode')}</SortTh>
                   <SortTh k="charged" align="right">{t('rep.charged')}</SortTh>
                   <SortTh k="paid" align="right">{t('rep.collected')}</SortTh>
-                  <SortTh k="balance" align="right">{t('debt.title')}</SortTh>
+                  <SortTh k="remaining" align="right">{t('dm.thisMonthDebt')}</SortTh>
+                  <SortTh k="balance" align="right">{t('dm.totalDebt')}</SortTh>
                   {can('absences.mark') && (
                     <Th align="right">{t('cls.absences')}</Th>
                   )}
@@ -368,6 +370,9 @@ export default function ClassCard() {
                     <Td align="right" mono>{money(s.charged, lang)}</Td>
                     <Td align="right" mono className="text-[var(--ok)]">
                       {money(s.paid, lang)}
+                    </Td>
+                    <Td align="right" mono>
+                      <Money value={s.remaining} colored />
                     </Td>
                     <Td align="right" mono>
                       <Money value={s.balance} colored bold={s.overdue > 0} />

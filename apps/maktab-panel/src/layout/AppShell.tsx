@@ -105,7 +105,6 @@ const groupsFor = (lc: boolean): NavGroup[] => [
       { to: '/tolovlar', labelKey: 'nav.payments', permission: 'payments.create', icon: <Icon d={I.cash} /> },
       { to: '/qarzdorlik', labelKey: 'nav.debts', permission: 'reports.view', icon: <Icon d={I.wallet} /> },
       { to: '/xarajatlar', labelKey: 'nav.expenses', permission: 'expenses.create', icon: <Icon d={I.wallet} /> },
-      { to: '/hisobotlar', labelKey: 'nav.reports', permission: 'reports.view', icon: <Icon d={I.chart} /> },
     ],
   },
   {
@@ -150,7 +149,7 @@ const TEACHER_NAV_LC: NavItem[] = [
 ];
 
 /** Telefon pastki paneli uchun ustuvorlik tartibi. */
-const BOTTOM_PRIORITY = ['/', '/oquvchilar', '/tolovlar', '/qarzdorlik', '/davomat', '/oylik', '/hisobotlar'];
+const BOTTOM_PRIORITY = ['/', '/oquvchilar', '/tolovlar', '/qarzdorlik', '/davomat', '/oylik'];
 const BOTTOM_PRIORITY_LC = ['/', '/guruhlar', '/tolovlar', '/davomat', '/oquvchilar', '/qarzdorlik'];
 
 /** Pastki panelda sig'adigan qisqa nomlar. */

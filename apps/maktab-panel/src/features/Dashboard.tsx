@@ -177,13 +177,18 @@ export default function Dashboard() {
 
       {canSeeFinance && (s ? (
         <>
-          <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+            <Stat
+              label={t('home.charged')}
+              value={money(s.charged, lang)}
+              delta={delta(s.charged, p?.charged)}
+              hint={t('dm.studentsCount', { count: month.paid + month.partial + month.unpaid })}
+            />
             <Stat
               label={t('home.collected')}
               value={money(s.collected, lang)}
               tone="ok"
               delta={delta(s.collected, p?.collected)}
-              hint={t('home.collectedHint', { charged: money(s.charged, lang) })}
             >
               <div className="mt-3 flex items-center gap-2">
                 <Progress value={rate} />

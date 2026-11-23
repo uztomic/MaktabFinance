@@ -137,7 +137,18 @@ export default function App() {
   }
 
   if (!session) return <LoginPage />;
-  if (error === 'noProfile' || !profile) return <NoProfile />;
+  //  Profil hali yuklanmoqda (kirgan zahoti) — xato emas, kutamiz.
+  //  Ilgari shu lahzada "maktab biriktirilmagan" bir soniya chiqardi.
+  if (!profile) {
+    if (!error) {
+      return (
+        <div className="flex min-h-screen items-center justify-center">
+          <Loading />
+        </div>
+      );
+    }
+    return <NoProfile />;
+  }
 
   // BLOKLANGAN MAKTAB — oddiy panel ko'rsatilmaydi.
   //

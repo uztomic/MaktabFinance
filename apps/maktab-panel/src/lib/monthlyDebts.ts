@@ -36,6 +36,8 @@ export interface StudentMonth {
   totalDebt: number;
   /** To'liq yopilmagan oylar, eskisi birinchi. */
   unpaidPeriods: string[];
+  /** Har bir yopilmagan oy va undan qolgan summa. */
+  unpaidMonths: Array<{ period: string; owed: number }>;
 }
 
 export interface ClassMonth {
@@ -121,13 +123,17 @@ export async function loadMonthlyDebts(
     let total = 0;
     let paidThis = 0;
     const unpaid: string[] = [];
+    const unpaidM: Array<{ period: string; owed: number }> = [];
     for (const p of [...months.keys()].sort()) {
       const due = months.get(p)!;
       total += due;
       const alloc = Math.max(0, Math.min(pool, due));
       pool -= alloc;
       if (p === period) paidThis = alloc;
-      if (due - alloc > 0.009 && p <= now) unpaid.push(p);
+      if (due - alloc > 0.009 && p <= now) {
+        unpaid.push(p);
+        unpaidM.push({ period: p, owed: due - alloc });
+      }
     }
     const totalDebt = total - (paidBy.get(s.id) ?? 0);
     const remaining = Math.max(0, charged - paidThis);
@@ -142,7 +148,7 @@ export async function loadMonthlyDebts(
       class_id: s.class_id,
       class_name: s.class_name,
       charged, paid: paidThis, remaining, state,
-      totalDebt, unpaidPeriods: unpaid,
+      totalDebt, unpaidPeriods: unpaid, unpaidMonths: unpaidM,
     });
   }
 

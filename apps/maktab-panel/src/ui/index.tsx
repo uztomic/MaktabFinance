@@ -630,7 +630,7 @@ export function Stat({
         )}
       </div>
       <div className={`num mt-2 truncate text-[22px] font-semibold leading-tight tracking-tight
-        md:text-[26px] ${color}`}>
+        md:text-[24px] ${color}`}>
         {value}
       </div>
       {hint && <div className="mt-1 truncate text-[12px] text-[var(--text-faint)]">{hint}</div>}

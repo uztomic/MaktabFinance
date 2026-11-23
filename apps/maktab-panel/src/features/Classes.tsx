@@ -17,14 +17,15 @@ import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/auth/AuthProvider';
 import { useI18n, useT } from '@/i18n';
-import { isoDate, money } from '@/lib/format';
+import { currentPeriod, isoDate, money, periodLabel } from '@/lib/format';
 import { exportTable } from '@/lib/export';
 import {
   Badge, Button, Card, EmptyState, ErrorState, Field, Input, Loading,
   Modal, Money, Notice, PageHeader, Select, Table, Td, Th, Tr,
 } from '@/ui';
 import { useConfirm, useSort, useToast } from '@/ui/Feedback';
-import { DateRangePicker, rangeLabel, useDateRange } from '@/ui/DateRange';
+import { MonthPicker, periodEnd } from '@/ui/MonthPicker';
+import { loadMonthlyDebts } from '@/lib/monthlyDebts';
 
 type SortKey =
   | 'class_name' | 'students' | 'charged' | 'collected'
@@ -45,11 +46,20 @@ export default function Classes() {
     useState<{ id: string; name: string; branch_id: string } | null>(null);
   const [promoting, setPromoting] = useState(false);
 
-  const { range, setPreset, setCustom } = useDateRange();
-  const { from, to } = range;
+  //  Moliya — FAQAT tanlangan oy: shu oy hisoblangan, shu oyga
+  //  tushgan to'lov (FIFO) va shu oydan qolgan qarz. Barcha oylar
+  //  qarzi Qarzdorlik sahifasida.
+  const [period, setPeriod] = useState(currentPeriod);
+  const from = period;
+  const to = periodEnd(period);
   const sort = useSort<SortKey>('class_name');
 
-  const rows = useQuery({
+  const monthly = useQuery({
+    queryKey: ['debts-monthly', period, branchId],
+    queryFn: () => loadMonthlyDebts(period, branchId),
+  });
+
+  const base = useQuery({
     queryKey: ['classes-report', from, to, branchId],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('report_by_class', {
@@ -167,31 +177,48 @@ export default function Classes() {
     onError: (e) => toast.error((e as Error).message),
   });
 
+  //  Sinf ro'yxati (rahbar, filial) + shu oy raqamlari.
+  const rows = useMemo(() => {
+    const byCls = new Map((monthly.data ?? []).map((c) => [c.class_id, c] as const));
+    return (base.data ?? []).map((r) => {
+      const m = byCls.get(r.class_id);
+      const charged = m?.charged ?? 0;
+      const collected = m?.paid ?? 0;
+      return {
+        ...r,
+        charged, collected,
+        remaining: m?.remaining ?? 0,
+        unpaid: (m?.count.unpaid ?? 0) + (m?.count.partial ?? 0),
+        collection_rate: charged > 0 ? Math.round(1000 * collected / charged) / 10 : 0,
+      };
+    });
+  }, [base.data, monthly.data]);
+
   const list = useMemo(() => {
-    const data = rows.data ?? [];
+    const data = rows;
     // deno-lint-ignore no-explicit-any
     return sort.apply(data, (r: any, k) => r[k]);
-  }, [rows.data, sort.apply]);
+  }, [rows, sort.apply]);
 
   const totals = useMemo(() =>
-    (rows.data ?? []).reduce((a, r) => ({
+    rows.reduce((a, r) => ({
       students: a.students + Number(r.students ?? 0),
-      charged: a.charged + Number(r.charged ?? 0),
-      collected: a.collected + Number(r.collected ?? 0),
-      remaining: a.remaining + Number(r.remaining ?? 0),
-      overdue: a.overdue + Number(r.overdue ?? 0),
-    }), { students: 0, charged: 0, collected: 0, remaining: 0, overdue: 0 }),
-    [rows.data]);
+      charged: a.charged + r.charged,
+      collected: a.collected + r.collected,
+      remaining: a.remaining + r.remaining,
+    }), { students: 0, charged: 0, collected: 0, remaining: 0 }),
+    [rows]);
 
   const canEdit = mayWrite('students.manage');
 
   if (!can('students.manage')) {
     return <Notice tone="danger">{t('common.noAccess')}</Notice>;
   }
-  if (rows.isLoading) return <Loading />;
-  if (rows.error) {
-    return <ErrorState message={(rows.error as Error).message}
-                       onRetry={() => rows.refetch()} />;
+  if (base.isLoading || monthly.isLoading) return <Loading />;
+  const err = base.error ?? monthly.error;
+  if (err) {
+    return <ErrorState message={(err as Error).message}
+                       onRetry={() => { void base.refetch(); void monthly.refetch(); }} />;
   }
 
   const rate = totals.charged > 0
@@ -213,7 +240,7 @@ export default function Classes() {
     <>
       <PageHeader
         title={t('cls.title')}
-        subtitle={`${t('common.showing', { count: list.length })} · ${rangeLabel(range, lang)}`}
+        subtitle={`${t('common.showing', { count: list.length })} · ${periodLabel(period, lang)}`}
         actions={
           <>
             <Button
@@ -227,7 +254,7 @@ export default function Classes() {
                   { header: t('cls.students'), value: (r) => r.students, numeric: true },
                   { header: t('cls.charged'), value: (r) => r.charged, numeric: true },
                   { header: t('cls.collected'), value: (r) => r.collected, numeric: true },
-                  { header: t('cls.overdue'), value: (r) => r.overdue, numeric: true },
+                  { header: t('cls.remainingMonth'), value: (r) => r.remaining, numeric: true },
                   { header: '%', value: (r) => r.collection_rate, numeric: true },
                 ],
                 list,
@@ -250,11 +277,8 @@ export default function Classes() {
         }
       />
 
-      {/* Moliyaviy ustunlar shu oraliq bo'yicha hisoblanadi.
-          O'quvchilar soni esa BUGUNGI holat — u sanaga bog'liq emas. */}
       <div className="mb-4">
-        <DateRangePicker range={range} onPreset={setPreset} onCustom={setCustom}
-                         compact />
+        <MonthPicker value={period} onChange={setPeriod} />
       </div>
 
       <Card padded={false}>
@@ -279,7 +303,7 @@ export default function Classes() {
                   <SortTh k="students" align="right">{t('cls.students')}</SortTh>
                   <SortTh k="charged" align="right">{t('cls.charged')}</SortTh>
                   <SortTh k="collected" align="right">{t('cls.collected')}</SortTh>
-                  <SortTh k="overdue" align="right">{t('cls.overdue')}</SortTh>
+                  <SortTh k="remaining" align="right">{t('cls.remainingMonth')}</SortTh>
                   <SortTh k="collection_rate" align="right">%</SortTh>
                   <Th align="right">{t('common.actions')}</Th>
                 </tr>
@@ -322,7 +346,7 @@ export default function Classes() {
                         {money(c.collected, lang)}
                       </Td>
                       <Td align="right" mono>
-                        <Money value={c.overdue} colored />
+                        <Money value={c.remaining} colored />
                       </Td>
                       <Td align="right">
                         <Badge tone={r >= 80 ? 'ok' : r >= 50 ? 'warn' : 'danger'}>
@@ -369,7 +393,7 @@ export default function Classes() {
                     {money(totals.collected, lang)}
                   </Td>
                   <Td align="right" mono className="text-[var(--danger)]">
-                    {money(totals.overdue, lang)}
+                    {money(totals.remaining, lang)}
                   </Td>
                   <Td align="right">
                     <Badge tone={rate >= 80 ? 'ok' : rate >= 50 ? 'warn' : 'danger'}>

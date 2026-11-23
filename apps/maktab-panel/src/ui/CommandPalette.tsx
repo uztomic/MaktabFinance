@@ -48,7 +48,6 @@ const PAGES: Array<{ to: string; labelKey: string; permission: string | null }> 
   { to: '/tolovlar', labelKey: 'nav.payments', permission: 'payments.create' },
   { to: '/qarzdorlik', labelKey: 'nav.debts', permission: 'reports.view' },
   { to: '/xarajatlar', labelKey: 'nav.expenses', permission: 'expenses.create' },
-  { to: '/hisobotlar', labelKey: 'nav.reports', permission: 'reports.view' },
   { to: '/oqituvchilar', labelKey: 'nav.teachers', permission: 'teachers.manage' },
   { to: '/oylik', labelKey: 'nav.payroll', permission: 'payroll.view' },
   { to: '/filiallar', labelKey: 'nav.branches', permission: 'users.manage' },
