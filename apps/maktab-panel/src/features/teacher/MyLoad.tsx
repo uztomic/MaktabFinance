@@ -137,8 +137,8 @@ function Stat({
     ? 'text-[var(--danger)]'
     : '';
   return (
-    <div className="rounded-lg border bg-[var(--bg)] px-3 py-2.5 text-center">
-      <div className="text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
+    <div className="rounded-2xl border bg-[var(--bg)] px-3 py-2.5 text-center">
+      <div className="text-[10px] text-[var(--text-muted)]">
         {label}
       </div>
       <div className={`num mt-0.5 text-lg font-semibold ${color}`}>{value}</div>

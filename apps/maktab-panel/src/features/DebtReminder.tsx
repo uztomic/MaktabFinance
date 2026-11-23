@@ -68,7 +68,7 @@ export function DebtReminderModal({ target, onClose }: { target: DebtTarget; onC
     <Modal open title={`${t('remind.title')} — ${target.full_name}`} onClose={onClose}>
       <div className="space-y-3">
         <textarea
-          className="min-h-[150px] w-full rounded-md border bg-[var(--bg)] px-3 py-2 text-[13px]"
+          className="min-h-[150px] w-full rounded-[10px] border bg-[var(--bg)] px-3 py-2 text-[13px]"
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
@@ -85,11 +85,11 @@ export function DebtReminderModal({ target, onClose }: { target: DebtTarget; onC
                     <span className="font-mono text-[var(--text-muted)]">{tel}</span>
                   </div>
                   <div className="grid grid-cols-3 gap-1.5">
-                    <a className="flex min-h-10 items-center justify-center rounded-md bg-brand-700 text-[13px] font-medium text-white"
+                    <a className="flex min-h-10 items-center justify-center rounded-md bg-[var(--primary)] text-[13px] font-medium text-[var(--on-primary)]"
                        href={`sms:${tel}?body=${encodeURIComponent(text)}`}>SMS</a>
-                    <a className="flex min-h-10 items-center justify-center rounded-md border text-[13px] font-medium"
+                    <a className="flex min-h-10 items-center justify-center rounded-[10px] border text-[13px] font-medium"
                        href={`tel:${tel}`}>{t('remind.call')}</a>
-                    <a className="flex min-h-10 items-center justify-center rounded-md border text-[13px] font-medium"
+                    <a className="flex min-h-10 items-center justify-center rounded-[10px] border text-[13px] font-medium"
                        href={`https://t.me/share/url?url=${encodeURIComponent(' ')}&text=${encodeURIComponent(text)}`}
                        target="_blank" rel="noreferrer">Telegram</a>
                   </div>

@@ -20,7 +20,7 @@ import { date, money } from '@/lib/format';
 import { exportTable } from '@/lib/export';
 import {
   Badge, Button, Card, EmptyState, ErrorState, Input, Loading,
-  Money, Notice, PageHeader, Table, Td, Th, Tr,
+  Money, Notice, PageHeader, Progress, Stat, Table, Td, Th, Tr,
 } from '@/ui';
 import { formatPhone } from '@/ui/PhoneInput';
 import { useSort, useToast } from '@/ui/Feedback';
@@ -199,7 +199,7 @@ export default function ClassCard() {
   }) => (
     <Th align={align}>
       <button type="button" onClick={() => sort.toggle(k)}
-              className="font-semibold uppercase hover:text-[var(--text)]">
+              className="font-medium hover:text-[var(--text)]">
         {children}{sort.indicator(k)}
       </button>
     </Th>
@@ -262,66 +262,47 @@ export default function ClassCard() {
           Moliyaviy ko'rsatkichlar va yo'qlik shu oraliq bo'yicha.
           O'quvchilar ro'yxati esa bugungi holat — u sanaga bog'liq
           emas, chunki sinf tarkibi tarixi saqlanmaydi. --- */}
-      <Card className="mb-3">
+      <div className="mb-4">
         <DateRangePicker range={range} onPreset={setPreset} onCustom={setCustom}
                          compact />
-      </Card>
+      </div>
 
-      {/* --- Moliyaviy jamlanma ---------------------------------- */}
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label={t('cls.charged')} value={money(f?.charged, lang)}
-              hint={t('cls.chargedHint')} />
-        <Stat label={t('cls.collected')} value={money(f?.collected, lang)}
-              tone="ok" />
-        <Stat label={t('cls.remaining')} value={money(f?.remaining, lang)}
-              tone="danger" hint={t('cls.remainingHint')} />
+      {/* --- Jamlanma: 3 raqam ----------------------------------
+           Ilgari 8 ta karta edi ("To'lanmagan", "Qoldiq", "Muddati
+           o'tgan" — bir narsaning uch xil nomi). Endi: kim bor, qancha
+           yig'ildi, qancha qoldi. Tafsilot izohda. */}
+      <div className="mb-4 grid gap-3 sm:grid-cols-3">
         <Stat
-          label={t('cls.rate')}
-          value={`${rate}%`}
-          tone={rate >= 80 ? 'ok' : rate >= 50 ? 'warn' : 'danger'}
-          bar={rate}
+          label={t('cls.students')}
+          value={c.capacity ? `${active} / ${c.capacity}` : String(active)}
+          hint={debtors > 0 ? `${t('cls.debtors')}: ${debtors}` : undefined}
+          tone={debtors > 0 ? 'neutral' : 'neutral'}
         />
+        <Stat label={t('cls.collected')} value={money(f?.collected, lang)} tone="ok"
+              hint={`${t('cls.charged')}: ${money(f?.charged, lang)}`}>
+          <div className="mt-3 flex items-center gap-2">
+            <Progress value={rate} />
+            <span className="num shrink-0 text-[11.5px] text-[var(--text-muted)]">{rate}%</span>
+          </div>
+        </Stat>
+        <Stat label={t('cls.remaining')} value={money(f?.remaining, lang)}
+              tone={Number(f?.remaining ?? 0) > 0 ? 'danger' : 'neutral'}
+              hint={Number(f?.overdue ?? 0) > 0
+                ? `${t('cls.overdue')}: ${money(f?.overdue, lang)}` : undefined} />
       </div>
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label={t('cls.students')} value={String(active)}
-              hint={c.capacity ? t('cls.ofCapacity', { capacity: c.capacity }) : undefined} />
-        <Stat label={t('cls.debtors')} value={String(debtors)}
-              tone={debtors > 0 ? 'warn' : 'ok'}
-              hint={t('cls.debtorsHint')} />
-        <Stat label={t('cls.unpaid')} value={money(f?.unpaid, lang)}
-              hint={t('cls.unpaidHint')} />
-        <Stat label={t('cls.overdue')} value={money(f?.overdue, lang)}
-              tone={Number(f?.overdue ?? 0) > 0 ? 'danger' : 'ok'}
-              hint={t('cls.overdueHint')} />
-      </div>
-
-      {/* --- Sinf rahbari ---------------------------------------- */}
-      <div className="mb-4">
-        <Card title={t('cls.teacher')}>
-          {teacher
-            ? (
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <Link to={`/oqituvchilar/${teacher.id}`}
-                        className="text-sm font-medium hover:underline">
-                    {teacher.full_name}
-                  </Link>
-                  {teacher.phone && (
-                    <div className="text-[13px] text-[var(--text-muted)]">
-                      {formatPhone(teacher.phone)}
-                    </div>
-                  )}
-                </div>
-                <Badge tone="brand">{t('cls.teacherBadge')}</Badge>
-              </div>
-            )
-            : (
-              <p className="text-[13px] text-[var(--text-muted)]">
-                {t('cls.noTeacher')}
-              </p>
-            )}
-        </Card>
+      {/* --- Sinf rahbari — alohida karta emas, bitta qator ------- */}
+      <div className="mb-4 flex flex-wrap items-center gap-2 text-[13px] text-[var(--text-muted)]">
+        <span>{t('cls.teacher')}:</span>
+        {teacher
+          ? <>
+              <Link to={`/oqituvchilar/${teacher.id}`}
+                    className="font-medium text-[var(--text)] hover:underline">
+                {teacher.full_name}
+              </Link>
+              {teacher.phone && <span>· {formatPhone(teacher.phone)}</span>}
+            </>
+          : <span>{t('cls.noTeacher')}</span>}
       </div>
 
       {c.note && (
@@ -424,50 +405,5 @@ export default function ClassCard() {
         />
       )}
     </>
-  );
-}
-
-// ---------------------------------------------------------------------
-
-function Stat({
-  label, value, hint, tone = 'neutral', bar,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-  tone?: 'neutral' | 'ok' | 'warn' | 'danger';
-  /** 0–100 — foiz chizig'i. */
-  bar?: number;
-}) {
-  const color = {
-    neutral: 'text-[var(--text)]',
-    ok: 'text-[var(--ok)]',
-    warn: 'text-[var(--warn)]',
-    danger: 'text-[var(--danger)]',
-  }[tone];
-  const barColor = {
-    neutral: 'bg-brand-600',
-    ok: 'bg-[var(--ok)]',
-    warn: 'bg-[var(--warn)]',
-    danger: 'bg-[var(--danger)]',
-  }[tone];
-
-  return (
-    <div className="rounded-lg border bg-[var(--bg)] p-3">
-      <div className="text-[11px] font-medium uppercase tracking-wide
-        text-[var(--text-muted)]">
-        {label}
-      </div>
-      <div className={`num mt-1 text-lg font-semibold ${color}`}>{value}</div>
-      {bar !== undefined && (
-        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--bg-inset)]">
-          <div className={`h-full rounded-full ${barColor}`}
-               style={{ width: `${Math.min(100, Math.max(0, bar))}%` }} />
-        </div>
-      )}
-      {hint && (
-        <div className="mt-1 text-[11px] text-[var(--text-faint)]">{hint}</div>
-      )}
-    </div>
   );
 }

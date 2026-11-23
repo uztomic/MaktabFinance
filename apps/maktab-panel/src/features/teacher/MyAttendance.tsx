@@ -357,9 +357,9 @@ function Counter({ label, value, tone = 'neutral' }: {
     danger: 'text-[var(--danger)]',
   }[tone];
   return (
-    <div className="rounded-lg border bg-[var(--bg)] px-3 py-2 text-center">
+    <div className="rounded-2xl border bg-[var(--bg)] px-3 py-2 text-center">
       <div className={`num text-xl font-semibold ${color}`}>{value}</div>
-      <div className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
+      <div className="text-[11px] text-[var(--text-muted)]">
         {label}
       </div>
     </div>

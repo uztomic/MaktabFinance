@@ -199,8 +199,8 @@ function Stat({ label, value, hint }: {
   label: string; value: string; hint?: string;
 }) {
   return (
-    <div className="rounded-lg border bg-[var(--bg)] px-4 py-3">
-      <div className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
+    <div className="rounded-2xl border bg-[var(--bg)] px-4 py-3">
+      <div className="text-[11px] text-[var(--text-muted)]">
         {label}
       </div>
       <div className="num mt-1 text-lg font-semibold">{value}</div>

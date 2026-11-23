@@ -21,7 +21,7 @@ import { useI18n, useT } from '@/i18n';
 import { currentPeriod, date, isoDate, money, num, periodLabel } from '@/lib/format';
 import { type Column, exportTable } from '@/lib/export';
 import {
-  Badge, Button, Card, EmptyState, ErrorState, Field, Input, Loading,
+  Badge, Button, Card, EmptyState, ErrorState, Input, Loading, Progress, Stat,
   Modal, Money, Notice, PageHeader, Table, Td, Th, Tr,
 } from '@/ui';
 
@@ -84,46 +84,39 @@ export default function Reports() {
         subtitle={`${date(from, lang)} — ${date(to, lang)}`}
       />
 
-      {/* --- Sana oralig'i (TZ 4.12.1) ------------------------- */}
-      <Card className="mb-4">
-        <div className="flex flex-wrap items-end gap-2">
-          <Field label={t('common.from')}>
-            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-          </Field>
-          <Field label={t('common.to')}>
-            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-          </Field>
-          <div className="flex gap-1.5">
-            <Button size="sm" onClick={() => quick('month')}>
-              {t('rep.quick.month')}
+      {/* --- Sana oralig'i (TZ 4.12.1) — bitta qatorda, alohida
+           kartasiz: sana va tayyor oraliqlar yonma-yon. ------------- */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)}
+               className="w-[150px]" aria-label={t('common.from')} />
+        <span className="text-[var(--text-faint)]">—</span>
+        <Input type="date" value={to} onChange={(e) => setTo(e.target.value)}
+               className="w-[150px]" aria-label={t('common.to')} />
+        <div className="flex flex-wrap gap-1">
+          {(['month', 'prevMonth', 'quarter', 'year'] as const).map((k) => (
+            <Button key={k} size="sm" variant="ghost" onClick={() => quick(k)}>
+              {t(`rep.quick.${k}`)}
             </Button>
-            <Button size="sm" onClick={() => quick('prevMonth')}>
-              {t('rep.quick.prevMonth')}
-            </Button>
-            <Button size="sm" onClick={() => quick('quarter')}>
-              {t('rep.quick.quarter')}
-            </Button>
-            <Button size="sm" onClick={() => quick('year')}>
-              {t('rep.quick.year')}
-            </Button>
-          </div>
+          ))}
         </div>
-      </Card>
+      </div>
 
-      <div className="mb-4 flex flex-wrap gap-1 border-b">
-        {TABS.map((x) => (
-          <button
-            key={x.id}
-            onClick={() => setTab(x.id)}
-            className={`-mb-px border-b-2 px-3 py-2 text-[13px] font-medium
-              transition-colors
-              ${tab === x.id
-                ? 'border-brand-700 text-[var(--text)]'
-                : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text)]'}`}
-          >
-            {x.label}
-          </button>
-        ))}
+      {/* --- Hisobot turi — gorizontal suriladigan tablar ------------- */}
+      <div className="-mx-3 mb-5 overflow-x-auto px-3 md:mx-0 md:px-0">
+        <div className="flex w-max gap-1 rounded-xl bg-[var(--bg-inset)] p-1">
+          {TABS.map((x) => (
+            <button
+              key={x.id}
+              onClick={() => setTab(x.id)}
+              className={`h-8 whitespace-nowrap rounded-lg px-3 text-[13px] transition-colors
+                ${tab === x.id
+                  ? 'bg-[var(--bg)] font-medium text-[var(--text)] shadow-[0_1px_2px_rgba(0,0,0,0.08)]'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text)]'}`}
+            >
+              {x.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <ReportBody id={tab} from={from} to={to} branchId={branchId} />
@@ -530,74 +523,33 @@ function FinancialSummary({ row, from, to }: {
   if (!row) return <Card><EmptyState /></Card>;
 
   const M = (v: unknown) => money(v as number, lang);
-  const rate = Number(row.collection_rate ?? 0);
-  const net = Number(row.profit_net ?? 0);
-  const cash = Number(row.cash_position ?? 0);
+  const N = (v: unknown) => Number(v ?? 0);
+  const rate = N(row.collection_rate);
+  const net = N(row.profit_net);
+  const cash = N(row.cash_position);
 
+  //  Ilgari 16 ta karta: "Xarajatsiz foyda", "Oyliksiz foyda", "Sof
+  //  foyda" bir-birining ichida edi, o'quvchilar soni ikki marta.
+  //  Endi tepada 3 ta asosiy raqam, pastda bitta hisobot varag'i —
+  //  har qator bir marta, chiziqdan keyin natija.
   return (
     <div className="space-y-4">
-      {/* --- TUSHUM ------------------------------------------- */}
-      <Section title={t('fin.income')}>
-        <Stat label={t('fin.expected')} value={M(row.charged)}
-              hint={t('fin.expectedHint')} />
-        <Stat label={t('fin.collected')} value={M(row.collected)} tone="ok" />
-        <Stat label={t('fin.remaining')} value={M(row.remaining)} tone="danger"
-              hint={t('fin.remainingHint')} />
-        <Stat label={t('cls.rate')} value={`${rate}%`} bar={rate}
-              tone={rate >= 80 ? 'ok' : rate >= 50 ? 'warn' : 'danger'} />
-      </Section>
-
-      {/* --- XARAJAT ------------------------------------------ */}
-      <Section title={t('fin.expenses')}>
-        <Stat label={t('fin.payroll')} value={M(row.payroll)} tone="warn"
-              hint={t('fin.payrollHint')} />
-        <Stat label={t('fin.otherExpenses')} value={M(row.other_expenses)} />
-        <Stat label={t('fin.totalExpenses')} value={M(row.total_expenses)}
-              tone="danger" />
-        <Stat
-          label={t('fin.payrollShare')}
-          value={Number(row.total_expenses) > 0
-            ? `${Math.round(100 * Number(row.payroll) / Number(row.total_expenses))}%`
-            : '—'}
-          hint={t('fin.payrollShareHint')}
-        />
-      </Section>
-
-      {/* --- FOYDA -------------------------------------------- */}
-      <Section title={t('fin.profit')}>
-        <Stat label={t('fin.beforeExpenses')} value={M(row.profit_before_expenses)}
-              hint={t('fin.beforeExpensesHint')} />
-        <Stat label={t('fin.beforePayroll')} value={M(row.profit_before_payroll)}
-              tone={Number(row.profit_before_payroll) >= 0 ? 'ok' : 'danger'} />
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Stat label={t('home.collected')} value={M(row.collected)} tone="ok"
+              hint={t('dm.rate', { rate })} />
+        <Stat label={t('home.expenses')} value={M(row.total_expenses)}
+              hint={t('home.expensesHint', { amount: M(row.payroll) })} />
         <Stat label={t('fin.netProfit')} value={M(row.profit_net)}
-              tone={net >= 0 ? 'ok' : 'danger'} hint={t('fin.netProfitHint')} />
-        <Stat label={t('fin.cashPosition')} value={M(row.cash_position)}
-              tone={cash >= 0 ? 'ok' : 'danger'} hint={t('fin.cashPositionHint')} />
-      </Section>
+              tone={net >= 0 ? 'ok' : 'danger'} hint={t('home.profitHint')} />
+      </div>
 
-      {/* --- QARZDORLIK VA KONTINGENT ------------------------- */}
-      <Section title={t('fin.debtAndStudents')}>
-        <Stat label={t('cls.totalDebt')} value={M(row.total_debt)} tone="danger"
-              hint={t('cls.totalDebtHint')} />
-        <Stat label={t('debt.advances')} value={M(row.advances)} tone="ok" />
-        <Stat label={t('dashboard.students')} value={String(row.students ?? 0)} />
-        <Stat
-          label={t('students.settled')}
-          value={`${row.paid_students ?? 0} / ${row.students ?? 0}`}
-          tone="ok"
-          bar={Number(row.students) > 0
-            ? 100 * Number(row.paid_students) / Number(row.students)
-            : 0}
-        />
-      </Section>
-
-      <Card>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-[13px] text-[var(--text-muted)]">
-            {t('fin.periodNote', { from: date(from, lang), to: date(to, lang) })}
-          </p>
+      <Card
+        padded={false}
+        title={t('rep.summary')}
+        action={
           <Button
             size="sm"
+            variant="ghost"
             onClick={() => exportTable(
               'moliyaviy-jamlanma',
               [
@@ -619,60 +571,51 @@ function FinancialSummary({ row, from, to }: {
           >
             {t('common.export')}
           </Button>
+        }
+      >
+        <div className="divide-y divide-[var(--border-soft)] text-[14px]">
+          <Line label={t('fin.expected')} value={M(row.charged)} />
+          <Line label={t('fin.collected')} value={M(row.collected)} tone="ok"
+                extra={<span className="w-24"><Progress value={rate} /></span>} />
+          <Line label={t('fin.remaining')} value={M(row.remaining)}
+                tone={N(row.remaining) > 0 ? 'danger' : undefined} muted />
+          <Line label={t('fin.payroll')} value={M(row.payroll)} />
+          <Line label={t('fin.otherExpenses')} value={M(row.other_expenses)} />
+          <Line label={t('fin.totalExpenses')} value={M(row.total_expenses)} strong />
+          <Line label={t('fin.netProfit')} value={M(row.profit_net)} strong
+                tone={net >= 0 ? 'ok' : 'danger'} />
+          <Line label={t('fin.cashPosition')} value={M(row.cash_position)}
+                tone={cash >= 0 ? 'ok' : 'danger'} hint={t('fin.cashPositionHint')} />
+          <Line label={t('cls.totalDebt')} value={M(row.total_debt)}
+                tone={N(row.total_debt) > 0 ? 'danger' : undefined} />
+          {N(row.advances) > 0 && <Line label={t('debt.advances')} value={M(row.advances)} muted />}
+          <Line label={t('students.settled')}
+                value={`${row.paid_students ?? 0} / ${row.students ?? 0}`} muted />
         </div>
       </Card>
     </div>
   );
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <div>
-      <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider
-        text-[var(--text-muted)]">
-        {title}
-      </h2>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{children}</div>
-    </div>
-  );
-}
-
-function Stat({ label, value, hint, tone = 'neutral', bar }: {
+/** Hisobot varag'i qatori: chapda nom, o'ngda summa. */
+function Line({ label, value, tone, strong, muted, hint, extra }: {
   label: string;
   value: string;
+  tone?: 'ok' | 'danger';
+  strong?: boolean;
+  muted?: boolean;
   hint?: string;
-  tone?: 'neutral' | 'ok' | 'warn' | 'danger';
-  bar?: number;
+  extra?: ReactNode;
 }) {
-  const color = {
-    neutral: 'text-[var(--text)]',
-    ok: 'text-[var(--ok)]',
-    warn: 'text-[var(--warn)]',
-    danger: 'text-[var(--danger)]',
-  }[tone];
-  const barColor = {
-    neutral: 'bg-brand-600',
-    ok: 'bg-[var(--ok)]',
-    warn: 'bg-[var(--warn)]',
-    danger: 'bg-[var(--danger)]',
-  }[tone];
-
+  const color = tone === 'ok' ? 'text-[var(--ok)]' : tone === 'danger' ? 'text-[var(--danger)]' : '';
   return (
-    <div className="rounded-lg border bg-[var(--bg)] p-3">
-      <div className="text-[11px] font-medium uppercase tracking-wide
-        text-[var(--text-muted)]">
-        {label}
+    <div className={`flex items-center gap-3 px-5 py-3 ${strong ? 'bg-[var(--bg-subtle)]' : ''}`}>
+      <div className="min-w-0 flex-1">
+        <div className={`${strong ? 'font-semibold' : muted ? 'text-[var(--text-muted)]' : ''}`}>{label}</div>
+        {hint && <div className="text-[12px] text-[var(--text-faint)]">{hint}</div>}
       </div>
-      <div className={`num mt-1 text-lg font-semibold ${color}`}>{value}</div>
-      {bar !== undefined && (
-        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--bg-inset)]">
-          <div className={`h-full rounded-full ${barColor}`}
-               style={{ width: `${Math.min(100, Math.max(0, bar))}%` }} />
-        </div>
-      )}
-      {hint && (
-        <div className="mt-1 text-[11px] text-[var(--text-faint)]">{hint}</div>
-      )}
+      {extra}
+      <div className={`num shrink-0 ${strong ? 'font-semibold' : ''} ${color}`}>{value}</div>
     </div>
   );
 }

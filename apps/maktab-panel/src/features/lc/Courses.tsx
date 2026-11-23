@@ -178,7 +178,7 @@ function CourseModal({ course, onClose }: { course: any; onClose: () => void }) 
           <div className="flex flex-wrap gap-1.5 pt-1">
             {COLORS.map((c) => (
               <button key={c} type="button" onClick={() => setF({ ...f, color: c })}
-                className={`h-7 w-7 rounded-full ring-offset-2 ring-offset-[var(--bg)] ${f.color === c ? 'ring-2 ring-brand-600' : ''}`}
+                className={`h-7 w-7 rounded-full ring-offset-2 ring-offset-[var(--bg)] ${f.color === c ? 'ring-2 ring-[var(--text)]' : ''}`}
                 style={{ background: c }} aria-label={c} />
             ))}
           </div>

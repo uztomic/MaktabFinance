@@ -214,7 +214,7 @@ function Stat({ label, value, tone }: {
 }) {
   return (
     <div>
-      <div className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
+      <div className="text-[11px] text-[var(--text-muted)]">
         {label}
       </div>
       <div className={`num text-lg font-semibold ${

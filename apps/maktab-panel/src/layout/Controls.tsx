@@ -74,7 +74,7 @@ export function ThemeToggle() {
       onClick={() => setTheme(next[theme])}
       title={t('common.theme')}
       aria-label={t('common.theme')}
-      className="flex h-9 w-9 items-center justify-center rounded-md border
+      className="flex h-9 w-9 items-center justify-center rounded-[10px] border
         bg-[var(--bg)] text-sm hover:bg-[var(--bg-inset)]"
     >
       <span aria-hidden="true">{icon}</span>

@@ -97,8 +97,8 @@ export default function Schedule() {
             <div className="mb-3 grid grid-cols-7 gap-1">
               {WEEKDAYS.map((d) => (
                 <button key={d} type="button" onClick={() => setDay(d)}
-                  className={`rounded-lg py-2 text-[12px] font-medium ${day === d ? 'bg-brand-900 text-white'
-                    : d === today ? 'border border-brand-600' : 'border'}`}>
+                  className={`rounded-lg py-2 text-[12px] font-medium ${day === d ? 'bg-[var(--primary)] text-[var(--on-primary)]'
+                    : d === today ? 'border border-[var(--text)]' : 'border'}`}>
                   {t(`lc.dowShort.${d}`)}
                   <span className="block text-[10px] opacity-70">{byDay.get(d)?.length ?? 0}</span>
                 </button>
@@ -107,7 +107,7 @@ export default function Schedule() {
             <ul className="space-y-2">
               {(byDay.get(day) ?? []).map(({ g, clash }) => (
                 <li key={g.id}>
-                  <Link to={`/guruhlar/${g.id}`} className="flex gap-3 rounded-xl border bg-[var(--bg)] p-3">
+                  <Link to={`/guruhlar/${g.id}`} className="flex gap-3 rounded-2xl border bg-[var(--bg)] p-3">
                     <span className="w-1 shrink-0 rounded-full" style={{ background: colorFor(g.course_id ?? g.id, g.courses?.color) }} />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
@@ -127,7 +127,7 @@ export default function Schedule() {
           </div>
 
           {/* --- Kompyuter: haftalik to'r ---------------------------- */}
-          <div className="hidden overflow-x-auto rounded-xl border bg-[var(--bg)] shadow-[var(--shadow-card)] md:block">
+          <div className="hidden overflow-x-auto rounded-2xl border bg-[var(--bg)] shadow-[var(--shadow-card)] md:block">
             <div className="grid min-w-[56rem]" style={{ gridTemplateColumns: '3.5rem repeat(7, minmax(0, 1fr))' }}>
               <div className="border-b bg-[var(--bg-subtle)]" />
               {WEEKDAYS.map((d) => (

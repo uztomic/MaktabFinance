@@ -25,6 +25,7 @@ import {
   currentPeriod, date, dateTime, type Lang, money, periodLabel, shiftPeriod,
 } from '@/lib/format';
 import { exportTable } from '@/lib/export';
+import { MonthPicker } from '@/ui/MonthPicker';
 import { PeriodLockButton } from './PeriodLock';
 import {
   Badge, Button, Card, EmptyState, ErrorState, Input, Loading, Money, Notice,
@@ -349,10 +350,9 @@ export default function Invoices() {
         subtitle={`${periodLabel(period, lang)} · ${t('common.showing', { count: list.length })}`}
         actions={
           <>
-            <Button size="sm" onClick={() => setPeriod(shiftPeriod(period, -1))}>←</Button>
-            <Button size="sm" onClick={() => setPeriod(shiftPeriod(period, 1))}>→</Button>
+            <MonthPicker value={period} onChange={setPeriod}
+                         max={shiftPeriod(currentPeriod(), 3)} />
             <Button
-              size="sm"
               disabled={list.length === 0}
               onClick={() => exportTable(
                 `hisoblanma-${period.slice(0, 7)}`,
@@ -481,15 +481,12 @@ export default function Invoices() {
             })}
           </Notice>
         )}
-        {hasPreliminary && (
-          <Notice tone="neutral">{t('inv.hasPreliminary')}</Notice>
-        )}
         {note && <Notice tone="ok">{note}</Notice>}
         {error && <Notice tone="danger">{(error as Error).message}</Notice>}
       </div>
 
-      {/* --- Davr bo'yicha hisob --------------------------------- */}
-      {diag.data && <PeriodSummary d={diag.data} rows={list} />}
+      {/* Davr foyda jamlanmasi bu yerdan olindi — u bosh sahifada va
+          hisobotlarda bor; bu sahifa faqat hisoblanmalar haqida. */}
 
       {/* --- Ro'yxat -------------------------------------------- */}
       {list.length > 0 && (
@@ -628,95 +625,6 @@ export default function Invoices() {
  *
  *  Sinf kesimi ham shu qoidaga bo'ysunadi.
  */
-function PeriodSummary({ d, rows }: {
-  d: Forecast;
-  //  Qurilgan hisoblanmalar — bo'sh bo'lsa prognozga o'tiladi.
-  rows: Array<{
-    total: number | null;
-    student?: { class_name?: string | null } | undefined;
-  }>;
-}) {
-  const t = useT();
-  const { lang } = useI18n();
-
-  const real = rows.length > 0;
-
-  const income = real
-    ? rows.reduce((s, r) => s + Number(r.total ?? 0), 0)
-    : d.expected_total;
-
-  const byClass = real
-    ? [...rows.reduce((m, r) => {
-        const k = r.student?.class_name || '—';
-        const cur = m.get(k) ?? { class_name: k, students: 0, total: 0 };
-        cur.students += 1;
-        cur.total += Number(r.total ?? 0);
-        return m.set(k, cur);
-      }, new Map<string, { class_name: string; students: number; total: number }>())
-        .values()].sort((a, b) => a.class_name.localeCompare(b.class_name))
-    : d.by_class;
-
-  //  Na daromad, na oylik — ko'rsatadigan narsa yo'q.
-  if (income === 0 && d.payroll_net === 0) return null;
-
-  return (
-    <Card className="mb-4">
-      <h2 className="mb-3 text-[13px] font-semibold">
-        {real ? t('inv.sum.titleReal') : t('inv.sum.titlePlan')}
-      </h2>
-
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Figure label={t('inv.sum.income')} value={money(income, lang)} />
-        <Figure
-          label={t('inv.sum.payroll')}
-          value={d.payroll_net > 0 ? `− ${money(d.payroll_net, lang)}` : '—'}
-          hint={d.payroll_missing > 0
-            ? t('inv.sum.payrollMissing', { count: d.payroll_missing })
-            : undefined}
-        />
-        <Figure
-          label={t('inv.sum.net')}
-          value={money(income - d.payroll_net, lang)}
-          strong
-        />
-      </div>
-
-      {!real && d.expected_service > 0 && (
-        <p className="mt-2 text-[12px] text-[var(--text-muted)]">
-          {t('inv.expectedDaily')}
-        </p>
-      )}
-
-      {byClass.length > 0 && (
-        <details className="mt-3">
-          <summary className="cursor-pointer text-[13px] font-medium">
-            {t('inv.sum.byClass', { count: byClass.length })}
-          </summary>
-          <div className="mt-2 overflow-x-auto">
-            <Table>
-              <thead>
-                <tr>
-                  <Th>{t('students.class')}</Th>
-                  <Th align="right">{t('nav.students')}</Th>
-                  <Th align="right">{t('common.total')}</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {byClass.map((c) => (
-                  <Tr key={c.class_name}>
-                    <Td>{c.class_name}</Td>
-                    <Td align="right" mono>{c.students}</Td>
-                    <Td align="right" mono>{money(c.total, lang)}</Td>
-                  </Tr>
-                ))}
-              </tbody>
-            </Table>
-          </div>
-        </details>
-      )}
-    </Card>
-  );
-}
 
 /**
  *  Shartnomadan farq qiladigan hisoblanmalar.
@@ -761,23 +669,6 @@ function StaleInvoices({ rows, lang, t }: {
   );
 }
 
-function Figure({ label, value, hint, strong }: {
-  label: string; value: string; hint?: string; strong?: boolean;
-}) {
-  return (
-    <div className="rounded-md bg-[var(--bg-subtle)] px-3 py-2">
-      <div className="text-[11px] uppercase text-[var(--text-muted)]">
-        {label}
-      </div>
-      <div className={`num ${strong ? 'text-lg font-semibold' : 'font-medium'}`}>
-        {value}
-      </div>
-      {hint && (
-        <div className="mt-0.5 text-[11px] text-[var(--warn)]">{hint}</div>
-      )}
-    </div>
-  );
-}
 
 function PeriodDiagnosis({ d, onGo }: {
   d: Forecast;
@@ -884,21 +775,21 @@ function StepButton({
       className={`rounded-lg border p-3 text-left transition-colors
         disabled:cursor-not-allowed disabled:opacity-50
         ${current
-          ? 'border-brand-700 bg-brand-900 text-white shadow-md hover:bg-brand-800'
+          ? 'bg-[var(--primary)] border-[var(--primary)] text-[var(--on-primary)] shadow-md hover:bg-[var(--primary-hover)]'
           : 'hover:bg-[var(--bg-subtle)]'}`}
     >
       <div className="flex items-center gap-2">
         <span className={`flex h-5 w-5 shrink-0 items-center justify-center
           rounded-full text-[11px] font-semibold
           ${state === 'done' ? 'bg-[var(--ok)] text-white'
-            : current ? 'bg-white/20 text-white'
+            : current ? 'border border-current text-[var(--on-primary)]'
             : 'bg-[var(--bg-inset)] text-[var(--text-muted)]'}`}>
           {state === 'done' ? '✓' : n}
         </span>
         <span className="text-sm font-medium">{label}</span>
       </div>
       <p className={`mt-1 pl-7 text-[11px] leading-snug
-        ${current ? 'text-white/80' : 'text-[var(--text-muted)]'}`}>
+        ${current ? 'text-[var(--on-primary)] opacity-80' : 'text-[var(--text-muted)]'}`}>
         {hint}
       </p>
     </button>

@@ -382,7 +382,7 @@ export default function Expenses() {
                     <div className="mt-1 flex items-center gap-2">
                       <div className="h-1 flex-1 overflow-hidden rounded-full
                         bg-[var(--bg-inset)]">
-                        <div className="h-full bg-brand-600"
+                        <div className="h-full bg-[var(--text)]"
                              style={{ width: `${pct}%` }} />
                       </div>
                       <span className="num w-8 text-right text-[11px]

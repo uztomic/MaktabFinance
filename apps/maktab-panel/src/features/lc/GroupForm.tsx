@@ -225,7 +225,7 @@ export function GroupForm({ open, group, currentPrice, onClose, onSaved }: Props
               return (
                 <button key={d} type="button" onClick={() => toggleDay(d)}
                   className={`h-9 min-w-11 rounded-lg border px-3 text-[13px] font-medium transition-colors
-                    ${on ? 'border-brand-700 bg-brand-900 text-white'
+                    ${on ? 'bg-[var(--primary)] border-[var(--primary)] text-[var(--on-primary)]'
                       : 'hover:bg-[var(--bg-inset)]'}`}
                   aria-pressed={on}>
                   {t(`lc.dowShort.${d}`)}

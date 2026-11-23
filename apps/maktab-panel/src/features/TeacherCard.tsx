@@ -969,7 +969,7 @@ function DismissModal({ mode, name, onClose, onSubmit, busy }: {
         </Field>
 
         {mode === 'delete' && (
-          <label className="flex items-start gap-2 rounded-md border
+          <label className="flex items-start gap-2 rounded-[10px] border
             bg-[var(--bg-subtle)] px-3 py-2.5 text-[13px]">
             <input
               type="checkbox"

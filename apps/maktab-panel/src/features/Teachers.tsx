@@ -6,6 +6,7 @@
 //  toifa, filiallar va ustamalar.
 // =====================================================================
 
+import { MonthPicker } from '@/ui/MonthPicker';
 import { type FormEvent, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
@@ -125,8 +126,7 @@ export default function Teachers() {
         subtitle={`${periodLabel(period, lang)} · ${t('common.showing', { count: list.data?.length ?? 0 })}`}
         actions={
           <>
-            <Button size="sm" onClick={() => setPeriod(shiftPeriod(period, -1))}>←</Button>
-            <Button size="sm" onClick={() => setPeriod(shiftPeriod(period, 1))}>→</Button>
+            <MonthPicker value={period} onChange={setPeriod} max={shiftPeriod(currentPeriod(), 1)} />
             {canEdit && (
               <Button variant="primary" onClick={() => setAdding(true)}>
                 {t('teachers.add')}

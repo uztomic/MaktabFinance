@@ -70,7 +70,7 @@ export function RolePermissionList({ role }: { role: string }) {
   const denied = (perms.data ?? []).filter((p) => !p.allowed);
 
   return (
-    <div className="rounded-md border bg-[var(--bg-subtle)] p-3">
+    <div className="rounded-[10px] border bg-[var(--bg-subtle)] p-3">
       <div className="mb-2 text-[12px] font-medium">
         {t('perm.roleGives', { count: allowed.length })}
       </div>
@@ -139,7 +139,7 @@ export function UserPermissionEditor({ userId, canEdit, onToggle, busy }: {
     <div className="space-y-2">
       <Notice tone="neutral">{t('perm.editorHint')}</Notice>
 
-      <div className="divide-y rounded-md border">
+      <div className="divide-y rounded-[10px] border">
         {rows.map((r) => {
           const changed = r.override !== null && r.override !== r.from_role;
           return (

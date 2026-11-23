@@ -341,13 +341,13 @@ export default function Users() {
             {t('users.passwordOnce')}
           </Notice>
           <div className="rounded-md bg-[var(--bg-inset)] px-3 py-2">
-            <div className="text-[11px] uppercase text-[var(--text-muted)]">
+            <div className="text-[11px] text-[var(--text-muted)]">
               {t('auth.login')}
             </div>
             <div className="num text-sm font-semibold">{created?.login}</div>
           </div>
           <div className="rounded-md bg-[var(--bg-inset)] px-3 py-2">
-            <div className="text-[11px] uppercase text-[var(--text-muted)]">
+            <div className="text-[11px] text-[var(--text-muted)]">
               {t('auth.password')}
             </div>
             <div className="num text-lg font-semibold tracking-wider">
@@ -460,7 +460,7 @@ function AddUserModal({
             </label>
 
             {!allBranches && (
-              <div className="mt-2 space-y-1 rounded-md border p-2">
+              <div className="mt-2 space-y-1 rounded-[10px] border p-2">
                 {branches.map((b) => (
                   <label key={b.id} className="flex items-center gap-2 text-[13px]">
                     <input

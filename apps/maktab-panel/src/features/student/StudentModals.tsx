@@ -226,7 +226,7 @@ export function ContractModal({
                     {t(`contracts.months${mode === 'other' ? 'Other' : mode}`)}
                   </div>
                   <div className={`mt-0.5 text-[11px]
-                    ${active ? 'text-brand-800' : 'text-[var(--text-muted)]'}`}>
+                    ${active ? 'text-[var(--text)]' : 'text-[var(--text-muted)]'}`}>
                     {t(`contracts.months${mode === 'other' ? 'Other' : mode}.hint`)}
                   </div>
                 </button>

@@ -142,7 +142,7 @@ export function SalaryPreview({
 
   if (base <= 0) {
     return (
-      <div className="rounded-md border border-dashed px-3 py-2.5
+      <div className="rounded-[10px] border border-dashed px-3 py-2.5
         text-[13px] text-[var(--text-muted)]">
         {/*  Soatbayda haftalik yuklamani to'ldirmaslik odatiy hol:
              oy oxirida haqiqiy soat kiritiladi va oylik o'shandan
@@ -156,9 +156,9 @@ export function SalaryPreview({
   }
 
   return (
-    <div className="rounded-md border bg-[var(--bg-subtle)] px-3 py-2.5">
+    <div className="rounded-[10px] border bg-[var(--bg-subtle)] px-3 py-2.5">
       <div className="mb-2 flex items-baseline justify-between">
-        <span className="text-[11px] font-medium uppercase tracking-wide
+        <span className="text-[11px] font-medium
           text-[var(--text-muted)]">
           {t('salary.preview')}
         </span>

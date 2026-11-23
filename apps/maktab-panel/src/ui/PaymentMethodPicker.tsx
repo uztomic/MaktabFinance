@@ -83,7 +83,7 @@ export function PaymentMethodPicker({
             disabled={disabled}
             onClick={() => onChange(m.id)}
             aria-pressed={active}
-            className={`rounded-md border px-2.5 py-1.5 text-[13px] transition-colors
+            className={`rounded-[10px] border px-2.5 py-1.5 text-[13px] transition-colors
               disabled:opacity-50
               ${active
                 ? 'border-[var(--sel-border)] bg-[var(--sel-bg)] text-[var(--sel-text)] font-medium'

@@ -68,7 +68,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
     return (
       <div className="mx-auto max-w-lg px-4 py-10">
-        <div className="rounded-lg border bg-[var(--bg)] p-5 shadow-sm">
+        <div className="rounded-2xl border bg-[var(--bg)] p-5 shadow-sm">
           <h2 className="text-base font-semibold">{labels.title}</h2>
           <p className="mt-1.5 text-[13px] text-[var(--text-muted)]">
             {labels.hint}
@@ -78,8 +78,8 @@ export class ErrorBoundary extends Component<Props, State> {
             <button
               type="button"
               onClick={() => this.setState({ error: null })}
-              className="rounded-md bg-brand-900 px-3 py-1.5 text-[13px]
-                font-medium text-white hover:opacity-90"
+              className="rounded-md bg-[var(--primary)] px-3 py-1.5 text-[13px]
+                font-medium text-[var(--on-primary)] hover:opacity-90"
             >
               {labels.retry}
             </button>
@@ -88,7 +88,7 @@ export class ErrorBoundary extends Component<Props, State> {
               //  To'liq qayta yuklash: eskirgan bo'lak yoki buzilgan
               //  holat shu bilan tozalanadi.
               onClick={() => { globalThis.location.href = '/'; }}
-              className="rounded-md border px-3 py-1.5 text-[13px]
+              className="rounded-[10px] border px-3 py-1.5 text-[13px]
                 hover:bg-[var(--bg-inset)]"
             >
               {labels.home}

@@ -89,8 +89,8 @@ export default function MyPayroll() {
         )
         : (
           <>
-            <div className="mb-4 rounded-lg border bg-[var(--bg)] px-4 py-4 text-center">
-              <div className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
+            <div className="mb-4 rounded-2xl border bg-[var(--bg)] px-4 py-4 text-center">
+              <div className="text-[11px] text-[var(--text-muted)]">
                 {t('payroll.net')}
               </div>
               <div className="num mt-1 text-3xl font-semibold">

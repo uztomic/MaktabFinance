@@ -121,7 +121,7 @@ export function ClassPicker({
   if (creating) {
     return (
       <Field label={label ?? t('students.class')} hint={t('cls.createHint')}>
-        <div className="space-y-2 rounded-md border border-dashed p-2.5">
+        <div className="space-y-2 rounded-[10px] border border-dashed p-2.5">
           <div className="grid gap-2 sm:grid-cols-[1fr_5rem]">
             <Input
               value={name}
@@ -170,14 +170,14 @@ export function ClassPicker({
   if (!options.isLoading && list.length === 0) {
     return (
       <Field label={label ?? t('students.class')}>
-        <div className="rounded-md border border-dashed px-2.5 py-2
+        <div className="rounded-[10px] border border-dashed px-2.5 py-2
           text-[13px] text-[var(--text-muted)]">
           {t('cls.none')}{' '}
           {canCreate && (
             <button
               type="button"
               onClick={() => setCreating(true)}
-              className="font-medium text-brand-700 hover:underline"
+              className="font-medium text-accent-700 hover:underline dark:text-accent-400"
             >
               {t('cls.createFirst')} →
             </button>

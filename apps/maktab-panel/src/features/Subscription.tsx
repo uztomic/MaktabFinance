@@ -472,7 +472,7 @@ function PayModal({ schoolId, suggested, onClose, onDone }: {
             type="file"
             accept="image/jpeg,image/png,image/webp,application/pdf"
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            className="w-full rounded-md border bg-[var(--bg)] px-2.5 py-1.5 text-sm"
+            className="w-full rounded-[10px] border bg-[var(--bg)] px-2.5 py-1.5 text-sm"
           />
         </Field>
 

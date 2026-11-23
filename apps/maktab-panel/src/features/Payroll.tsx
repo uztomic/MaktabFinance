@@ -9,6 +9,7 @@
 //  TZ 4.11.9 — tasdiqlangandan keyin avtomatik xarajat yaratiladi.
 // =====================================================================
 
+import { MonthPicker } from '@/ui/MonthPicker';
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
@@ -224,10 +225,7 @@ export default function Payroll() {
         subtitle={periodLabel(period, lang)}
         actions={
           <>
-            <Button size="sm" onClick={() => setPeriod(shiftPeriod(period, -1))}
-                    aria-label={t('payroll.prevMonth')}>←</Button>
-            <Button size="sm" onClick={() => setPeriod(shiftPeriod(period, 1))}
-                    aria-label={t('payroll.nextMonth')}>→</Button>
+            <MonthPicker value={period} onChange={setPeriod} max={shiftPeriod(currentPeriod(), 1)} />
             {data.length > 0 && (
               <Button size="sm" onClick={doExport}>{t('common.export')}</Button>
             )}
@@ -273,7 +271,7 @@ export default function Payroll() {
             { label: t('payroll.toApprove'), value: String(drafts.length), tone: drafts.length ? 'text-[var(--warn)]' : 'text-[var(--ok)]' },
           ].map((x) => (
             <Card key={x.label}>
-              <div className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">{x.label}</div>
+              <div className="text-[11px] font-medium text-[var(--text-muted)]">{x.label}</div>
               <div className={`mt-1 font-mono text-[17px] tabular-nums ${x.tone ?? ''}`}>{x.value}</div>
             </Card>
           ))}

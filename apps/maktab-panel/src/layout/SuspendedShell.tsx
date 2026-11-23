@@ -112,7 +112,7 @@ export default function SuspendedShell() {
             <div className="mt-3 flex flex-wrap gap-4 rounded-md
               bg-[var(--bg)] px-3 py-2">
               <div>
-                <p className="text-[11px] uppercase tracking-wide
+                <p className="text-[11px]
                   text-[var(--text-muted)]">{t('blocked.debt')}</p>
                 <p className="num text-lg font-semibold text-[var(--danger)]">
                   {money(debt.data.amount, lang)}
@@ -120,7 +120,7 @@ export default function SuspendedShell() {
               </div>
               {debt.data.days !== null && debt.data.days >= 0 && (
                 <div>
-                  <p className="text-[11px] uppercase tracking-wide
+                  <p className="text-[11px]
                     text-[var(--text-muted)]">{t('blocked.overdue')}</p>
                   <p className="num text-lg font-semibold text-[var(--danger)]">
                     {t('blocked.days', { days: String(debt.data.days) })}
@@ -151,7 +151,7 @@ export default function SuspendedShell() {
             onClick={() => setTab('sub')}
             className={`rounded-md px-3 py-1.5 text-[13px] ${
               tab === 'sub'
-                ? 'bg-brand-900 font-medium text-white'
+                ? 'bg-[var(--primary)] font-medium text-[var(--on-primary)]'
                 : 'border bg-[var(--bg)] hover:bg-[var(--bg-inset)]'
             }`}
           >
@@ -161,7 +161,7 @@ export default function SuspendedShell() {
             onClick={() => setTab('help')}
             className={`rounded-md px-3 py-1.5 text-[13px] ${
               tab === 'help'
-                ? 'bg-brand-900 font-medium text-white'
+                ? 'bg-[var(--primary)] font-medium text-[var(--on-primary)]'
                 : 'border bg-[var(--bg)] hover:bg-[var(--bg-inset)]'
             }`}
           >

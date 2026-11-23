@@ -177,7 +177,7 @@ export default function Groups() {
             const color = colorFor(g.course_id ?? g.id, g.courses?.color);
             return (
               <Link key={g.id} to={`/guruhlar/${g.id}`}
-                className="group relative overflow-hidden rounded-xl border bg-[var(--bg)] p-4
+                className="group relative overflow-hidden rounded-2xl border bg-[var(--bg)] p-4
                   shadow-[var(--shadow-card)] transition-shadow hover:shadow-md">
                 <span className="absolute inset-y-0 left-0 w-1" style={{ background: color }} />
                 <div className="flex items-start justify-between gap-2">
@@ -290,8 +290,8 @@ export function Kpi({ label, value, sub, tone }: {
   const color = tone === 'ok' ? 'text-[var(--ok)]' : tone === 'warn' ? 'text-[var(--warn)]'
     : tone === 'danger' ? 'text-[var(--danger)]' : '';
   return (
-    <div className="rounded-xl border bg-[var(--bg)] px-3 py-2.5 shadow-[var(--shadow-card)]">
-      <div className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">{label}</div>
+    <div className="rounded-2xl border bg-[var(--bg)] px-3 py-2.5 shadow-[var(--shadow-card)]">
+      <div className="text-[11px] font-medium text-[var(--text-muted)]">{label}</div>
       <div className={`num mt-0.5 text-lg font-semibold ${color}`}>{value}</div>
       {sub && <div className="text-[11px] text-[var(--text-faint)]">{sub}</div>}
     </div>

@@ -201,9 +201,9 @@ export function CalendarSettings({ editable }: { editable: boolean }) {
                 onClick={() => saveWeek.mutate(
                   on ? week.filter((x) => x !== d) : [...week, d],
                 )}
-                className={`rounded-md border px-3 py-1.5 text-[13px] ${
+                className={`rounded-[10px] border px-3 py-1.5 text-[13px] ${
                   on
-                    ? 'border-brand-600 bg-brand-600 font-medium text-white'
+                    ? 'bg-[var(--primary)] border-[var(--primary)] font-medium text-[var(--on-primary)]'
                     : 'text-[var(--text-muted)]'
                 } ${editable ? '' : 'opacity-60'}`}
               >

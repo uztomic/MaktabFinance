@@ -122,12 +122,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null);
 
     // --- Profil + maktab -------------------------------------------
-    const { data: user, error: uErr } = await supabase
+    //  `org_type` ustuni o'quv markazi migratsiyasi bilan keladi. Panel
+    //  bazadan OLDIN chiqarilsa ham kirish buzilmasin: ustun yo'q bo'lsa
+    //  (42703) so'rov usiz qaytariladi va tur "maktab" deb olinadi.
+    let { data: user, error: uErr } = await supabase
       .from('app_users')
       .select('id, school_id, role, full_name, email, phone, lang, all_branches, schools!inner(name, status, org_type)')
       .eq('id', uid)
       .is('deleted_at', null)
       .maybeSingle();
+    if (uErr?.code === '42703') {
+      const old = await supabase
+        .from('app_users')
+        .select('id, school_id, role, full_name, email, phone, lang, all_branches, schools!inner(name, status)')
+        .eq('id', uid)
+        .is('deleted_at', null)
+        .maybeSingle();
+      user = old.data as typeof user;
+      uErr = old.error;
+    }
 
     if (uErr) {
       setError(uErr.message);

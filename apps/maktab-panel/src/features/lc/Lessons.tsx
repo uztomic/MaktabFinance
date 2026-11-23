@@ -130,7 +130,7 @@ export default function Lessons() {
             return (
               <button key={s.id} type="button" disabled={!can}
                 onClick={() => setOpen({ ...s, group_name: s.group_name })}
-                className="relative overflow-hidden rounded-xl border bg-[var(--bg)] p-3 text-left
+                className="relative overflow-hidden rounded-2xl border bg-[var(--bg)] p-3 text-left
                   shadow-[var(--shadow-card)] transition-shadow enabled:hover:shadow-md disabled:opacity-70">
                 <span className="absolute inset-y-0 left-0 w-1" style={{ background: colorFor(s.course_id ?? s.group_id, s.color) }} />
                 <div className="flex items-start justify-between gap-2">
@@ -150,7 +150,7 @@ export default function Lessons() {
                 <div className="mt-2 text-[12px] text-[var(--text-muted)]">
                   {s.status === 'held'
                     ? t('lc.l.markedOf', { m: s.marked, n: s.students })
-                    : can ? <span className="font-medium text-brand-600 dark:text-accent-400">{t('lc.l.tapToMark')}</span>
+                    : can ? <span className="font-medium text-accent-700 dark:text-accent-400">{t('lc.l.tapToMark')}</span>
                       : t('lc.l.studentsN', { n: s.students })}
                 </div>
               </button>

@@ -234,7 +234,7 @@ export default function Leads() {
         <button
           type="button"
           onClick={() => setTodayOnly((v) => !v)}
-          className={`flex items-center gap-1.5 rounded-md border px-3 py-1.5
+          className={`flex items-center gap-1.5 rounded-[10px] border px-3 py-1.5
             text-[13px] font-medium transition-colors
             ${todayOnly
               ? 'border-[var(--sel-border)] bg-[var(--sel-bg)] text-[var(--sel-text)]'
@@ -325,7 +325,7 @@ export default function Leads() {
                         ? (
                           <div className="flex items-center justify-end gap-1.5">
                             <Link to={`/oquvchilar/${l.student_id}`}
-                                  className="text-[13px] text-brand-600
+                                  className="text-[13px] text-accent-700 dark:text-accent-400
                                     hover:underline">
                               {t('lead.converted')}
                             </Link>

@@ -140,7 +140,7 @@ export function ReceiptModal({
                 {data.branch_name}
               </div>
             )}
-            <div className="mt-2 text-[11px] uppercase tracking-wide
+            <div className="mt-2 text-[11px]
               text-[var(--text-muted)]">
               {t('receipt.title')}
             </div>
@@ -227,7 +227,7 @@ export function ReceiptModal({
             </button>
 
             {showCfg && (
-              <div className="mt-2 grid gap-2 rounded-md border
+              <div className="mt-2 grid gap-2 rounded-[10px] border
                 bg-[var(--bg-subtle)] p-3 sm:grid-cols-3">
                 <label className="text-[12px]">
                   <span className="block text-[var(--text-muted)]">

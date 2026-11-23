@@ -161,6 +161,15 @@ const BOTTOM_PRIORITY_LC = ['/', '/guruhlar', '/tolovlar', '/davomat', '/oquvchi
 /** Pastki panelda sig'adigan qisqa nomlar. */
 const SHORT: Record<string, string> = { '/': 'nav.home' };
 
+/** Logotip yo'li — panel "/functions/v1/panel/" ostida ham ishlasin. */
+const LOGO = `${import.meta.env.BASE_URL}logo-mark.svg`;
+
+/** Ism-familiyadan ikki harf: "Aliyev Vali" → "AV". */
+function initials(name?: string | null): string {
+  return (name ?? '').split(/\s+/).filter(Boolean).slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? '').join('') || '·';
+}
+
 export default function AppShell() {
   const t = useT();
   const { profile, can, mayWrite, permissions, signOut, impersonation } = useAuth();
@@ -201,8 +210,8 @@ export default function AppShell() {
   const payButton = (
     <button onClick={() => openQuickPay()} aria-label={t('quickpay.title')}
       className="flex min-h-14 flex-col items-center justify-center">
-      <span className="-mt-5 flex h-12 w-12 items-center justify-center rounded-full bg-brand-700
-        text-2xl leading-none text-white shadow-lg shadow-black/25 ring-4 ring-[var(--bg)] active:scale-95">+</span>
+      <span className="-mt-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--primary)]
+        text-2xl leading-none text-[var(--on-primary)] shadow-[var(--shadow-pop)] ring-4 ring-[var(--bg)] active:scale-95">+</span>
       <span className="mt-0.5 text-[10.5px] font-semibold text-[var(--text)]">{t('quickpay.short')}</span>
     </button>
   );
@@ -213,10 +222,10 @@ export default function AppShell() {
   };
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
-    `relative flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] transition-colors ${
+    `flex items-center gap-2.5 rounded-[10px] px-3 py-[7px] text-[13.5px] transition-colors ${
       isActive
-        ? 'bg-brand-800 font-medium text-white before:absolute before:-left-2 before:top-1.5 before:bottom-1.5 before:w-[3px] before:rounded-r before:bg-accent-400'
-        : 'text-brand-200 hover:bg-brand-800/60 hover:text-white'
+        ? 'bg-[var(--sel-bg)] font-medium text-[var(--text)]'
+        : 'text-[var(--text-muted)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text)]'
     }`;
 
   return (
@@ -268,31 +277,30 @@ export default function AppShell() {
              bir qismi edi va uzun ro'yxatda sahifa bilan birga
              ko'tarilib ketardi. */}
         <aside
-          className="no-print hidden h-full w-56 shrink-0 flex-col
-            overflow-hidden bg-brand-900 md:flex"
+          className="no-print hidden h-full w-60 shrink-0 flex-col
+            overflow-hidden border-r bg-[var(--bg)] md:flex"
         >
-          <div className="flex items-center gap-2 px-4 py-4">
-            <img src="/logo-mark.svg" alt="" className="h-7 w-7" width={28} height={28} />
+          <div className="flex items-center gap-2.5 px-5 pb-5 pt-5">
+            <img src={LOGO} alt="" className="h-8 w-8 rounded-[9px]" width={32} height={32} />
             <div className="min-w-0">
-              <div className="truncate text-sm font-semibold leading-tight text-white">
-                Uztomic <span className="text-accent-400">Edu</span>
+              <div className="truncate text-[15px] font-semibold leading-tight tracking-tight">
+                Uztomic <span className="text-accent-600 dark:text-accent-400">Edu</span>
               </div>
-              <div className="truncate text-[11px] leading-tight text-brand-300">
+              <div className="truncate text-[12px] leading-tight text-[var(--text-faint)]">
                 {profile?.school_name}
               </div>
             </div>
           </div>
 
-          <nav className="flex-1 space-y-4 overflow-y-auto px-2 pb-4">
+          <nav className="flex-1 space-y-5 overflow-y-auto px-3 pb-4">
             {groups.map((g, gi) => (
               <div key={g.labelKey || gi}>
                 {g.labelKey && (
-                  <div className="px-2.5 pb-1 text-[10px] font-semibold uppercase
-                    tracking-wider text-brand-400">
+                  <div className="px-3 pb-1.5 text-[11.5px] font-medium text-[var(--text-faint)]">
                     {t(g.labelKey)}
                   </div>
                 )}
-                <div className="space-y-0.5">
+                <div className="space-y-px">
                   {g.items.map((item) => (
                     <NavLink key={item.to} to={item.to} end={item.to === '/'}
                              className={linkClass}>
@@ -305,18 +313,28 @@ export default function AppShell() {
             ))}
           </nav>
 
-          <div className="border-t border-brand-800 px-3 py-3">
-            <div className="truncate text-[13px] font-medium text-white">
-              {profile?.full_name}
-            </div>
-            <div className="text-[11px] text-brand-300">
-              {profile && t(`role.${profile.role}`)}
+          <div className="flex items-center gap-2.5 border-t px-4 py-3">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full
+              bg-[var(--bg-inset)] text-[12px] font-semibold">
+              {initials(profile?.full_name)}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[13px] font-medium">{profile?.full_name}</div>
+              <div className="truncate text-[11.5px] text-[var(--text-faint)]">
+                {profile && t(`role.${profile.role}`)}
+              </div>
             </div>
             <button
               onClick={signOut}
-              className="mt-2 text-[12px] text-brand-300 hover:text-white hover:underline"
+              title={t('auth.logout')}
+              aria-label={t('auth.logout')}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-faint)]
+                hover:bg-[var(--bg-inset)] hover:text-[var(--text)]"
             >
-              {t('auth.logout')}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4" />
+              </svg>
             </button>
           </div>
         </aside>
@@ -325,30 +343,33 @@ export default function AppShell() {
         <div className="flex min-w-0 min-h-0 flex-1 flex-col">
           {/*  `sticky` olib tashlandi: sarlavha endi surilmaydigan
                qismda turadi va har doim ko'rinadi. */}
-          <header className="no-print z-20 flex shrink-0 items-center gap-2
-            border-b bg-[var(--bg)] px-3 py-2 md:px-5">
+          <header className="no-print z-20 flex h-14 shrink-0 items-center gap-2
+            border-b bg-[var(--bg)] px-3 md:px-6">
             <div className="flex items-center gap-2 md:hidden">
-              <img src="/logo-mark.svg" alt="" className="h-6 w-6" />
-              <span className="text-sm font-semibold">Uztomic Edu</span>
+              <img src={LOGO} alt="" className="h-7 w-7 rounded-lg" />
+              <span className="text-[15px] font-semibold tracking-tight">
+                Uztomic <span className="text-accent-600 dark:text-accent-400">Edu</span>
+              </span>
             </div>
 
             <button
               onClick={openSearch}
-              className="ml-2 hidden items-center gap-2 rounded-md border px-2.5
-                py-1.5 text-[13px] text-[var(--text-muted)]
-                hover:bg-[var(--bg-subtle)] sm:flex"
+              className="hidden h-9 w-72 items-center gap-2 rounded-[10px] bg-[var(--bg-inset)] px-3
+                text-[13px] text-[var(--text-faint)] hover:text-[var(--text-muted)] md:flex"
               title={t('search.placeholder')}
             >
-              <span>⌕</span>
-              <span>{t('search.short')}</span>
-              <kbd className="rounded border px-1 py-0.5 text-[10px]">Ctrl K</kbd>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+              <span className="flex-1 text-left">{t('search.short')}</span>
+              <kbd className="rounded-[10px] border bg-[var(--bg)] px-1.5 py-0.5 text-[10px]">Ctrl K</kbd>
             </button>
 
             <div className="ml-auto flex items-center gap-2">
               {/* Telefonda qidiruv — ikonka (Ctrl K yo'q). */}
               <button
                 onClick={openSearch}
-                className="flex h-9 w-9 items-center justify-center rounded-md border sm:hidden"
+                className="flex h-9 w-9 items-center justify-center rounded-[10px] text-[var(--text-muted)]
+                  hover:bg-[var(--bg-inset)] md:hidden"
                 aria-label={t('search.short')}
               >
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -365,13 +386,13 @@ export default function AppShell() {
             <div className="no-print fixed inset-0 z-40 md:hidden" role="dialog" aria-modal="true">
               <button className="absolute inset-0 bg-black/50" aria-label={t('common.close')}
                       onClick={() => setMenuOpen(false)} />
-              <nav className="absolute inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto rounded-t-2xl
-                bg-brand-900 px-3 pb-[calc(16px+env(safe-area-inset-bottom))] pt-2 shadow-2xl">
-                <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-brand-700" />
-                <div className="mb-3 flex items-center justify-between gap-3 px-1">
+              <nav className="absolute inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto rounded-t-3xl
+                bg-[var(--bg)] px-4 pb-[calc(16px+env(safe-area-inset-bottom))] pt-2 shadow-2xl">
+                <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-[var(--border)]" />
+                <div className="mb-4 flex items-center justify-between gap-3 px-1">
                   <div className="min-w-0">
-                    <div className="truncate text-[14px] font-semibold text-white">{profile?.full_name}</div>
-                    <div className="truncate text-[12px] text-brand-300">
+                    <div className="truncate text-[15px] font-semibold">{profile?.full_name}</div>
+                    <div className="truncate text-[12px] text-[var(--text-faint)]">
                       {profile && t(`role.${profile.role}`)} · {profile?.school_name}
                     </div>
                   </div>
@@ -380,8 +401,7 @@ export default function AppShell() {
                 {groups.map((g, gi) => (
                   <div key={g.labelKey || gi} className="mb-3 last:mb-0">
                     {g.labelKey && (
-                      <div className="px-1 pb-1.5 text-[10px] font-semibold uppercase
-                        tracking-wider text-brand-400">
+                      <div className="px-1 pb-1.5 text-[11.5px] font-medium text-[var(--text-faint)]">
                         {t(g.labelKey)}
                       </div>
                     )}
@@ -390,9 +410,9 @@ export default function AppShell() {
                         <NavLink
                           key={item.to} to={item.to} end={item.to === '/'}
                           onClick={() => setMenuOpen(false)}
-                          className={({ isActive }) => `flex min-h-11 items-center gap-2 rounded-lg px-3
-                            text-[13px] ${isActive ? 'bg-brand-700 font-medium text-white'
-                              : 'bg-brand-800/60 text-brand-100 active:bg-brand-800'}`}
+                          className={({ isActive }) => `flex min-h-11 items-center gap-2 rounded-xl px-3
+                            text-[13px] ${isActive ? 'bg-[var(--primary)] font-medium text-[var(--on-primary)]'
+                              : 'bg-[var(--bg-subtle)] text-[var(--text)] active:bg-[var(--bg-inset)]'}`}
                         >
                           {item.icon}
                           <span className="truncate">{t(item.labelKey)}</span>
@@ -402,17 +422,19 @@ export default function AppShell() {
                   </div>
                 ))}
                 <button onClick={signOut}
-                        className="mt-2 flex min-h-11 w-full items-center justify-center rounded-lg
-                          border border-brand-700 text-[13px] text-brand-200">
+                        className="mt-2 flex min-h-11 w-full items-center justify-center rounded-xl
+                          border text-[13px] text-[var(--danger)]">
                   {t('auth.logout')}
                 </button>
               </nav>
             </div>
           )}
 
-          <main className="flex-1 overflow-y-auto px-3 pb-6 pt-4 md:px-5 md:py-5
-            print:overflow-visible">
-            <Outlet />
+          <main className="flex-1 overflow-y-auto bg-[var(--bg-subtle)] px-3 pb-8 pt-4
+            md:px-8 md:py-7 print:overflow-visible">
+            <div className="mx-auto w-full max-w-[1280px]">
+              <Outlet />
+            </div>
           </main>
 
           {/* --- Pastki navigatsiya (telefon) ------------------------
@@ -426,7 +448,7 @@ export default function AppShell() {
                 {canPay && i === 2 && payButton}
                 <NavLink to={item.to} end={item.to === '/'}
                   className={({ isActive }) => `flex min-h-14 flex-col items-center justify-center gap-0.5
-                    px-1 text-[10.5px] leading-tight ${isActive ? 'font-semibold text-brand-600 dark:text-accent-400'
+                    px-1 text-[10.5px] leading-tight ${isActive ? 'font-semibold text-[var(--text)]'
                       : 'text-[var(--text-muted)]'}`}>
                   {item.icon}
                   <span className="max-w-full truncate">{t(SHORT[item.to] ?? item.labelKey)}</span>

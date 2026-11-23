@@ -1,298 +1,369 @@
 // =====================================================================
-//  Qarzdorlik (TZ 4.8).
+//  Qarzdorlik — OY bo'yicha, SINF kesimida (TZ 4.8).
 //
-//  TZ 4.8.1 — qarzdorlik hisoblanma va TASDIQLANGAN to'lovlar farqi
-//  sifatida real vaqtda hisoblanadi. Hech qayerda saqlanmaydi.
+//  Ilgari sahifada uchta mavhum raqam turardi ("Jami qarzdorlik",
+//  "Muddati o'tgan", "Ortiqcha to'lov") va uzun o'quvchilar jadvali.
+//  Buxgalterning haqiqiy savoliga — "shu oy kim to'ladi, kim yo'q?" —
+//  javob yo'q edi.
 //
-//  TZ 4.8.3 — muddati o'tgan qarzdorlik alohida ustunda.
-//  TZ 4.8.5 — ortiqcha to'lov (avans) alohida ro'yxatda.
+//  Endi:
+//    · yuqorida oy tanlanadi — istalgan oyni ko'rish mumkin;
+//    · har sinf bitta qator: nechta o'quvchi, nechtasi to'lagan,
+//      qisman, to'lamagan, qancha qoldi;
+//    · sinf ochilsa — har o'quvchi holati va QAYSI OYLAR uchun
+//      qarzdorligi (FIFO, lib/monthlyDebts.ts).
 // =====================================================================
 
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/auth/AuthProvider';
 import { useI18n, useT } from '@/i18n';
-import { date, money } from '@/lib/format';
+import { currentPeriod, money, periodLabel } from '@/lib/format';
 import { exportTable } from '@/lib/export';
 import { openQuickPay } from '@/lib/quickPayBus';
+import {
+  type ClassMonth, loadMonthlyDebts, type PayState, type StudentMonth,
+} from '@/lib/monthlyDebts';
 import { DebtReminderModal, type DebtTarget } from './DebtReminder';
 import {
-  Badge, Button, Card, EmptyState, ErrorState, Input, Loading, Money,
-  Notice, PageHeader, Select, Table, Td, Th, Tr,
+  Badge, Button, EmptyState, ErrorState, Input, Loading, Notice,
+  PageHeader, Progress, Segmented, Stat,
 } from '@/ui';
+import { MonthPicker } from '@/ui/MonthPicker';
+
+type Filter = 'all' | 'unpaid' | 'partial' | 'paid';
+
+const TONE: Record<PayState, 'ok' | 'warn' | 'danger' | 'neutral'> = {
+  paid: 'ok', partial: 'warn', unpaid: 'danger', none: 'neutral',
+};
 
 export default function Debts() {
   const t = useT();
   const { lang } = useI18n();
-  const { branchId, can, mayWrite } = useAuth();
+  const { branchId, can } = useAuth();
+  const [period, setPeriod] = useState(currentPeriod);
+  const [filter, setFilter] = useState<Filter>('all');
+  const [search, setSearch] = useState('');
+  const [open, setOpen] = useState<Set<string>>(new Set());
   const [remind, setRemind] = useState<DebtTarget | null>(null);
 
-  const [search, setSearch] = useState('');
-  const [onlyOverdue, setOnlyOverdue] = useState(false);
-  const [klass, setKlass] = useState('');
-
-  const debts = useQuery({
-    queryKey: ['debts', branchId],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('report_debts', {
-        p_branch_id: branchId ?? undefined,
-        p_min_amount: 0.01,
-      });
-      if (error) throw error;
-      return data ?? [];
-    },
+  const q = useQuery({
+    queryKey: ['debts-monthly', period, branchId],
+    queryFn: () => loadMonthlyDebts(period, branchId),
+    enabled: can('reports.view'),
   });
 
-  const advances = useQuery({
-    queryKey: ['advances', branchId],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('report_advances', {
-        p_branch_id: branchId ?? undefined,
-      });
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
-  const classes = useMemo(() => {
-    const s = new Set<string>();
-    for (const d of debts.data ?? []) if (d.class_name) s.add(d.class_name);
-    return [...s].sort();
-  }, [debts.data]);
-
-  const rows = useMemo(() => {
+  //  Qidiruv va filtr o'quvchi darajasida; sinf faqat ichida mos
+  //  o'quvchi qolsa ko'rinadi. Qidiruvda sinflar avtomatik ochiladi.
+  const view = useMemo(() => {
     const n = search.trim().toLowerCase();
-    return (debts.data ?? []).filter((d) => {
-      if (onlyOverdue && Number(d.overdue_amount ?? 0) <= 0) return false;
-      if (klass && d.class_name !== klass) return false;
-      if (!n) return true;
-      return d.full_name?.toLowerCase().includes(n) ||
-        d.payment_code?.toLowerCase().includes(n);
-    });
-  }, [debts.data, search, onlyOverdue, klass]);
+    return (q.data ?? []).map((c) => ({
+      ...c,
+      shown: c.students.filter((s) =>
+        (filter === 'all' || s.state === filter) &&
+        (!n || s.full_name.toLowerCase().includes(n) ||
+          (s.payment_code ?? '').toLowerCase().includes(n))),
+    })).filter((c) => c.shown.length > 0);
+  }, [q.data, filter, search]);
+
+  const totals = useMemo(() => {
+    const all = q.data ?? [];
+    const sum = (f: (c: ClassMonth) => number) => all.reduce((a, c) => a + f(c), 0);
+    return {
+      charged: sum((c) => c.charged),
+      paid: sum((c) => c.paid),
+      remaining: sum((c) => c.remaining),
+      students: sum((c) => c.students.length),
+      count: {
+        paid: sum((c) => c.count.paid),
+        partial: sum((c) => c.count.partial),
+        unpaid: sum((c) => c.count.unpaid),
+      },
+    };
+  }, [q.data]);
 
   if (!can('reports.view')) {
     return <Notice tone="danger">{t('common.noAccess')}</Notice>;
   }
-  if (debts.isLoading) return <Loading />;
-  if (debts.error) {
-    return <ErrorState message={(debts.error as Error).message}
-                       onRetry={() => debts.refetch()} />;
-  }
 
-  const totalDebt = rows.reduce((s, d) => s + Number(d.balance ?? 0), 0);
-  const totalOverdue = rows.reduce((s, d) => s + Number(d.overdue_amount ?? 0), 0);
-  const totalAdvance = (advances.data ?? [])
-    .reduce((s, a) => s + Number(a.advance ?? 0), 0);
+  const month = periodLabel(period, lang);
+  const rate = totals.charged > 0 ? Math.round((totals.paid / totals.charged) * 100) : 0;
+  const searching = search.trim() !== '';
+
+  const toggle = (key: string) => setOpen((s) => {
+    const n = new Set(s);
+    if (n.has(key)) n.delete(key); else n.add(key);
+    return n;
+  });
+
+  const doExport = () => exportTable(
+    `qarzdorlik-${period.slice(0, 7)}`,
+    [
+      { header: t('students.class'), value: (s: StudentMonth) => s.class_name },
+      { header: t('common.fullName'), value: (s: StudentMonth) => s.full_name },
+      { header: t('students.paymentCode'), value: (s: StudentMonth) => s.payment_code },
+      { header: t('dm.charged'), value: (s: StudentMonth) => s.charged, numeric: true },
+      { header: t('dm.paid'), value: (s: StudentMonth) => s.paid, numeric: true },
+      { header: t('dm.remaining'), value: (s: StudentMonth) => s.remaining, numeric: true },
+      { header: t('dm.status'), value: (s: StudentMonth) => t(`dm.state.${s.state}`) },
+      { header: t('dm.totalDebt'), value: (s: StudentMonth) => s.totalDebt, numeric: true },
+      {
+        header: t('dm.debtMonths'),
+        value: (s: StudentMonth) => s.unpaidPeriods.map((p) => periodLabel(p, lang)).join(', '),
+      },
+    ],
+    view.flatMap((c) => c.shown),
+    [t('debt.title'), month],
+  );
 
   return (
     <>
       <PageHeader
         title={t('debt.title')}
-        subtitle={t('common.showing', { count: rows.length })}
+        subtitle={t('dm.subtitle', { month, count: totals.students })}
         actions={
-          <Button
-            disabled={rows.length === 0}
-            onClick={() => exportTable(
-              'qarzdorlik',
-              [
-                { header: t('common.fullName'), value: (d) => d.full_name },
-                { header: t('students.class'), value: (d) => d.class_name },
-                { header: t('students.paymentCode'), value: (d) => d.payment_code },
-                { header: t('rep.charged'), value: (d) => d.charged, numeric: true },
-                { header: t('rep.collected'), value: (d) => d.paid, numeric: true },
-                { header: t('debt.title'), value: (d) => d.balance, numeric: true },
-                { header: t('debt.overdue'), value: (d) => d.overdue_amount, numeric: true },
-                { header: t('debt.daysOverdue'), value: (d) => d.days_overdue, numeric: true },
-              ],
-              rows,
-              [t('debt.title')],
-            )}
-          >
-            {t('common.export')}
-          </Button>
+          <>
+            <MonthPicker value={period} onChange={(p) => { setPeriod(p); setOpen(new Set()); }} />
+            <Button onClick={doExport} disabled={view.length === 0}>{t('common.export')}</Button>
+          </>
         }
       />
 
-      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
-        <Stat label={t('debt.totalDebt')} value={money(totalDebt, lang)} tone="danger" />
-        <Stat label={t('debt.overdue')} value={money(totalOverdue, lang)} tone="danger" />
-        <Stat label={t('debt.advances')} value={money(totalAdvance, lang)} tone="ok" />
-      </div>
+      {q.isLoading ? <Loading /> : q.error ? (
+        <ErrorState message={(q.error as Error).message} onRetry={() => q.refetch()} />
+      ) : totals.charged <= 0 && totals.students === 0 ? (
+        <EmptyState />
+      ) : (
+        <>
+          {/* --- Oy natijasi: 3 raqam, ortiqcha yo'q ------------------ */}
+          <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-3">
+            <Stat label={t('dm.charged')} value={money(totals.charged, lang)}
+                  hint={t('dm.studentsCount', { count: totals.students })} />
+            <Stat label={t('dm.paid')} value={money(totals.paid, lang)} tone="ok"
+                  hint={t('dm.rate', { rate })}>
+              <div className="mt-3"><Progress value={rate} /></div>
+            </Stat>
+            <div className="col-span-2 lg:col-span-1">
+              <Stat label={t('dm.remaining')} value={money(totals.remaining, lang)}
+                    tone={totals.remaining > 0 ? 'danger' : 'neutral'}
+                    hint={t('dm.counts', {
+                      unpaid: totals.count.unpaid, partial: totals.count.partial,
+                    })} />
+            </div>
+          </div>
 
-      <div className="mb-3 flex flex-wrap gap-2">
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={t('students.searchHint')}
-          className="max-w-xs"
-          type="search"
-        />
-        <Select value={klass} onChange={(e) => setKlass(e.target.value)}
-                className="w-auto">
-          <option value="">{t('common.all')}</option>
-          {classes.map((c) => <option key={c} value={c}>{c}</option>)}
-        </Select>
-        <label className="flex items-center gap-2 text-[13px]">
-          <input
-            type="checkbox"
-            checked={onlyOverdue}
-            onChange={(e) => setOnlyOverdue(e.target.checked)}
-            className="h-4 w-4"
-          />
-          {t('debt.onlyOverdue')}
-        </label>
-      </div>
+          {totals.charged <= 0 && (
+            <div className="mb-4">
+              <Notice tone="neutral">
+                <strong>{t('dm.noInvoices')}</strong> {t('dm.noInvoicesHint')}
+              </Notice>
+            </div>
+          )}
 
-      <Card padded={false}>
-        {rows.length === 0 ? <EmptyState title={t('debt.noDebt')} hint="" /> : (
-          <Table>
-            <thead>
-              <tr>
-                <Th>{t('common.fullName')}</Th>
-                <Th>{t('students.class')}</Th>
-                <Th>{t('students.paymentCode')}</Th>
-                <Th align="right">{t('rep.charged')}</Th>
-                <Th align="right">{t('rep.collected')}</Th>
-                <Th align="right">{t('debt.title')}</Th>
-                <Th align="right">{t('debt.overdue')}</Th>
-                <Th>{t('debt.oldestDue')}</Th>
-                <Th align="right">{t('common.actions')}</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((d) => (
-                <Tr key={d.student_id}>
-                  <Td>
-                    <Link to={`/oquvchilar/${d.student_id}`}
-                          className="font-medium hover:underline">
-                      {d.full_name}
-                    </Link>
-                  </Td>
-                  <Td className="text-[var(--text-muted)]">{d.class_name ?? '—'}</Td>
-                  <Td mono className="text-[var(--text-muted)]">{d.payment_code}</Td>
-                  <Td align="right" mono>{money(d.charged, lang)}</Td>
-                  <Td align="right" mono className="text-[var(--ok)]">
-                    {money(d.paid, lang)}
-                  </Td>
-                  <Td align="right" mono><Money value={d.balance} colored bold /></Td>
-                  <Td align="right" mono>
-                    {Number(d.overdue_amount) > 0
-                      ? <span className="text-[var(--danger)]">
-                          {money(d.overdue_amount, lang)}
-                        </span>
-                      : '—'}
-                  </Td>
-                  <Td>
-                    {d.oldest_due
-                      ? (
-                        <span className="flex items-center gap-1.5">
-                          <span className="num text-[12px] text-[var(--text-muted)]">
-                            {date(d.oldest_due, lang)}
-                          </span>
-                          {Number(d.days_overdue) > 0 && (
-                            <Badge tone="danger">
-                              +{d.days_overdue} {t('debt.daysOverdue')}
-                            </Badge>
-                          )}
-                        </span>
-                      )
-                      : '—'}
-                  </Td>
-                  <Td align="right">
-                    <div className="flex justify-end gap-1.5">
-                      <Button size="sm" onClick={() => setRemind({
-                        student_id: d.student_id!, full_name: d.full_name ?? '',
-                        class_name: d.class_name, payment_code: d.payment_code,
-                        balance: Number(d.balance ?? 0), oldest_due: d.oldest_due,
-                      })}>
-                        {t('remind.button')}
-                      </Button>
-                      {mayWrite('payments.create') && (
-                        <Button size="sm" variant="primary" onClick={() => openQuickPay({
-                          student_id: d.student_id!, full_name: d.full_name ?? '',
-                          class_name: d.class_name ?? null, payment_code: d.payment_code ?? null,
-                          balance: Number(d.balance ?? 0),
-                        })}>
-                          {t('quickpay.payButton')}
-                        </Button>
-                      )}
-                    </div>
-                  </Td>
-                </Tr>
+          {/* --- Filtr ----------------------------------------------- */}
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <Segmented<Filter>
+              value={filter}
+              onChange={setFilter}
+              options={[
+                { value: 'all', label: t('dm.all') },
+                { value: 'unpaid', label: <>{t('dm.state.unpaid')} <Count n={totals.count.unpaid} /></> },
+                { value: 'partial', label: <>{t('dm.state.partial')} <Count n={totals.count.partial} /></> },
+                { value: 'paid', label: <>{t('dm.state.paid')} <Count n={totals.count.paid} /></> },
+              ]}
+            />
+            <Input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t('dm.search')}
+              className="w-full sm:ml-auto sm:w-64"
+            />
+          </div>
+
+          {/* --- Sinflar --------------------------------------------- */}
+          {view.length === 0 ? (
+            <div className="rounded-2xl border bg-[var(--bg)]">
+              <EmptyState title={t('debt.noDebt')} hint="" />
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {view.map((c) => (
+                <ClassRow
+                  key={c.key}
+                  c={c}
+                  rows={c.shown}
+                  open={searching || open.has(c.key)}
+                  onToggle={() => toggle(c.key)}
+                  onRemind={setRemind}
+                />
               ))}
-            </tbody>
-            <tfoot>
-              <tr className="bg-[var(--bg-subtle)] font-semibold">
-                <Td>{t('common.total')}</Td>
-                <Td /><Td /><Td /><Td />
-                <Td align="right" mono className="text-[var(--danger)]">
-                  {money(totalDebt, lang)}
-                </Td>
-                <Td align="right" mono className="text-[var(--danger)]">
-                  {money(totalOverdue, lang)}
-                </Td>
-                <Td /><Td />
-              </tr>
-            </tfoot>
-          </Table>
-        )}
-      </Card>
-
-      {/* --- Avanslar (TZ 4.8.5) --------------------------------- */}
-      {(advances.data?.length ?? 0) > 0 && (
-        <Card title={t('debt.advances')} className="mt-4" padded={false}>
-          <Table>
-            <thead>
-              <tr>
-                <Th>{t('common.fullName')}</Th>
-                <Th>{t('students.class')}</Th>
-                <Th align="right">{t('students.advance')}</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {advances.data!.map((a) => (
-                <Tr key={a.student_id}>
-                  <Td>
-                    <Link to={`/oquvchilar/${a.student_id}`}
-                          className="font-medium hover:underline">
-                      {a.full_name}
-                    </Link>
-                  </Td>
-                  <Td className="text-[var(--text-muted)]">{a.class_name ?? '—'}</Td>
-                  <Td align="right" mono className="text-[var(--ok)]">
-                    {money(a.advance, lang)}
-                  </Td>
-                </Tr>
-              ))}
-            </tbody>
-          </Table>
-        </Card>
+            </div>
+          )}
+        </>
       )}
+
       {remind && <DebtReminderModal target={remind} onClose={() => setRemind(null)} />}
     </>
   );
 }
 
-function Stat({
-  label, value, tone,
+function Count({ n }: { n: number }) {
+  return <span className="num text-[11.5px] text-[var(--text-faint)]">{n}</span>;
+}
+
+// ---------------------------------------------------------------------
+
+function ClassRow({
+  c, rows, open, onToggle, onRemind,
 }: {
-  label: string;
-  value: string;
-  tone: 'ok' | 'danger';
+  c: ClassMonth;
+  rows: StudentMonth[];
+  open: boolean;
+  onToggle: () => void;
+  onRemind: (t: DebtTarget) => void;
 }) {
+  const t = useT();
+  const { lang } = useI18n();
+  const rate = c.charged > 0 ? Math.round((c.paid / c.charged) * 100) : 0;
+
   return (
-    <div className="rounded-lg border bg-[var(--bg)] px-4 py-3">
-      <div className="text-[11px] font-medium uppercase tracking-wide
-        text-[var(--text-muted)]">
-        {label}
+    <section className="overflow-hidden rounded-2xl border bg-[var(--bg)]">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="flex w-full items-center gap-3 px-4 py-3.5 text-left hover:bg-[var(--bg-subtle)] md:gap-5 md:px-5"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+             className={`shrink-0 text-[var(--text-faint)] transition-transform ${open ? 'rotate-90' : ''}`}>
+          <path d="m9 18 6-6-6-6" />
+        </svg>
+
+        <div className="min-w-0 flex-1 md:flex-none md:basis-48">
+          <div className="truncate text-[15px] font-semibold tracking-tight">{c.name}</div>
+          <div className="text-[12px] text-[var(--text-faint)]">
+            {t('dm.studentsCount', { count: c.students.length })}
+          </div>
+        </div>
+
+        <div className="hidden flex-1 items-center gap-2 md:flex">
+          <Pill tone="ok" n={c.count.paid} label={t('dm.state.paid')} />
+          <Pill tone="warn" n={c.count.partial} label={t('dm.state.partial')} />
+          <Pill tone="danger" n={c.count.unpaid} label={t('dm.state.unpaid')} />
+        </div>
+
+        <div className="hidden w-40 lg:block">
+          <Progress value={rate} />
+          <div className="num mt-1 text-[11.5px] text-[var(--text-faint)]">
+            {t('dm.rate', { rate })}
+          </div>
+        </div>
+
+        <div className="shrink-0 text-right">
+          <div className={`num text-[15px] font-semibold ${c.remaining > 0 ? 'text-[var(--danger)]' : 'text-[var(--ok)]'}`}>
+            {c.remaining > 0 ? money(c.remaining, lang) : '✓'}
+          </div>
+          <div className="text-[11.5px] text-[var(--text-faint)] md:hidden">
+            <span className="text-[var(--ok)]">{c.count.paid}</span>
+            {' · '}<span className="text-[var(--warn)]">{c.count.partial}</span>
+            {' · '}<span className="text-[var(--danger)]">{c.count.unpaid}</span>
+          </div>
+          <div className="hidden text-[11.5px] text-[var(--text-faint)] md:block">
+            {t('dm.remaining')}
+          </div>
+        </div>
+      </button>
+
+      {open && (
+        <div className="border-t border-[var(--border-soft)]">
+          {rows.map((s) => <StudentRow key={s.student_id} s={s} onRemind={onRemind} />)}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function Pill({ tone, n, label }: { tone: 'ok' | 'warn' | 'danger'; n: number; label: string }) {
+  if (n === 0) return null;
+  return <Badge tone={tone}><span className="num mr-1 font-semibold">{n}</span>{label}</Badge>;
+}
+
+function StudentRow({ s, onRemind }: { s: StudentMonth; onRemind: (t: DebtTarget) => void }) {
+  const t = useT();
+  const { lang } = useI18n();
+  const { mayWrite } = useAuth();
+  const owes = s.totalDebt > 0.009;
+
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-[var(--border-soft)]
+      px-4 py-3 last:border-b-0 md:flex-nowrap md:px-5 md:pl-12">
+      {/* Ism va holat */}
+      <div className="min-w-0 flex-1 md:basis-56 md:flex-none">
+        <Link to={`/oquvchilar/${s.student_id}`} className="block truncate text-[14px] font-medium hover:underline">
+          {s.full_name}
+        </Link>
+        <div className="mt-0.5 flex items-center gap-2">
+          <Badge tone={TONE[s.state]}>{t(`dm.state.${s.state}`)}</Badge>
+          {s.payment_code && (
+            <span className="num text-[11.5px] text-[var(--text-faint)]">{s.payment_code}</span>
+          )}
+        </div>
       </div>
-      <div className={`num mt-1 text-xl font-semibold tracking-tight
-        ${tone === 'ok' ? 'text-[var(--ok)]' : 'text-[var(--danger)]'}`}>
-        {value}
+
+      {/* Shu oy: to'langan / hisoblangan */}
+      <div className="w-[46%] md:w-44">
+        <div className="text-[11.5px] text-[var(--text-faint)]">{t('dm.thisMonth')}</div>
+        <div className="num text-[13px]">
+          {s.charged > 0
+            ? <><span className={s.state === 'paid' ? 'text-[var(--ok)]' : ''}>{money(s.paid, lang)}</span>
+                <span className="text-[var(--text-faint)]"> / {money(s.charged, lang)}</span></>
+            : <span className="text-[var(--text-faint)]">—</span>}
+        </div>
       </div>
+
+      {/* Qarz oylari */}
+      <div className="min-w-0 flex-1">
+        <div className="text-[11.5px] text-[var(--text-faint)]">
+          {owes ? <>{t('dm.totalDebt')}: <span className="num font-medium text-[var(--danger)]">{money(s.totalDebt, lang)}</span></>
+            : s.totalDebt < -0.009
+            ? <>{t('dm.advance')}: <span className="num font-medium text-[var(--ok)]">{money(-s.totalDebt, lang)}</span></>
+            : t('dm.noDebt')}
+        </div>
+        {s.unpaidPeriods.length > 0 && (
+          <div className="mt-1 flex flex-wrap gap-1">
+            {s.unpaidPeriods.map((p) => (
+              <span key={p} className="rounded-md bg-[var(--danger-bg)] px-1.5 py-0.5 text-[11px] text-[var(--danger)]">
+                {periodLabel(p, lang)}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Amallar */}
+      {owes && (
+        <div className="flex shrink-0 gap-1.5">
+          <Button size="sm" variant="ghost" onClick={() => onRemind({
+            student_id: s.student_id, full_name: s.full_name,
+            class_name: s.class_name, payment_code: s.payment_code,
+            balance: s.totalDebt, oldest_due: s.unpaidPeriods[0] ?? null,
+          })}>
+            {t('remind.button')}
+          </Button>
+          {mayWrite('payments.create') && (
+            <Button size="sm" variant="primary" onClick={() => openQuickPay({
+              student_id: s.student_id, full_name: s.full_name,
+              class_name: s.class_name, payment_code: s.payment_code,
+              balance: s.totalDebt,
+            })}>
+              {t('quickpay.payButton')}
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

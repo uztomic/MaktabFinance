@@ -150,12 +150,12 @@ export default function LeadsFunnel() {
     return (
       <div key={l.id} draggable={canEdit}
         onDragStart={(e) => { e.dataTransfer.setData('text/plain', l.id); e.dataTransfer.effectAllowed = 'move'; }}
-        className="group rounded-lg border bg-[var(--bg)] p-2.5 shadow-sm transition-shadow hover:shadow-md">
+        className="group rounded-2xl border bg-[var(--bg)] p-2.5 shadow-sm transition-shadow hover:shadow-md">
         <div className="flex items-start justify-between gap-2">
           <button type="button" className="min-w-0 text-left" onClick={() => setEditing(l)}>
             <div className="truncate text-[13px] font-semibold">{l.full_name}</div>
             <a href={`tel:+${l.phone}`} onClick={(e) => e.stopPropagation()}
-               className="num text-[12px] text-brand-600 hover:underline dark:text-accent-400">{formatPhone(l.phone)}</a>
+               className="num text-[12px] text-accent-700 hover:underline dark:text-accent-400 dark:text-accent-400">{formatPhone(l.phone)}</a>
           </button>
           {due && <Badge tone="warn">{t('lc.f.callToday')}</Badge>}
         </div>
@@ -179,7 +179,7 @@ export default function LeadsFunnel() {
         {canEdit && (
           <div className="mt-2 flex flex-wrap items-center gap-1">
             {l.student_id ? (
-              <Link to={`/oquvchilar/${l.student_id}`} className="text-[12px] text-brand-600 hover:underline dark:text-accent-400">
+              <Link to={`/oquvchilar/${l.student_id}`} className="text-[12px] text-accent-700 hover:underline dark:text-accent-400 dark:text-accent-400">
                 {t('lc.f.openStudent')}
               </Link>
             ) : l.status !== 'rejected' && (
@@ -235,10 +235,10 @@ export default function LeadsFunnel() {
             onDragLeave={() => setDragOver((v) => (v === c ? null : v))}
             onDrop={drop(c)}
             className={`flex min-h-[60vh] flex-col rounded-xl border bg-[var(--bg-subtle)] transition-colors
-              ${dragOver === c ? 'border-brand-500 bg-[var(--sel-bg)]' : ''}`}>
+              ${dragOver === c ? 'border-[var(--text)] bg-[var(--sel-bg)]' : ''}`}>
             <header className="flex items-center gap-2 px-3 py-2">
               <span className={`h-2 w-2 rounded-full ${COL_TONE[c]}`} />
-              <span className="text-[12px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">{t(`lc.f.col.${c}`)}</span>
+              <span className="text-[12px] font-semibold text-[var(--text-muted)]">{t(`lc.f.col.${c}`)}</span>
               <span className="ml-auto num text-[12px] text-[var(--text-faint)]">{byCol.get(c)?.length ?? 0}</span>
             </header>
             <div className="flex-1 space-y-2 overflow-y-auto px-2 pb-2">

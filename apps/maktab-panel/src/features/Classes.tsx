@@ -203,7 +203,7 @@ export default function Classes() {
   }) => (
     <Th align={align}>
       <button type="button" onClick={() => sort.toggle(k)}
-              className="font-semibold uppercase hover:text-[var(--text)]">
+              className="font-medium hover:text-[var(--text)]">
         {children}{sort.indicator(k)}
       </button>
     </Th>
@@ -252,10 +252,10 @@ export default function Classes() {
 
       {/* Moliyaviy ustunlar shu oraliq bo'yicha hisoblanadi.
           O'quvchilar soni esa BUGUNGI holat — u sanaga bog'liq emas. */}
-      <Card className="mb-3">
+      <div className="mb-4">
         <DateRangePicker range={range} onPreset={setPreset} onCustom={setCustom}
                          compact />
-      </Card>
+      </div>
 
       <Card padded={false}>
         {list.length === 0

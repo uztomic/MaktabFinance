@@ -125,21 +125,21 @@ export function TeacherCredentials({ data, onClose }: {
         <Notice tone="warn">{t('teachers.loginCreatedHint')}</Notice>
 
         <div className="rounded-md bg-[var(--bg-inset)] px-3 py-2">
-          <div className="text-[11px] uppercase text-[var(--text-muted)]">
+          <div className="text-[11px] text-[var(--text-muted)]">
             {t('common.fullName')}
           </div>
           <div className="font-medium">{data.full_name}</div>
         </div>
 
         <div className="rounded-md bg-[var(--bg-inset)] px-3 py-2">
-          <div className="text-[11px] uppercase text-[var(--text-muted)]">
+          <div className="text-[11px] text-[var(--text-muted)]">
             {t('auth.login')}
           </div>
           <div className="num text-lg font-semibold">{data.login}</div>
         </div>
 
         <div className="rounded-md bg-[var(--bg-inset)] px-3 py-2">
-          <div className="text-[11px] uppercase text-[var(--text-muted)]">
+          <div className="text-[11px] text-[var(--text-muted)]">
             {t('auth.password')}
           </div>
           <div className="num text-lg font-semibold">{data.password}</div>
@@ -408,7 +408,7 @@ export function TeacherModal({
         </Field>
 
         {!existing && (
-          <label className="flex items-start gap-2 rounded-md border
+          <label className="flex items-start gap-2 rounded-[10px] border
             bg-[var(--bg-subtle)] px-3 py-2.5 text-[13px]">
             <input
               type="checkbox"

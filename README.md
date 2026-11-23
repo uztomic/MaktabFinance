@@ -1,8 +1,8 @@
 <div align="center">
-  <img src="apps/maktab-panel/public/logo-full.svg" alt="MaktabFinance — Uztomic Solutions" width="420">
+  <img src="apps/maktab-panel/public/logo-full.svg" alt="Uztomic Edu" width="420">
 </div>
 
-# MaktabFinance
+# Uztomic Edu
 
 Xususiy maktablar uchun moliya va boshqaruv tizimi.
 Texnik topshiriq: `TZ-maktab-moliya-tizimi.md` (v2.0).

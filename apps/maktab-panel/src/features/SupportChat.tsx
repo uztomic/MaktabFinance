@@ -178,12 +178,12 @@ export default function SupportChat() {
                         system
                           ? 'w-full bg-[var(--bg-inset)] text-center text-[var(--text-muted)]'
                           : mine
-                            ? 'bg-brand-900 text-white'
+                            ? 'bg-[var(--primary)] text-[var(--on-primary)]'
                             : 'border bg-[var(--bg)]'
                       }`}>
                         <p className="whitespace-pre-wrap">{m.body as string}</p>
                         <p className={`mt-1 text-[11px] ${
-                          mine && !system ? 'text-brand-300' : 'text-[var(--text-faint)]'
+                          mine && !system ? 'opacity-70' : 'text-[var(--text-faint)]'
                         }`}>
                           {system
                             ? `${t('help.system')} · `
@@ -283,8 +283,8 @@ function NewThreadModal({ schoolName, onClose, onDone }: {
             value={body}
             onChange={(e) => setBody(e.target.value)}
             rows={4}
-            className="w-full rounded-md border bg-[var(--bg)] px-2.5 py-2 text-sm
-              text-[var(--text)] focus:border-brand-500"
+            className="w-full rounded-[10px] border bg-[var(--bg)] px-2.5 py-2 text-sm
+              text-[var(--text)] focus:border-[var(--text)]"
             required
           />
         </Field>

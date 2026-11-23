@@ -309,7 +309,7 @@ export function CommandPalette() {
             : groups.map((g) => (
               <div key={g.name} className="mb-1 last:mb-0">
                 <div className="px-2.5 pb-0.5 pt-1.5 text-[10px] font-semibold
-                  uppercase tracking-wider text-[var(--text-faint)]">
+                  text-[var(--text-faint)]">
                   {g.name}
                 </div>
                 {g.items.map(({ hit, index }) => (

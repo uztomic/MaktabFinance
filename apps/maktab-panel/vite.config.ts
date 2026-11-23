@@ -40,7 +40,7 @@ export default defineConfig({
         short_name: 'Uztomic Edu',
         description: "Bog'cha, maktab va o'quv markazi uchun moliya va boshqaruv tizimi",
         lang: 'uz',
-        theme_color: '#1E2B3D',
+        theme_color: '#0B0D11',
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',

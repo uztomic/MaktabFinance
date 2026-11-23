@@ -325,10 +325,10 @@ export default function PayrollFormula({ editable }: { editable: boolean }) {
                   <span
                     className={`flex h-4 w-4 shrink-0 items-center justify-center
                       rounded-full border-2
-                      ${active ? 'border-brand-700' : 'border-[var(--text-faint)]'}`}
+                      ${active ? 'border-[var(--text)]' : 'border-[var(--text-faint)]'}`}
                   >
                     {active && (
-                      <span className="h-2 w-2 rounded-full bg-brand-700" />
+                      <span className="h-2 w-2 rounded-full bg-[var(--text)]" />
                     )}
                   </span>
                   <span className={`text-sm font-medium
@@ -337,7 +337,7 @@ export default function PayrollFormula({ editable }: { editable: boolean }) {
                   </span>
                 </div>
                 <p className={`mt-1 pl-6 text-[12px]
-                  ${active ? 'text-brand-800' : 'text-[var(--text-muted)]'}`}>
+                  ${active ? 'text-[var(--text)]' : 'text-[var(--text-muted)]'}`}>
                   {t(`pf.base.${bt}.hint`)}
                 </p>
               </button>

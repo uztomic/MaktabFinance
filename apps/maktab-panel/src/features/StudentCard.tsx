@@ -490,24 +490,24 @@ export default function StudentCard() {
 
       {/* --- Balans ------------------------------------------------- */}
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <div className="rounded-lg border bg-[var(--bg)] px-4 py-3">
-          <div className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
+        <div className="rounded-2xl border bg-[var(--bg)] px-4 py-3">
+          <div className="text-[11px] text-[var(--text-muted)]">
             {t('dashboard.charged')}
           </div>
           <div className="num mt-1 text-lg font-semibold">
             {money(balance.data?.charged, lang)}
           </div>
         </div>
-        <div className="rounded-lg border bg-[var(--bg)] px-4 py-3">
-          <div className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
+        <div className="rounded-2xl border bg-[var(--bg)] px-4 py-3">
+          <div className="text-[11px] text-[var(--text-muted)]">
             {t('dashboard.collected')}
           </div>
           <div className="num mt-1 text-lg font-semibold text-[var(--ok)]">
             {money(balance.data?.paid, lang)}
           </div>
         </div>
-        <div className="rounded-lg border bg-[var(--bg)] px-4 py-3">
-          <div className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
+        <div className="rounded-2xl border bg-[var(--bg)] px-4 py-3">
+          <div className="text-[11px] text-[var(--text-muted)]">
             {bal < 0 ? t('students.advance') : t('students.debt')}
           </div>
           <div className={`num mt-1 text-lg font-semibold ${
@@ -523,8 +523,8 @@ export default function StudentCard() {
             </div>
           )}
         </div>
-        <div className="rounded-lg border bg-[var(--bg)] px-4 py-3">
-          <div className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
+        <div className="rounded-2xl border bg-[var(--bg)] px-4 py-3">
+          <div className="text-[11px] text-[var(--text-muted)]">
             {t('students.paymentsCount')}
           </div>
           <div className="num mt-1 text-lg font-semibold">
@@ -1189,7 +1189,7 @@ function ProofImageButton({ path }: { path: string }) {
   if (url) {
     return (
       <a href={url} target="_blank" rel="noreferrer"
-         className="text-[12px] text-brand-700 hover:underline">
+         className="text-[12px] text-accent-700 hover:underline dark:text-accent-400">
         {t('pay.openFullSize')} ↗
       </a>
     );
@@ -1622,7 +1622,7 @@ export function CashPaymentModal({
         </label>
 
         {mixed && (
-          <div className="space-y-2 rounded-md border bg-[var(--bg-subtle)] p-3">
+          <div className="space-y-2 rounded-[10px] border bg-[var(--bg-subtle)] p-3">
             <p className="text-[12px] text-[var(--text-muted)]">
               {t('pay.mixedHint')}
             </p>
@@ -1662,7 +1662,7 @@ export function CashPaymentModal({
             </label>
 
             {discountOn && (
-              <div className="space-y-2 rounded-md border bg-[var(--bg-subtle)] p-3">
+              <div className="space-y-2 rounded-[10px] border bg-[var(--bg-subtle)] p-3">
                 <p className="text-[12px] text-[var(--text-muted)]">
                   {t('pay.discountHint')}
                 </p>
@@ -1750,7 +1750,7 @@ export function DeleteConfirmModal({
                  autoFocus />
         </Field>
 
-        <label className="flex items-start gap-2 rounded-md border
+        <label className="flex items-start gap-2 rounded-[10px] border
           bg-[var(--bg-subtle)] px-3 py-2.5 text-[13px]">
           <input
             type="checkbox"

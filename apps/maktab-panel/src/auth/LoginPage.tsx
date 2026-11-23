@@ -91,15 +91,15 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           <div className="mb-8 flex flex-col items-center text-center">
             <img
-              src="/logo-mark.svg"
+              src={`${import.meta.env.BASE_URL}logo-mark.svg`}
               alt=""
-              className="h-16 w-16"
+              className="h-14 w-14 rounded-2xl"
               width={64}
               height={64}
             />
-            <h1 className="mt-3 text-lg font-semibold tracking-tight">
+            <h1 className="mt-4 text-2xl font-semibold tracking-tight">
               <span className="text-[var(--brand-text)]">Uztomic </span>
-              <span className="text-accent-600">Edu</span>
+              <span className="text-accent-600 dark:text-accent-400">Edu</span>
             </h1>
             <p className="mt-0.5 text-[13px] text-[var(--text-muted)]">
               {t('app.tagline')}
@@ -108,9 +108,9 @@ export default function LoginPage() {
 
           <form
             onSubmit={onSubmit}
-            className="rounded-lg border bg-[var(--bg)] p-5 shadow-sm"
+            className="rounded-3xl border bg-[var(--bg)] p-6 shadow-[var(--shadow-pop)]"
           >
-            <h2 className="mb-1 text-sm font-semibold">{t('auth.title')}</h2>
+            <h2 className="mb-1 text-base font-semibold">{t('auth.title')}</h2>
             <p className="mb-4 text-[13px] text-[var(--text-muted)]">
               {t('auth.subtitle')}
             </p>

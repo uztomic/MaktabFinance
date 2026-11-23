@@ -96,7 +96,7 @@ export default function ResetPasswordPage() {
       <div className="flex flex-1 items-start justify-center px-4 pb-16 pt-[6vh]">
         <div className="w-full max-w-sm">
           <div className="mb-8 flex flex-col items-center text-center">
-            <img src="/logo-mark.svg" alt="" className="h-16 w-16"
+            <img src={`${import.meta.env.BASE_URL}logo-mark.svg`} alt="" className="h-14 w-14 rounded-2xl"
                  width={64} height={64} />
             <h1 className="mt-3 text-lg font-semibold tracking-tight">
               <span className="text-[var(--brand-text)]">Uztomic </span>
@@ -104,7 +104,7 @@ export default function ResetPasswordPage() {
             </h1>
           </div>
 
-          <div className="rounded-lg border bg-[var(--bg)] p-5 shadow-sm">
+          <div className="rounded-2xl border bg-[var(--bg)] p-5 shadow-sm">
             <h2 className="mb-1 text-sm font-semibold">
               {t('auth.newPassword')}
             </h2>

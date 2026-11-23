@@ -64,7 +64,7 @@ export default function Payments() {
             className={`-mb-px flex items-center gap-1.5 border-b-2 px-3 py-2
               text-[13px] font-medium transition-colors
               ${tab === x.id
-                ? 'border-brand-700 text-[var(--text)]'
+                ? 'border-[var(--text)] text-[var(--text)]'
                 : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text)]'}`}
           >
             {x.label}
@@ -257,7 +257,7 @@ function AllPayments() {
   }) => (
     <Th align={align}>
       <button type="button" onClick={() => sort.toggle(k)}
-              className="font-semibold uppercase hover:text-[var(--text)]">
+              className="font-medium hover:text-[var(--text)]">
         {children}{sort.indicator(k)}
       </button>
     </Th>
@@ -996,7 +996,7 @@ function ProofReviewModal({
                      className="max-h-[28rem] w-full rounded border object-contain
                        bg-[var(--bg-inset)]" />
                 <a href={imageUrl} target="_blank" rel="noreferrer"
-                   className="text-[12px] text-brand-700 hover:underline">
+                   className="text-[12px] text-accent-700 hover:underline dark:text-accent-400">
                   {t('pay.openFullSize')} ↗
                 </a>
               </div>

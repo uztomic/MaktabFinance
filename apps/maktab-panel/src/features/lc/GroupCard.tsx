@@ -84,7 +84,7 @@ export default function GroupCard() {
   if (!can('students.manage')) return <Notice tone="danger">{t('common.noAccess')}</Notice>;
   if (group.isLoading) return <Loading />;
   if (group.error) return <ErrorState message={(group.error as Error).message} onRetry={() => group.refetch()} />;
-  if (!g) return <EmptyState title={t('lc.group.notFound')} action={<Link to="/guruhlar" className="text-brand-600 underline">{t('common.back')}</Link>} />;
+  if (!g) return <EmptyState title={t('lc.group.notFound')} action={<Link to="/guruhlar" className="text-accent-700 dark:text-accent-400 underline">{t('common.back')}</Link>} />;
 
   const ms = members.data ?? [];
   const active = ms.filter((m) => m.status === 'active').length;
@@ -118,7 +118,7 @@ export default function GroupCard() {
         <Kpi label={t('lc.kpi.trial')} value={String(trial)} tone={trial ? 'warn' : undefined} />
         <Kpi label={t('lc.price')} value={price != null ? money(price, lang) : '—'} />
         <Kpi label={t('lc.kpi.debtors')} value={String(debtors)} tone={debtors ? 'danger' : undefined} />
-        <div className="flex items-center rounded-xl border bg-[var(--bg)] px-3 py-2.5 shadow-[var(--shadow-card)]">
+        <div className="flex items-center rounded-2xl border bg-[var(--bg)] px-3 py-2.5 shadow-[var(--shadow-card)]">
           <StatusBadge status={g.status} />
           {g.teacher_pay_kind && (
             <span className="ml-2 text-[12px] text-[var(--text-muted)]">
@@ -133,7 +133,7 @@ export default function GroupCard() {
         {(['members', 'lessons', 'journal'] as Tab[]).map((x) => (
           <button key={x} type="button" onClick={() => setTab(x)}
             className={`-mb-px border-b-2 px-3 py-2 text-[13px] font-medium ${tab === x
-              ? 'border-brand-700 text-[var(--text)]' : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text)]'}`}>
+              ? 'border-[var(--text)] text-[var(--text)]' : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text)]'}`}>
             {t(`lc.tab.${x}`)}
           </button>
         ))}
@@ -622,7 +622,7 @@ function Lessons({ group }: { group: GroupRow }) {
   const canEdit = mayWrite('students.manage');
   const list = sessions.data ?? [];
   const held = list.filter((s) => s.status === 'held').length;
-  const unmarked = list.filter((s) => s.status === 'planned' && s.day < today).length;
+  const unmarked = list.filter((s) => s.status === 'planned' && today > s.day).length;
 
   return (
     <>
