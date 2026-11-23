@@ -8,7 +8,7 @@
 
 import { type FormEvent, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/auth/AuthProvider';
 import { ClassPicker } from '@/ui/ClassPicker';
@@ -21,6 +21,30 @@ import {
 import { usesGroups } from '@/lib/org';
 
 type Status = 'active' | 'academic_leave' | 'expelled';
+type Issue = 'no_contract' | 'no_parent' | 'no_class' | 'parent_no_telegram';
+
+/** 1000 talik bo'laklarda o'qib, o'quvchi id larini qaytaradi. */
+async function loadIssue(issue: Issue): Promise<Set<string>> {
+  const out = new Set<string>();
+  if (issue === 'no_class') return out;
+  for (let from = 0; ; from += 1000) {
+    const res = issue === 'no_contract'
+      ? await supabase.from('contracts').select('student_id').eq('is_active', true)
+          .order('id').range(from, from + 999)
+      : issue === 'no_parent'
+      ? await supabase.from('student_parents').select('student_id')
+          .order('student_id').range(from, from + 999)
+      : await supabase.from('student_parents')
+          .select('student_id, parents!inner(telegram_id, is_active, deleted_at)')
+          .is('parents.telegram_id', null).eq('parents.is_active', true)
+          .is('parents.deleted_at', null)
+          .order('student_id').range(from, from + 999);
+    if (res.error) throw res.error;
+    for (const r of res.data ?? []) out.add((r as { student_id: string }).student_id);
+    if ((res.data?.length ?? 0) < 1000) break;
+  }
+  return out;
+}
 
 const STATUS_TONE: Record<Status, 'ok' | 'warn' | 'neutral'> = {
   active: 'ok',
@@ -36,6 +60,16 @@ export default function Students() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<Status | ''>('active');
   const [adding, setAdding] = useState(false);
+
+  //  Bosh sahifadagi ogohlantirishdan kelinganda (?muammo=no_contract)
+  //  AYNAN shu o'quvchilar ko'rsatiladi — butun ro'yxat emas.
+  const [params, setParams] = useSearchParams();
+  const issue = params.get('muammo') as Issue | null;
+  const issueIds = useQuery({
+    queryKey: ['student-issue', issue, branchId],
+    enabled: !!issue,
+    queryFn: () => loadIssue(issue!),
+  });
 
   const canEdit = mayWrite('students.manage');
 
@@ -82,14 +116,22 @@ export default function Students() {
   // serverga borishdan tezroq va buxgalter yozayotganda darhol javob beradi.
   const rows = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    if (!needle) return list.data ?? [];
-    return (list.data ?? []).filter((s) =>
+    let base = list.data ?? [];
+    if (issue === 'no_class') base = base.filter((s) => !s.class_name);
+    else if (issue && issueIds.data) {
+      const ids = issueIds.data;
+      //  no_contract / no_parent — ro'yxatda YO'Qlari; parent_no_telegram — bor'lari.
+      base = base.filter((s) => issue === 'parent_no_telegram'
+        ? ids.has(s.student_id ?? '') : !ids.has(s.student_id ?? ''));
+    }
+    if (!needle) return base;
+    return base.filter((s) =>
       s.full_name?.toLowerCase().includes(needle) ||
       s.class_name?.toLowerCase().includes(needle) ||
       (isLC && (groupNames.data?.get(s.student_id ?? '') ?? []).join(' ').toLowerCase().includes(needle)) ||
       s.payment_code?.toLowerCase().includes(needle)
     );
-  }, [list.data, search, isLC, groupNames.data]);
+  }, [list.data, search, isLC, groupNames.data, issue, issueIds.data]);
 
   const totals = useMemo(() =>
     rows.reduce((acc, r) => {
@@ -147,6 +189,16 @@ export default function Students() {
           </Button>
         )}
       />
+
+      {issue && (
+        <div className="mb-3 flex items-center gap-2 rounded-xl bg-[var(--warn-bg)] px-4 py-2.5 text-[13px] text-[var(--warn)]">
+          <span className="flex-1">{t(`students.issue.${issue}`)} · <strong className="num">{rows.length}</strong></span>
+          <button type="button" className="font-medium underline"
+                  onClick={() => { params.delete('muammo'); setParams(params); }}>
+            {t('students.issue.clear')}
+          </button>
+        </div>
+      )}
 
       <div className="mb-3 flex flex-wrap gap-2">
         <Input

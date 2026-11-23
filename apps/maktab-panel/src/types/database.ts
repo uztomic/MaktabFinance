@@ -4487,6 +4487,10 @@ export type Database = {
         Args: { p_branch_id?: string; p_note?: string; p_period: string }
         Returns: Json
       }
+      unlock_period: {
+        Args: { p_branch_id?: string; p_period: string; p_reason?: string }
+        Returns: Json
+      }
       log_platform_action: {
         Args: {
           p_action: string

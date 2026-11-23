@@ -109,7 +109,6 @@ export default function Messages() {
     <>
       <PageHeader
         title={t('msg.title')}
-        subtitle={t('msg.hint')}
         actions={
           <Button
             disabled={list.length === 0}

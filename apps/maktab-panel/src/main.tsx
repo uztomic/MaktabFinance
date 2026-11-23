@@ -8,6 +8,20 @@ import { applyTheme } from '@/layout/Controls';
 import { ConfirmProvider, ToastProvider } from '@/ui/Feedback';
 import App from './App';
 import './index.css';
+import { registerSW } from 'virtual:pwa-register';
+
+//  Yangi versiya chiqqanda panel O'ZI yangilanadi. Ilgari service
+//  worker eski nusxani berib turardi va foydalanuvchi yangilangan
+//  sahifani faqat ikki-uch marta qayta yuklagandan keyin ko'rardi.
+//  Har 30 daqiqada yangilanish tekshiriladi (kun bo'yi ochiq turadigan
+//  kassa kompyuteri uchun).
+const updateSW = registerSW({
+  immediate: true,
+  onNeedRefresh() { void updateSW(true); },
+  onRegisteredSW(_url, reg) {
+    if (reg) setInterval(() => { void reg.update(); }, 30 * 60 * 1000);
+  },
+});
 
 // Mavzuni birinchi bo'yashdan OLDIN qo'llaymiz — ekran "chaqnamasin".
 try {

@@ -20,7 +20,7 @@ import { useI18n, useT } from '@/i18n';
 import { date, dateTime, isoDate, money, periodLabel } from '@/lib/format';
 import {
   Badge, Button, Card, EmptyState, ErrorState, Field, Input, Loading,
-  Modal, Money, MoneyInput, Notice, PageHeader, Table, Td, Th, Tr,
+  Modal, Money, MoneyInput, Notice, PageHeader, Segmented, Table, Td, Th, Tr,
 } from '@/ui';
 import { formatPhone } from '@/ui/PhoneInput';
 import { useConfirm, useToast } from '@/ui/Feedback';
@@ -252,6 +252,11 @@ export default function StudentCard() {
       //  Chegirma berilgan bo'lsa hisoblanma ham o'zgargan.
       qc.invalidateQueries({ queryKey: ['student-invoices', id] });
       qc.invalidateQueries({ queryKey: ['students'] });
+      qc.invalidateQueries({ queryKey: ['debts-monthly'] });
+      qc.invalidateQueries({ queryKey: ['pay-months'] });
+      qc.invalidateQueries({ queryKey: ['month-close'] });
+      qc.invalidateQueries({ queryKey: ['fin-summary'] });
+      qc.invalidateQueries({ queryKey: ['report'] });
       setPayOpen(false);
       // TZ 4.7.1.2 — raqamlangan kvitansiya darhol ko'rsatiladi.
       setReceipt({
@@ -1448,7 +1453,68 @@ export function CashPaymentModal({
   const [discountOn, setDiscountOn] = useState(false);
   const [discount, setDiscount] = useState('');
   const [discountReason, setDiscountReason] = useState('');
-  const discountValue = discountOn ? Number(discount) || 0 : 0;
+  //  Chegirma usuli: "qancha to'laydi", foiz yoki chegirma summasi —
+  //  shartnomadagi bilan bir xil. Asos — to'lov oyining hisoblanmasi.
+  const [discMode, setDiscMode] = useState<'pays' | 'percent' | 'amount'>('pays');
+
+  /**
+   *  Oylar bo'yicha holat (FIFO): to'lov avval ENG ESKI qarzni yopadi.
+   *  Kassir "bu to'lov qaysi oy uchun" deb o'ylamasin — oynada
+   *  ko'rinib tursin.
+   */
+  const monthsQ = useQuery({
+    queryKey: ['pay-months', studentId],
+    enabled: open,
+    queryFn: async () => {
+      const [inv, pay] = await Promise.all([
+        supabase.from('v_invoice_totals').select('period, total')
+          .eq('student_id', studentId).neq('status', 'cancelled'),
+        supabase.from('payments').select('amount')
+          .eq('student_id', studentId).eq('status', 'confirmed'),
+      ]);
+      if (inv.error) throw inv.error;
+      if (pay.error) throw pay.error;
+      const due = new Map<string, number>();
+      for (const r of inv.data ?? []) {
+        if (!r.period) continue;
+        due.set(r.period, (due.get(r.period) ?? 0) + Number(r.total ?? 0));
+      }
+      const paid = (pay.data ?? []).reduce((a, r) => a + Number(r.amount ?? 0), 0);
+      return {
+        months: [...due.entries()].sort(([a], [b]) => a.localeCompare(b))
+          .map(([period, d]) => ({ period, due: d })),
+        paid,
+      };
+    },
+  });
+
+  const payMonth = paidOn.slice(0, 8) + '01';
+  const baseMonth = monthsQ.data?.months.find((m) => m.period === payMonth)?.due ?? 0;
+  const discRaw = Number(discount) || 0;
+  const discountValue = !discountOn ? 0
+    : discMode === 'percent' ? Math.round(baseMonth * Math.min(100, discRaw) / 100)
+    : discMode === 'pays' ? (discRaw > 0 ? Math.max(0, baseMonth - discRaw) : 0)
+    : discRaw;
+
+  //  Kiritilgan to'lov + chegirma qaysi oylarni yopadi.
+  const coverage = useMemo(() => {
+    const data = monthsQ.data;
+    if (!data) return null;
+    const pay = (mixed ? 0 : Number(amount) || 0);
+    let pool = data.paid;
+    let extra = pay + discountValue;
+    const rows: Array<{ period: string; left: number; after: number }> = [];
+    for (const m of data.months) {
+      const take = Math.min(pool, m.due);
+      pool -= take;
+      const left = m.due - take;
+      if (left <= 0.009) continue;
+      const cover = Math.min(extra, left);
+      extra -= cover;
+      rows.push({ period: m.period, left, after: left - cover });
+    }
+    return { rows, advance: Math.max(0, extra + pool) };
+  }, [monthsQ.data, amount, mixed, discountValue]);
 
   /**
    *  Oldindan to'lov.
@@ -1603,10 +1669,43 @@ export function CashPaymentModal({
               </div>
             )}
 
+            {coverage && coverage.rows.length > 0 && (
+              <div className="rounded-xl border p-3">
+                <div className="mb-2 text-[12.5px] font-medium text-[var(--text-muted)]">
+                  {t('pay.debtMonths')}
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {coverage.rows.map((r, i) => {
+                    const upto = coverage.rows.slice(0, i + 1).reduce((a, x) => a + x.left, 0);
+                    const done = r.after <= 0.009;
+                    return (
+                      <button key={r.period} type="button"
+                        onClick={() => { setPlan(null); setAmount(String(Math.round(upto - discountValue))); }}
+                        className={`rounded-lg border px-2.5 py-1.5 text-left text-[12.5px] transition-colors
+                          ${done ? 'border-[var(--ok)] bg-[var(--ok-bg)]' : 'hover:bg-[var(--bg-subtle)]'}`}>
+                        <div className="font-medium">{done ? '✓ ' : ''}{periodLabel(r.period, lang)}</div>
+                        <div className="num text-[11.5px] text-[var(--text-muted)]">
+                          {done ? t('pay.covered')
+                            : r.after < r.left ? t('pay.leftAfter', { amount: money(r.after, lang) })
+                            : money(r.left, lang)}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-2 text-[11.5px] text-[var(--text-faint)]">{t('pay.fifoHint')}</p>
+              </div>
+            )}
+
             <Field label={t('common.amount')} required>
               <MoneyInput value={amount} onChange={(e) => setAmount(e.target.value)}
                           autoFocus required />
             </Field>
+            {coverage && coverage.advance > 0 && Number(amount) > 0 && (
+              <p className="-mt-1 text-[12px] text-[var(--ok)]">
+                {t('pay.advanceAfter', { amount: money(coverage.advance, lang) })}
+              </p>
+            )}
             <Field label={t('payMethod.label')} hint={t('payMethod.hint')} required>
               <PaymentMethodPicker value={method} onChange={setMethodId} />
             </Field>
@@ -1665,25 +1764,60 @@ export function CashPaymentModal({
 
             {discountOn && (
               <div className="space-y-2 rounded-[10px] border bg-[var(--bg-subtle)] p-3">
-                <p className="text-[12px] text-[var(--text-muted)]">
-                  {t('pay.discountHint')}
-                </p>
-                <Field label={t('pay.discountAmount')} required>
-                  <MoneyInput value={discount}
-                              onChange={(e) => setDiscount(e.target.value)} />
+                <div className="flex items-center justify-between text-[13px]">
+                  <span className="text-[var(--text-muted)]">
+                    {t('pay.monthPrice', { month: periodLabel(payMonth, lang) })}
+                  </span>
+                  <span className="num font-medium">{baseMonth > 0 ? money(baseMonth, lang) : '—'}</span>
+                </div>
+                <Segmented
+                  value={discMode}
+                  onChange={(v) => { setDiscMode(v); setDiscount(''); }}
+                  options={[
+                    { value: 'pays', label: t('disc.mode.pays') },
+                    { value: 'percent', label: t('disc.mode.percent') },
+                    { value: 'amount', label: t('disc.mode.amount') },
+                  ]}
+                />
+                <Field label={t(`disc.mode.${discMode}.label`)} required>
+                  {discMode === 'percent'
+                    ? (
+                      <span className="relative block">
+                        <Input type="number" min={0} max={100} step="0.1" value={discount}
+                               onChange={(e) => setDiscount(e.target.value)}
+                               className="num pr-8 text-right" />
+                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2
+                          text-[13px] text-[var(--text-faint)]">%</span>
+                      </span>
+                    )
+                    : <MoneyInput value={discount} onChange={(e) => setDiscount(e.target.value)} />}
                 </Field>
+                {discountValue > 0 && baseMonth > 0 && (
+                  <div className="grid grid-cols-3 gap-2 rounded-lg bg-[var(--bg)] p-2.5 text-center">
+                    <div>
+                      <div className="text-[11px] text-[var(--text-faint)]">{t('disc.base')}</div>
+                      <div className="num text-[13px] text-[var(--text-muted)] line-through">{money(baseMonth, lang)}</div>
+                    </div>
+                    <div>
+                      <div className="text-[11px] text-[var(--text-faint)]">{t('disc.discount')}</div>
+                      <div className="num text-[13px] font-medium text-[var(--danger)]">
+                        −{money(discountValue, lang)} ({Math.round((discountValue / baseMonth) * 1000) / 10}%)
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[11px] text-[var(--text-faint)]">{t('disc.pays')}</div>
+                      <div className="num text-[14px] font-semibold text-[var(--ok)]">
+                        {money(Math.max(0, baseMonth - discountValue), lang)}
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <Field label={t('pay.discountReason')} required>
                   <Input value={discountReason}
                          onChange={(e) => setDiscountReason(e.target.value)}
                          placeholder={t('pay.discountReasonHint')} />
                 </Field>
-                {suggested > 0 && discountValue > 0 && (
-                  <p className="text-[12px] text-[var(--text-muted)]">
-                    {t('pay.discountLeft', {
-                      debt: money(Math.max(0, suggested - discountValue), lang),
-                    })}
-                  </p>
-                )}
+
               </div>
             )}
           </>

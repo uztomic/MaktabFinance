@@ -70,9 +70,11 @@ export function AttendanceToday() {
       || a.class_name.localeCompare(b.class_name, undefined, { numeric: true });
   }), [rows.data]);
 
+  //  Davomat OLINMAGAN sinf "hamma keldi" deb sanalmaydi — u
+  //  noma'lum. Keldi soni faqat olingan sinflardan.
   const totals = list.reduce((a, r) => ({
-    total: a.total + r.total,
-    present: a.present + r.present,
+    total: a.total + (r.checked ? r.total : 0),
+    present: a.present + (r.checked ? r.present : 0),
     absent: a.absent + r.absent,
   }), { total: 0, present: 0, absent: 0 });
   const unchecked = list.filter((r) => !r.checked && r.total > 0).length;
@@ -124,7 +126,8 @@ export function AttendanceToday() {
       ) : (
         <>
           <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-3">
-            <Stat label={t('att.came')} value={`${totals.present} / ${totals.total}`} tone="ok">
+            <Stat label={t('att.came')} tone="ok"
+                  value={totals.total > 0 ? `${totals.present} / ${totals.total}` : '—'}>
               <div className="mt-3"><Progress value={rate} /></div>
             </Stat>
             <Stat label={t('att.notCame')} value={String(totals.absent)}
@@ -208,8 +211,10 @@ function ClassRowView({ r, day, open, onToggle }: {
 
         <div className="shrink-0 text-right">
           <div className="num text-[15px] font-semibold">
-            <span className={r.checked ? 'text-[var(--ok)]' : ''}>{r.present}</span>
-            <span className="text-[var(--text-faint)]"> / {r.total}</span>
+            {r.checked
+              ? <><span className="text-[var(--ok)]">{r.present}</span>
+                  <span className="text-[var(--text-faint)]"> / {r.total}</span></>
+              : <span className="text-[var(--text-faint)]">— / {r.total}</span>}
           </div>
           <div className="text-[11.5px] md:hidden">
             {r.checked
@@ -365,6 +370,8 @@ function ClassPanel({ r, day }: { r: ClassRow; day: string }) {
               className={`h-8 min-w-[92px] shrink-0 rounded-lg px-3 text-[12.5px] font-medium transition-colors
                 disabled:cursor-default ${isAbsent
                   ? 'bg-[var(--danger)] text-white'
+                  : !r.checked
+                  ? 'bg-[var(--bg-inset)] text-[var(--text-muted)]'
                   : s.is_late
                   ? 'bg-[var(--warn-bg)] text-[var(--warn)]'
                   : 'bg-[var(--ok-bg)] text-[var(--ok)]'}`}
@@ -415,8 +422,8 @@ export function AttendanceSummary() {
   });
   const list = rows.data ?? [];
   if (list.length === 0) return null;
-  const total = list.reduce((a, r) => a + r.total, 0);
-  const present = list.reduce((a, r) => a + r.present, 0);
+  const total = list.reduce((a, r) => a + (r.checked ? r.total : 0), 0);
+  const present = list.reduce((a, r) => a + (r.checked ? r.present : 0), 0);
   const absent = list.reduce((a, r) => a + r.absent, 0);
   const unchecked = list.filter((r) => !r.checked && r.total > 0).length;
   return (
@@ -426,8 +433,10 @@ export function AttendanceSummary() {
         <span className="text-[var(--text-faint)]">→</span>
       </div>
       <div className="num mt-3 text-[26px] font-semibold tracking-tight">
-        <span className="text-[var(--ok)]">{present}</span>
-        <span className="text-[var(--text-faint)]"> / {total}</span>
+        {total > 0
+          ? <><span className="text-[var(--ok)]">{present}</span>
+              <span className="text-[var(--text-faint)]"> / {total}</span></>
+          : <span className="text-[var(--text-faint)]">—</span>}
       </div>
       <div className="mt-1 flex flex-wrap gap-x-3 text-[12.5px]">
         {absent > 0 && <span className="text-[var(--danger)]">{absent} {t('att.notCame').toLowerCase()}</span>}

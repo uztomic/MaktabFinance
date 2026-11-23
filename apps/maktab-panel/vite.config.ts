@@ -27,6 +27,8 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Ro'yxatdan o'tkazish main.tsx da (registerSW) — o'zi yangilanadi.
+      injectRegister: false,
       includeAssets: [
         'favicon.svg', 'apple-touch-icon.png', 'logo-mark.svg', 'logo-full.svg',
       ],

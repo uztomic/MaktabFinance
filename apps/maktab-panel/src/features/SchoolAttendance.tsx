@@ -30,7 +30,6 @@ export default function SchoolAttendance() {
     <>
       <PageHeader
         title={t('att.pageTitle')}
-        subtitle={t('att.pageHint')}
       />
       <AttendanceToday />
     </>

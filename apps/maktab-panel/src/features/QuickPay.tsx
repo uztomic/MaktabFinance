@@ -119,6 +119,11 @@ export function QuickPay({ open, onClose, preset }: { open: boolean; onClose: ()
       qc.invalidateQueries({ queryKey: ['debts'] });
       qc.invalidateQueries({ queryKey: ['advances'] });
       qc.invalidateQueries({ queryKey: ['quickpay-search'] });
+      qc.invalidateQueries({ queryKey: ['debts-monthly'] });
+      qc.invalidateQueries({ queryKey: ['pay-months'] });
+      qc.invalidateQueries({ queryKey: ['month-close'] });
+      qc.invalidateQueries({ queryKey: ['fin-summary'] });
+      qc.invalidateQueries({ queryKey: ['report'] });
       setReceipt({
         receipt_code: res.receipt_code,
         amount: vars.amount,

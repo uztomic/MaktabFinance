@@ -20,13 +20,14 @@ import { useAuth } from '@/auth/AuthProvider';
 import { useI18n, useT } from '@/i18n';
 import { currentPeriod, date, isoDate, money, num, periodLabel } from '@/lib/format';
 import { type Column, exportTable } from '@/lib/export';
+import { MonthClose } from './MonthClose';
 import {
   Badge, Button, Card, EmptyState, ErrorState, Input, Loading, Progress, Stat,
   Modal, Money, Notice, PageHeader, Table, Td, Th, Tr,
 } from '@/ui';
 
 type ReportId =
-  | 'summary' | 'classes' | 'pnl' | 'revenue' | 'expenses' | 'enrollment'
+  | 'months' | 'summary' | 'classes' | 'pnl' | 'revenue' | 'expenses' | 'enrollment'
   | 'cash' | 'methods' | 'sources' | 'usage' | 'payroll';
 
 export default function Reports() {
@@ -47,6 +48,7 @@ export default function Reports() {
 
   const TABS: Array<{ id: ReportId; label: string }> = [
     { id: 'summary', label: t('rep.summary') },
+    { id: 'months', label: t('mc.tab') },
     { id: 'classes', label: t('cls.byClass') },
     { id: 'pnl', label: t('rep.pnl') },
     { id: 'revenue', label: t('rep.revenue') },
@@ -119,7 +121,9 @@ export default function Reports() {
         </div>
       </div>
 
-      <ReportBody id={tab} from={from} to={to} branchId={branchId} />
+      {tab === 'months'
+        ? <MonthClose />
+        : <ReportBody id={tab} from={from} to={to} branchId={branchId} />}
     </>
   );
 }
@@ -235,7 +239,7 @@ function ReportBody({
 
   // Har bir hisobot uchun: ustunlar + jami qatori.
   // deno-lint-ignore no-explicit-any
-  const SPECS: Record<ReportId, {
+  const SPECS: Record<Exclude<ReportId, 'months'>, {
     columns: Array<Column<any> & {
       render?: (r: any) => React.ReactNode;
       align?: 'right';
@@ -391,7 +395,7 @@ function ReportBody({
     },
   };
 
-  const spec = SPECS[id];
+  const spec = SPECS[id as Exclude<ReportId, 'months'>];
 
   // Jami — sumKey belgilangan ustunlar bo'yicha (TZ 4.12.4).
   const sums: Record<string, number> = {};

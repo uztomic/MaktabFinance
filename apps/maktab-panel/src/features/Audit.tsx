@@ -51,9 +51,12 @@ export default function Audit() {
 
   const [table, setTable] = useState('');
   const [limit, setLimit] = useState(100);
+  //  Tizimning avtomatik o'zgarishlari (cron) sukut bo'yicha
+  //  yashiriladi — aks holda odamlar qilgan ish ko'rinmay qoladi.
+  const [showSystem, setShowSystem] = useState(false);
 
   const rows = useQuery({
-    queryKey: ['audit', table, limit],
+    queryKey: ['audit', table, limit, showSystem],
     queryFn: async () => {
       let q = supabase
         .from('audit_log')
@@ -61,6 +64,7 @@ export default function Audit() {
         .order('at', { ascending: false })
         .limit(limit);
       if (table) q = q.eq('table_name', table);
+      if (!showSystem) q = q.not('user_id', 'is', null);
       const { data, error } = await q;
       if (error) throw error;
       return data ?? [];
@@ -90,7 +94,12 @@ export default function Audit() {
 
   return (
     <>
-      <PageHeader title={t('audit.title')} subtitle={t('audit.hint')} />
+      <PageHeader title={t('audit.title')} />
+      <label className="mb-3 flex items-center gap-2 text-[13px] text-[var(--text-muted)]">
+        <input type="checkbox" className="h-4 w-4" checked={showSystem}
+               onChange={(e) => setShowSystem(e.target.checked)} />
+        {t('audit.showSystem')}
+      </label>
 
       {impersonated > 0 && (
         <div className="mb-3">

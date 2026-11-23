@@ -67,40 +67,23 @@ export function RolePermissionList({ role }: { role: string }) {
   if (perms.isLoading) return <Loading />;
 
   const allowed = (perms.data ?? []).filter((p) => p.allowed);
-  const denied = (perms.data ?? []).filter((p) => !p.allowed);
 
+  //  Avval ODDIY TIL bilan: bu rol nima qiladi. "0 ta ruxsat" degan
+  //  yozuv o'qituvchi uchun chalg'ituvchi edi — u davomat oladi,
+  //  lekin bu huquq rolda emas, sinf rahbarligida.
   return (
     <div className="rounded-[10px] border bg-[var(--bg-subtle)] p-3">
-      <div className="mb-2 text-[12px] font-medium">
-        {t('perm.roleGives', { count: allowed.length })}
-      </div>
-
-      <div className="flex flex-wrap gap-1">
-        {allowed.map((p) => (
-          <Badge key={p.permission} tone="ok">
-            {t(`perm.${p.permission}`)}
-          </Badge>
-        ))}
-        {allowed.length === 0 && (
-          <span className="text-[12px] text-[var(--text-muted)]">
-            {t('perm.none')}
-          </span>
-        )}
-      </div>
-
-      {denied.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1 opacity-60">
-          {denied.map((p) => (
-            <Badge key={p.permission} tone="neutral">
+      <div className="text-[13px] font-medium">{t(`role.desc.${role}`)}</div>
+      {allowed.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1">
+          {allowed.map((p) => (
+            <Badge key={p.permission} tone="ok">
               {t(`perm.${p.permission}`)}
             </Badge>
           ))}
         </div>
       )}
 
-      <p className="mt-2 text-[11px] text-[var(--text-muted)]">
-        {t('perm.afterSave')}
-      </p>
     </div>
   );
 }

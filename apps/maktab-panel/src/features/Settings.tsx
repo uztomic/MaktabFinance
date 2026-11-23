@@ -13,7 +13,7 @@
 // =====================================================================
 
 import { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/auth/AuthProvider';
@@ -62,6 +62,16 @@ export default function Settings() {
       <PageHeader title={t('settings.title')} subtitle={profile?.school_name} />
 
       <OrgTypeCard />
+
+      {/*  Jurnallar kundalik ish emas — menyudan shu yerga ko'chirildi. */}
+      <div className="mb-4 flex flex-wrap gap-2">
+        <Link to="/xabarlar" className="rounded-[10px] border bg-[var(--bg)] px-4 py-2.5 text-[13px] hover:bg-[var(--bg-subtle)]">
+          {t('msg.title')} →
+        </Link>
+        <Link to="/jurnal" className="rounded-[10px] border bg-[var(--bg)] px-4 py-2.5 text-[13px] hover:bg-[var(--bg-subtle)]">
+          {t('nav.audit')} →
+        </Link>
+      </div>
 
       <div className="mb-4 grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
         {TABS.map((x) => (

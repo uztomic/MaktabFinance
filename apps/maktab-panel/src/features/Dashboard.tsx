@@ -256,8 +256,10 @@ function Alerts({ setup, gaps, proofs }: {
 }) {
   const t = useT();
   const LINK: Record<string, string> = {
-    no_parent: '/oquvchilar', parent_no_telegram: '/oquvchilar',
-    no_contract: '/oquvchilar', no_class: '/oquvchilar',
+    no_parent: '/oquvchilar?muammo=no_parent',
+    parent_no_telegram: '/oquvchilar?muammo=parent_no_telegram',
+    no_contract: '/oquvchilar?muammo=no_contract',
+    no_class: '/oquvchilar?muammo=no_class',
     teacher_no_branch: '/oqituvchilar', teacher_no_login: '/oqituvchilar',
     class_no_teacher: '/sinflar',
   };
@@ -356,8 +358,10 @@ function TrendChart({
   return (
     <div>
       <div className="flex items-end gap-1.5" style={{ height: 200 }}>
-        {data.map((d) => {
+        {data.map((d, i) => {
           const active = d.period === selected;
+          //  O'ng yarmida oyna chapga ochiladi — ekrandan chiqib ketmasin.
+          const side = i >= data.length / 2 ? 'right-0' : 'left-0';
           return (
             <button
               type="button"
@@ -372,8 +376,8 @@ function TrendChart({
                      style={{ height: `${Math.max(d.charged, d.collected) > 0
                        ? (d.collected / Math.max(d.charged, d.collected)) * 100 : 0}%` }} />
               </div>
-              <div className="pointer-events-none absolute bottom-full z-10 mb-2 hidden w-48 rounded-xl border
-                bg-[var(--bg)] p-2.5 text-left text-[12px] shadow-[var(--shadow-pop)] group-hover:block">
+              <div className={`pointer-events-none absolute bottom-full z-10 mb-2 hidden w-48 rounded-xl border ${side}
+                bg-[var(--bg)] p-2.5 text-left text-[12px] shadow-[var(--shadow-pop)] group-hover:block`}>
                 <div className="mb-1 font-medium">{periodLabel(d.period, lang)}</div>
                 <Row label={t('dm.charged')} value={money(d.charged, lang)} />
                 <Row label={t('home.collected')} value={money(d.collected, lang)} />

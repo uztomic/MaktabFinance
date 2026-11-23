@@ -102,7 +102,6 @@ const groupsFor = (lc: boolean): NavGroup[] => [
     labelKey: 'nav.groupFinance',
     items: [
       { to: '/xizmatlar', labelKey: 'nav.services', permission: 'services.manage', icon: <Icon d={I.layers} /> },
-      { to: '/hisoblanma', labelKey: 'nav.invoices', permission: 'invoices.generate', icon: <Icon d={I.doc} /> },
       { to: '/tolovlar', labelKey: 'nav.payments', permission: 'payments.create', icon: <Icon d={I.cash} /> },
       { to: '/qarzdorlik', labelKey: 'nav.debts', permission: 'reports.view', icon: <Icon d={I.wallet} /> },
       { to: '/xarajatlar', labelKey: 'nav.expenses', permission: 'expenses.create', icon: <Icon d={I.wallet} /> },
@@ -121,8 +120,6 @@ const groupsFor = (lc: boolean): NavGroup[] => [
     items: [
       { to: '/filiallar', labelKey: 'nav.branches', permission: 'users.manage', icon: <Icon d={I.branch} /> },
       { to: '/foydalanuvchilar', labelKey: 'nav.users', permission: 'users.manage', icon: <Icon d={I.users} /> },
-      { to: '/xabarlar', labelKey: 'msg.title', permission: 'reports.view', icon: <Icon d={I.inbox} /> },
-      { to: '/jurnal', labelKey: 'nav.audit', permission: 'reports.view', icon: <Icon d={I.shield} /> },
       { to: '/sozlamalar', labelKey: 'nav.settings', permission: 'users.manage', icon: <Icon d={I.gear} /> },
     ],
   },
@@ -428,7 +425,7 @@ export default function AppShell() {
             </div>
           )}
 
-          <main className="flex-1 overflow-y-auto bg-[var(--bg-subtle)] px-3 pb-8 pt-4
+          <main className="flex-1 overflow-y-auto overflow-x-hidden bg-[var(--bg-subtle)] px-3 pb-8 pt-4
             md:px-8 md:py-7 print:overflow-visible">
             <div className="mx-auto w-full max-w-[1280px]">
               <Outlet />
