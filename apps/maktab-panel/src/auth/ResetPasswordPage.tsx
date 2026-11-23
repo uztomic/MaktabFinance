@@ -99,8 +99,8 @@ export default function ResetPasswordPage() {
             <img src="/logo-mark.svg" alt="" className="h-16 w-16"
                  width={64} height={64} />
             <h1 className="mt-3 text-lg font-semibold tracking-tight">
-              <span className="text-[var(--brand-text)]">Maktab</span>
-              <span className="text-accent-600">Finance</span>
+              <span className="text-[var(--brand-text)]">Uztomic </span>
+              <span className="text-accent-600">Edu</span>
             </h1>
           </div>
 

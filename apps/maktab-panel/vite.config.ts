@@ -36,9 +36,9 @@ export default defineConfig({
         runtimeCaching: [],
       },
       manifest: {
-        name: 'MaktabFinance',
-        short_name: 'MaktabFinance',
-        description: 'Maktab moliya va boshqaruv tizimi',
+        name: 'Uztomic Edu',
+        short_name: 'Uztomic Edu',
+        description: "Bog'cha, maktab va o'quv markazi uchun moliya va boshqaruv tizimi",
         lang: 'uz',
         theme_color: '#1E2B3D',
         background_color: '#ffffff',

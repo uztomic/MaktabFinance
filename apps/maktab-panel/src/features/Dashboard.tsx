@@ -31,6 +31,8 @@ import {
 import { DateRangePicker, useDateRange } from '@/ui/DateRange';
 import { AttendanceToday } from '@/features/AttendanceToday';
 import { TodayActivity } from '@/features/TodayActivity';
+import { LcOverview } from '@/features/lc/LcOverview';
+import { usesGroups } from '@/lib/org';
 
 export default function Dashboard() {
   const t = useT();
@@ -213,6 +215,9 @@ export default function Dashboard() {
           Kundalik ishlar bir bosishda. Ilgari har biri uchun menyudan
           bo'lim qidirish kerak edi (telefonda — ayniqsa noqulay). */}
       <QuickActions />
+
+      {/* --- O'quv markazi: guruhlar, bugungi darslar, voronka ---- */}
+      {usesGroups(profile?.org_type) && <LcOverview />}
 
       {/* Butun panel shu oraliq bo'yicha. Tanlov saqlanadi va boshqa
           sahifalarga ham o'tadi — buxgalter uni bir marta qo'yadi. */}
@@ -427,7 +432,7 @@ export default function Dashboard() {
            bosib kim kelgan / kim kelmaganini ko'rish allaqachon
            bor. Ikki nusxa saqlansa, biri yangilanib ikkinchisi
            orqada qolardi. */}
-      {(can('absences.mark') || canSeeFinance) && (
+      {(can('absences.mark') || canSeeFinance) && !usesGroups(profile?.org_type) && (
         <div className="mt-4">
           <AttendanceToday />
         </div>
@@ -747,12 +752,15 @@ function SetupIssues({ rows }: {
 
 function QuickActions() {
   const t = useT();
-  const { can, mayWrite } = useAuth();
+  const { can, mayWrite, profile } = useAuth();
+  const lc = usesGroups(profile?.org_type);
   const items = [
     { to: '/qarzdorlik', icon: '⏰', label: t('dash.qa.debts'), ok: can('reports.view') },
+    { to: '/guruhlar', icon: '👥', label: t('nav.groups'), ok: lc && can('students.manage') },
     { to: '/oquvchilar', icon: '👤', label: t('dash.qa.students'), ok: can('students.manage') },
+    { to: '/davomat', icon: '✅', label: t('nav.lessons'), ok: lc },
     { to: '/xarajatlar', icon: '🧾', label: t('dash.qa.expense'), ok: mayWrite('expenses.create') },
-    { to: '/yoqlik', icon: '✅', label: t('dash.qa.absences'), ok: can('absences.mark') },
+    { to: '/yoqlik', icon: '✅', label: t('dash.qa.absences'), ok: !lc && can('absences.mark') },
     { to: '/oylik', icon: '💼', label: t('dash.qa.payroll'), ok: can('payroll.view') },
     { to: '/hisobotlar', icon: '📊', label: t('dash.qa.reports'), ok: can('reports.view') },
   ].filter((x) => x.ok).slice(0, 4);

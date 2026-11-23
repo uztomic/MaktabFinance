@@ -1,0 +1,34 @@
+# =====================================================================
+#  Tekshiruv — `main` dan boshqa shoxlar va PR lar uchun.
+#
+#  Saytga CHIQARMAYDI. Faqat: maxfiy kalit yo'qmi, tarjimalar to'liqmi,
+#  TypeScript xatosiz yig'iladimi. Yashil bo'lsa — `main` ga qo'shish
+#  xavfsiz (bazadagi migratsiya alohida qo'llanadi).
+# =====================================================================
+
+name: Check
+
+on:
+  push:
+    branches-ignore: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: Maxfiy kalit tekshiruvi
+        run: node scripts/check-secrets.mjs
+      - name: Tarjima kalitlari
+        run: node scripts/i18n-check.mjs
+      - name: TypeScript + build
+        run: npm run build

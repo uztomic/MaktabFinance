@@ -45,6 +45,52 @@ export const LANGS: Array<{ code: Lang; label: string }> = [
 
 const STORAGE_KEY = 'maktab-lang';
 
+// ---------------------------------------------------------------------
+//  ATAMALAR VARIANTI — Uztomic Edu bitta panelda bog'cha, maktab va
+//  o'quv markaziga xizmat qiladi. Bog'chada "o'quvchi" emas "bola",
+//  "o'qituvchi" emas "tarbiyachi" deyiladi. 1600+ kalitni uch marta
+//  takrorlamaslik uchun atamalar ko'rsatishdan oldin almashtiriladi.
+//  Ruschada kelishiklar bor, shuning uchun so'z shakllari to'liq
+//  sanab chiqilgan (uzunlari avval).
+// ---------------------------------------------------------------------
+
+export type TermVariant = 'default' | 'kindergarten';
+
+const A = "['ʻ‘’`]";
+const KG_RULES: Record<Lang, Array<[RegExp, string]>> = {
+  'uz': [
+    [new RegExp(`O${A}qituvchi`, 'g'), 'Tarbiyachi'],
+    [new RegExp(`o${A}qituvchi`, 'g'), 'tarbiyachi'],
+    [new RegExp(`O${A}quvchi`, 'g'), 'Bola'],
+    [new RegExp(`o${A}quvchi`, 'g'), 'bola'],
+  ],
+  'uz-cyrl': [
+    [/Ўқитувчи/g, 'Тарбиячи'], [/ўқитувчи/g, 'тарбиячи'],
+    [/Ўқувчи/g, 'Бола'], [/ўқувчи/g, 'бола'],
+  ],
+  'ru': [
+    [/Преподавател/g, 'Воспитател'], [/преподавател/g, 'воспитател'],
+    [/Учител/g, 'Воспитател'], [/учител/g, 'воспитател'],
+    [/Учеников/g, 'Детей'], [/учеников/g, 'детей'],
+    [/Ученикам/g, 'Детям'], [/ученикам/g, 'детям'],
+    [/Учениками/g, 'Детьми'], [/учениками/g, 'детьми'],
+    [/Учениках/g, 'Детях'], [/учениках/g, 'детях'],
+    [/Ученики/g, 'Дети'], [/ученики/g, 'дети'],
+    [/Ученика/g, 'Ребёнка'], [/ученика/g, 'ребёнка'],
+    [/Ученику/g, 'Ребёнку'], [/ученику/g, 'ребёнку'],
+    [/Учеником/g, 'Ребёнком'], [/учеником/g, 'ребёнком'],
+    [/Ученике/g, 'Ребёнке'], [/ученике/g, 'ребёнке'],
+    [/Ученик/g, 'Ребёнок'], [/ученик/g, 'ребёнок'],
+  ],
+};
+
+function applyVariant(lang: Lang, variant: TermVariant, text: string): string {
+  if (variant !== 'kindergarten') return text;
+  let out = text;
+  for (const [re, to] of KG_RULES[lang] ?? []) out = out.replace(re, to);
+  return out;
+}
+
 /** Kalitni matnga aylantiradi va {o'rin} egallarni to'ldiradi. */
 function lookup(lang: Lang, key: string, params?: Record<string, unknown>): string {
   let text = BUNDLES[lang]?.[key];
@@ -70,6 +116,8 @@ function lookup(lang: Lang, key: string, params?: Record<string, unknown>): stri
 interface I18nValue {
   lang: Lang;
   setLang: (l: Lang) => void;
+  variant: TermVariant;
+  setVariant: (v: TermVariant) => void;
   t: (key: string, params?: Record<string, unknown>) => string;
 }
 
@@ -87,6 +135,7 @@ function readStoredLang(): Lang {
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>(readStoredLang);
+  const [variant, setVariant] = useState<TermVariant>('default');
 
   const setLang = useCallback((l: Lang) => {
     setLangState(l);
@@ -102,8 +151,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const value = useMemo<I18nValue>(() => ({
     lang,
     setLang,
-    t: (key, params) => lookup(lang, key, params),
-  }), [lang, setLang]);
+    variant,
+    setVariant,
+    t: (key, params) => applyVariant(lang, variant, lookup(lang, key, params)),
+  }), [lang, setLang, variant]);
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }

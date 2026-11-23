@@ -84,6 +84,8 @@ begin
   select s.id into v_school
     from public.schools s
    where s.deleted_at is null
+     -- O'quv markazi sinovi o'z sozlamasini ataylab bo'sh qoldiradi.
+     and s.name not like 'SINOVLC %'
      and exists (select 1 from public.teachers t
                   where t.school_id = s.id and t.deleted_at is null)
    order by s.created_at limit 1;

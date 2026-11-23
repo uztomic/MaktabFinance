@@ -98,8 +98,8 @@ export default function LoginPage() {
               height={64}
             />
             <h1 className="mt-3 text-lg font-semibold tracking-tight">
-              <span className="text-[var(--brand-text)]">Maktab</span>
-              <span className="text-accent-600">Finance</span>
+              <span className="text-[var(--brand-text)]">Uztomic </span>
+              <span className="text-accent-600">Edu</span>
             </h1>
             <p className="mt-0.5 text-[13px] text-[var(--text-muted)]">
               {t('app.tagline')}

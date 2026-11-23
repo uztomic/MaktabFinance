@@ -14,6 +14,554 @@ export type Database = {
   }
   public: {
     Tables: {
+      courses: {
+        Row: {
+          color: string | null
+          created_at: string
+          default_price: number | null
+          deleted_at: string | null
+          duration_months: number | null
+          id: string
+          is_active: boolean
+          lesson_minutes: number | null
+          level: string | null
+          name: string
+          note: string | null
+          school_id: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          default_price?: number | null
+          deleted_at?: string | null
+          duration_months?: number | null
+          id?: string
+          is_active?: boolean
+          lesson_minutes?: number | null
+          level?: string | null
+          name: string
+          note?: string | null
+          school_id: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          default_price?: number | null
+          deleted_at?: string | null
+          duration_months?: number | null
+          id?: string
+          is_active?: boolean
+          lesson_minutes?: number | null
+          level?: string | null
+          name?: string
+          note?: string | null
+          school_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courses_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_freezes: {
+        Row: {
+          branch_id: string
+          created_at: string
+          created_by: string | null
+          from_on: string
+          id: string
+          member_id: string
+          reason: string | null
+          school_id: string
+          to_on: string | null
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          created_by?: string | null
+          from_on: string
+          id?: string
+          member_id: string
+          reason?: string | null
+          school_id: string
+          to_on?: string | null
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          created_by?: string | null
+          from_on?: string
+          id?: string
+          member_id?: string
+          reason?: string | null
+          school_id?: string
+          to_on?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_freezes_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_freezes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_freezes_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "group_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_freezes_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_members: {
+        Row: {
+          branch_id: string
+          created_at: string
+          created_by: string | null
+          group_id: string
+          id: string
+          joined_on: string
+          left_on: string | null
+          left_reason: string | null
+          note: string | null
+          school_id: string
+          status: string
+          student_id: string
+          trial_on: string | null
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          created_by?: string | null
+          group_id: string
+          id?: string
+          joined_on?: string
+          left_on?: string | null
+          left_reason?: string | null
+          note?: string | null
+          school_id: string
+          status?: string
+          student_id: string
+          trial_on?: string | null
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          created_by?: string | null
+          group_id?: string
+          id?: string
+          joined_on?: string
+          left_on?: string | null
+          left_reason?: string | null
+          note?: string | null
+          school_id?: string
+          status?: string
+          student_id?: string
+          trial_on?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_members_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_members_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "study_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_members_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_members_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_sessions: {
+        Row: {
+          branch_id: string
+          cancel_reason: string | null
+          created_at: string
+          day: string
+          end_time: string | null
+          group_id: string
+          homework: string | null
+          id: string
+          marked_at: string | null
+          marked_by: string | null
+          room_id: string | null
+          school_id: string
+          start_time: string | null
+          status: string
+          teacher_id: string | null
+          topic: string | null
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          cancel_reason?: string | null
+          created_at?: string
+          day: string
+          end_time?: string | null
+          group_id: string
+          homework?: string | null
+          id?: string
+          marked_at?: string | null
+          marked_by?: string | null
+          room_id?: string | null
+          school_id: string
+          start_time?: string | null
+          status?: string
+          teacher_id?: string | null
+          topic?: string | null
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          cancel_reason?: string | null
+          created_at?: string
+          day?: string
+          end_time?: string | null
+          group_id?: string
+          homework?: string | null
+          id?: string
+          marked_at?: string | null
+          marked_by?: string | null
+          room_id?: string | null
+          school_id?: string
+          start_time?: string | null
+          status?: string
+          teacher_id?: string | null
+          topic?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_sessions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_sessions_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "study_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_sessions_marked_by_fkey"
+            columns: ["marked_by"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_sessions_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_sessions_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_sessions_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rooms: {
+        Row: {
+          branch_id: string
+          capacity: number | null
+          created_at: string
+          deleted_at: string | null
+          id: string
+          is_active: boolean
+          name: string
+          note: string | null
+          school_id: string
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          capacity?: number | null
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          note?: string | null
+          school_id: string
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          capacity?: number | null
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          note?: string | null
+          school_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rooms_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rooms_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_attendance: {
+        Row: {
+          branch_id: string
+          comment: string | null
+          created_at: string
+          grade: number | null
+          school_id: string
+          session_id: string
+          status: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          comment?: string | null
+          created_at?: string
+          grade?: number | null
+          school_id: string
+          session_id: string
+          status: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          comment?: string | null
+          created_at?: string
+          grade?: number | null
+          school_id?: string
+          session_id?: string
+          status?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_attendance_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_attendance_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_attendance_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "group_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_attendance_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      study_groups: {
+        Row: {
+          branch_id: string
+          capacity: number | null
+          course_id: string | null
+          created_at: string
+          days: number[]
+          deleted_at: string | null
+          end_time: string | null
+          ends_on: string | null
+          id: string
+          is_online: boolean
+          name: string
+          note: string | null
+          room_id: string | null
+          school_id: string
+          service_id: string | null
+          start_time: string | null
+          starts_on: string
+          status: string
+          teacher_id: string | null
+          teacher_pay_kind: string | null
+          teacher_pay_value: number | null
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          capacity?: number | null
+          course_id?: string | null
+          created_at?: string
+          days?: number[]
+          deleted_at?: string | null
+          end_time?: string | null
+          ends_on?: string | null
+          id?: string
+          is_online?: boolean
+          name: string
+          note?: string | null
+          room_id?: string | null
+          school_id: string
+          service_id?: string | null
+          start_time?: string | null
+          starts_on?: string
+          status?: string
+          teacher_id?: string | null
+          teacher_pay_kind?: string | null
+          teacher_pay_value?: number | null
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          capacity?: number | null
+          course_id?: string | null
+          created_at?: string
+          days?: number[]
+          deleted_at?: string | null
+          end_time?: string | null
+          ends_on?: string | null
+          id?: string
+          is_online?: boolean
+          name?: string
+          note?: string | null
+          room_id?: string | null
+          school_id?: string
+          service_id?: string | null
+          start_time?: string | null
+          starts_on?: string
+          status?: string
+          teacher_id?: string | null
+          teacher_pay_kind?: string | null
+          teacher_pay_value?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "study_groups_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "study_groups_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "study_groups_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "study_groups_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "study_groups_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "study_groups_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       absence_reasons: {
         Row: {
           code: string
@@ -1422,10 +1970,13 @@ export type Database = {
         Row: {
           assigned_to: string | null
           branch_id: string
+          course_id: string | null
           created_at: string
           created_by: string | null
           full_name: string
+          group_id: string | null
           id: string
+          lost_reason: string | null
           next_contact_on: string | null
           note: string | null
           phone: string
@@ -1434,15 +1985,19 @@ export type Database = {
           status: Database["public"]["Enums"]["lead_status"]
           student_id: string | null
           target_class: string | null
+          trial_on: string | null
           updated_at: string
         }
         Insert: {
           assigned_to?: string | null
           branch_id: string
+          course_id?: string | null
           created_at?: string
           created_by?: string | null
           full_name: string
+          group_id?: string | null
           id?: string
+          lost_reason?: string | null
           next_contact_on?: string | null
           note?: string | null
           phone: string
@@ -1451,15 +2006,19 @@ export type Database = {
           status?: Database["public"]["Enums"]["lead_status"]
           student_id?: string | null
           target_class?: string | null
+          trial_on?: string | null
           updated_at?: string
         }
         Update: {
           assigned_to?: string | null
           branch_id?: string
+          course_id?: string | null
           created_at?: string
           created_by?: string | null
           full_name?: string
+          group_id?: string | null
           id?: string
+          lost_reason?: string | null
           next_contact_on?: string | null
           note?: string | null
           phone?: string
@@ -1468,6 +2027,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["lead_status"]
           student_id?: string | null
           target_class?: string | null
+          trial_on?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1486,10 +2046,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "leads_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "leads_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "study_groups"
             referencedColumns: ["id"]
           },
           {
@@ -2534,6 +3108,7 @@ export type Database = {
           id: string
           legal_name: string | null
           name: string
+          org_type: string
           phone: string | null
           status: Database["public"]["Enums"]["school_status"]
           tax_id: string | null
@@ -2550,6 +3125,7 @@ export type Database = {
           id?: string
           legal_name?: string | null
           name: string
+          org_type?: string
           phone?: string | null
           status?: Database["public"]["Enums"]["school_status"]
           tax_id?: string | null
@@ -2566,13 +3142,16 @@ export type Database = {
           id?: string
           legal_name?: string | null
           name?: string
+          org_type?: string
           phone?: string | null
           status?: Database["public"]["Enums"]["school_status"]
           tax_id?: string | null
           timezone?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+
+        ]
       }
       service_prices: {
         Row: {
@@ -3663,6 +4242,127 @@ export type Database = {
       }
     }
     Functions: {
+      activate_group_member: {
+        Args: { p_from?: string; p_member_id: string }
+        Returns: undefined
+      }
+      cancel_session: {
+        Args: { p_reason: string; p_session_id: string }
+        Returns: undefined
+      }
+      enroll_to_group: {
+        Args: {
+          p_from?: string
+          p_group_id: string
+          p_note?: string
+          p_student_id: string
+          p_trial?: boolean
+        }
+        Returns: string
+      }
+      freeze_group_member: {
+        Args: {
+          p_from: string
+          p_member_id: string
+          p_reason?: string
+          p_to: string
+        }
+        Returns: string
+      }
+      generate_group_sessions: {
+        Args: { p_from: string; p_group_id: string; p_to: string }
+        Returns: number
+      }
+      group_conflicts: {
+        Args: {
+          p_branch_id: string
+          p_days: number[]
+          p_end: string
+          p_except_id?: string
+          p_room_id: string | null
+          p_start: string
+          p_teacher_id: string | null
+        }
+        Returns: {
+          days: number[]
+          end_time: string
+          group_id: string
+          group_name: string
+          kind: string
+          start_time: string
+        }[]
+      }
+      lc_overview: {
+        Args: { p_day?: string }
+        Returns: Json
+      }
+      leave_group: {
+        Args: { p_member_id: string; p_on?: string; p_reason?: string }
+        Returns: undefined
+      }
+      mark_session_attendance: {
+        Args: {
+          p_homework?: string
+          p_records: Json
+          p_session_id: string
+          p_topic?: string
+        }
+        Returns: Json
+      }
+      my_group_sessions: {
+        Args: { p_day?: string }
+        Returns: {
+          course_name: string
+          day: string
+          end_time: string
+          group_id: string
+          group_name: string
+          marked: number
+          room_name: string
+          session_id: string
+          start_time: string
+          status: string
+          students: number
+        }[]
+      }
+      report_group_earnings: {
+        Args: { p_period: string }
+        Returns: {
+          amount: number
+          detail: Json
+          group_id: string
+          group_name: string
+          pay_kind: string
+          quantity: number
+          teacher_id: string
+          teacher_name: string
+          unit_price: number
+        }[]
+      }
+      session_roster: {
+        Args: { p_session_id: string }
+        Returns: {
+          balance: number
+          comment: string
+          full_name: string
+          grade: number
+          member_status: string
+          status: string
+          student_id: string
+        }[]
+      }
+      set_group_price: {
+        Args: { p_group_id: string; p_price: number; p_valid_from?: string }
+        Returns: Json
+      }
+      set_org_type: {
+        Args: { p_type: string }
+        Returns: string
+      }
+      transfer_group_member: {
+        Args: { p_member_id: string; p_on?: string; p_to_group_id: string }
+        Returns: string
+      }
       add_invoice_discount: {
         Args: {
           p_amount: number

@@ -45,15 +45,25 @@ if (!REF || !TOKEN || !SERVICE_KEY) {
   process.exit(1);
 }
 
-const [schoolName, login, branchName] = process.argv.slice(2);
+//  Tur bayroqlari (istalgan joyda turishi mumkin):
+//    --oquv-markaz  — o'quv markazi (kurs, guruh, dars jadvali)
+//    --bogcha       — bog'cha (yosh guruhlari, tarbiyachi, kunlik davomat)
+//  Bayroqsiz — xususiy maktab.
+const FLAGS = { '--oquv-markaz': 'learning_center', '--bogcha': 'kindergarten' };
+const rawArgs = process.argv.slice(2);
+const orgFlag = rawArgs.find((a) => a in FLAGS);
+const orgType = orgFlag ? FLAGS[orgFlag] : null;
+const [schoolName, login, branchName] = rawArgs.filter((a) => !(a in FLAGS));
 
 if (!schoolName || !login) {
   console.log(
     '\nFoydalanish:\n' +
-    '  node scripts/new-school.mjs "Maktab nomi" <email yoki telefon> [filial nomi]\n\n' +
+    '  node scripts/new-school.mjs "Maktab nomi" <email yoki telefon> [filial nomi] [--oquv-markaz | --bogcha]\n\n' +
     'Misol:\n' +
     '  node scripts/new-school.mjs "Nur maktabi" direktor@nur.uz\n' +
-    '  node scripts/new-school.mjs "Nur maktabi" 998901234567 "Chilonzor filiali"\n',
+    '  node scripts/new-school.mjs "Nur maktabi" 998901234567 "Chilonzor filiali"\n' +
+    '  node scripts/new-school.mjs "Smart Academy" 998901234567 --oquv-markaz\n' +
+    '  node scripts/new-school.mjs "Quyoshcha bog\'chasi" 998901234567 --bogcha\n',
   );
   process.exit(1);
 }
@@ -94,6 +104,13 @@ const [prov] = await sql(`
 `);
 
 const { school_id, branch_id } = prov.result;
+
+if (orgType) {
+  await sql(`update public.schools set org_type = ${lit(orgType)} where id = ${lit(school_id)}`);
+  console.log(orgType === 'kindergarten'
+    ? '  ✓ Tur: Bog\'cha (yosh guruhlari, tarbiyachilar, kunlik davomat)'
+    : '  ✓ Tur: O\'quv markazi (kurslar, guruhlar, dars jadvali)');
+}
 console.log(`  ✓ Maktab yaratildi   ${school_id}`);
 console.log(`  ✓ Filial yaratildi   ${branch_id}`);
 console.log('  ✓ Shablon sozlamalar yuklandi (xarajat kategoriyalari,');
