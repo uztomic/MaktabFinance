@@ -18,7 +18,7 @@ import { AttendanceToday } from '@/features/AttendanceToday';
 
 export default function SchoolAttendance() {
   const t = useT();
-  const { can, profile } = useAuth();
+  const { can } = useAuth();
 
   //  Huquq brauzerda emas, bazada tekshiriladi — bu yerda faqat
   //  keraksiz so'rov yubormaslik uchun.
@@ -29,8 +29,8 @@ export default function SchoolAttendance() {
   return (
     <>
       <PageHeader
-        title={t('att.todayTitle')}
-        subtitle={profile?.school_name ?? ''}
+        title={t('att.pageTitle')}
+        subtitle={t('att.pageHint')}
       />
       <AttendanceToday />
     </>

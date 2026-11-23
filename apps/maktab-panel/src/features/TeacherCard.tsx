@@ -519,7 +519,7 @@ export default function TeacherCard() {
               </thead>
               <tbody>
                 {payrolls.data!.map((p) => (
-                  <Tr key={p.payroll_run_id}>
+                  <Tr key={p.payroll_run_id} to={`/oylik/${p.payroll_run_id}`}>
                     <Td>
                       <Link to={`/oylik/${p.payroll_run_id}`}
                             className="font-medium hover:underline">

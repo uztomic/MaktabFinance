@@ -73,9 +73,7 @@ function Icon({ d }: { d: ReactNode }) {
 const PEOPLE_SCHOOL: NavItem[] = [
   { to: '/oquvchilar', labelKey: 'nav.students', permission: 'students.manage', icon: <Icon d={I.users} /> },
   { to: '/sinflar', labelKey: 'nav.classes', permission: 'students.manage', icon: <Icon d={I.grid} /> },
-  { to: '/xizmatlar', labelKey: 'nav.services', permission: 'services.manage', icon: <Icon d={I.doc} /> },
   { to: '/davomat', labelKey: 'nav.attendance', permission: null, icon: <Icon d={I.calendar} /> },
-  { to: '/yoqlik', labelKey: 'nav.absences', permission: 'absences.mark', icon: <Icon d={I.calendar} /> },
   { to: '/murojaatlar', labelKey: 'nav.leads', permission: 'leads.manage', icon: <Icon d={I.inbox} /> },
 ];
 
@@ -87,7 +85,6 @@ const PEOPLE_LC: NavItem[] = [
   { to: '/davomat', labelKey: 'nav.lessons', permission: null, icon: <Icon d={I.calendar} /> },
   { to: '/murojaatlar', labelKey: 'nav.leadsFunnel', permission: 'leads.manage', icon: <Icon d={I.inbox} /> },
   { to: '/kurslar', labelKey: 'nav.courses', permission: 'students.manage', icon: <Icon d={I.book} /> },
-  { to: '/xizmatlar', labelKey: 'nav.services', permission: 'services.manage', icon: <Icon d={I.doc} /> },
 ];
 
 const groupsFor = (lc: boolean): NavGroup[] => [
@@ -104,6 +101,7 @@ const groupsFor = (lc: boolean): NavGroup[] => [
   {
     labelKey: 'nav.groupFinance',
     items: [
+      { to: '/xizmatlar', labelKey: 'nav.services', permission: 'services.manage', icon: <Icon d={I.layers} /> },
       { to: '/hisoblanma', labelKey: 'nav.invoices', permission: 'invoices.generate', icon: <Icon d={I.doc} /> },
       { to: '/tolovlar', labelKey: 'nav.payments', permission: 'payments.create', icon: <Icon d={I.cash} /> },
       { to: '/qarzdorlik', labelKey: 'nav.debts', permission: 'reports.view', icon: <Icon d={I.wallet} /> },

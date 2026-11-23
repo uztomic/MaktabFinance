@@ -44,7 +44,6 @@ const PAGES: Array<{ to: string; labelKey: string; permission: string | null }> 
   { to: '/oquvchilar', labelKey: 'nav.students', permission: 'students.manage' },
   { to: '/sinflar', labelKey: 'nav.classes', permission: 'students.manage' },
   { to: '/xizmatlar', labelKey: 'nav.services', permission: 'services.manage' },
-  { to: '/yoqlik', labelKey: 'nav.absences', permission: 'absences.mark' },
   { to: '/murojaatlar', labelKey: 'nav.leads', permission: 'leads.manage' },
   { to: '/hisoblanma', labelKey: 'nav.invoices', permission: 'invoices.generate' },
   { to: '/tolovlar', labelKey: 'nav.payments', permission: 'payments.create' },

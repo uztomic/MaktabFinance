@@ -102,24 +102,32 @@ export function CatalogSelect({
   if (adding) {
     return (
       <Field label={label} hint={t('catalog.newHint')}>
+        {/*  Tor ustunda ham maydon to'liq kenglikda qoladi: tugmalar
+             matn emas, ixcham belgi (✓ / ✕). Ilgari ikkita matnli
+             tugma maydonni ezib, uni ko'rinmas qilib qo'yardi. */}
         <div className="flex gap-1.5">
           <Input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder={t('catalog.newPlaceholder')}
             autoFocus
+            className="min-w-0 flex-1"
             onKeyDown={(e) => {
               if (e.key === 'Enter') { e.preventDefault(); add.mutate(draft); }
               if (e.key === 'Escape') { e.preventDefault(); setAdding(false); }
             }}
           />
-          <Button type="button" variant="primary" size="md"
+          <Button type="button" variant="primary"
+                  className="w-10 shrink-0 !px-0"
+                  title={t('common.add')} aria-label={t('common.add')}
                   disabled={add.isPending || !draft.trim()}
                   onClick={() => add.mutate(draft)}>
-            {add.isPending ? '…' : t('common.add')}
+            {add.isPending ? '…' : '✓'}
           </Button>
-          <Button type="button" size="md" onClick={() => setAdding(false)}>
-            {t('common.cancel')}
+          <Button type="button" className="w-10 shrink-0 !px-0"
+                  title={t('common.cancel')} aria-label={t('common.cancel')}
+                  onClick={() => setAdding(false)}>
+            ✕
           </Button>
         </div>
       </Field>
@@ -134,6 +142,7 @@ export function CatalogSelect({
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled || list.isLoading}
           required={required}
+          className="min-w-0 flex-1"
         >
           <option value="">{required ? '—' : t('catalog.notSet')}</option>
           {orphan && <option value={value}>{value}</option>}
@@ -147,7 +156,8 @@ export function CatalogSelect({
             size="md"
             title={t('catalog.add')}
             onClick={() => { setDraft(''); setAdding(true); }}
-            className="shrink-0"
+            className="w-10 shrink-0 !px-0"
+            aria-label={t('catalog.add')}
           >
             +
           </Button>

@@ -34,7 +34,6 @@ const Debts       = lazyPage(() => import('@/features/Debts'));
 const Expenses    = lazyPage(() => import('@/features/Expenses'));
 const Reports     = lazyPage(() => import('@/features/Reports'));
 const Leads       = lazyPage(() => import('@/features/Leads'));
-const Absences    = lazyPage(() => import('@/features/Absences'));
 const Teachers    = lazyPage(() => import('@/features/Teachers'));
 const TeacherCard = lazyPage(() => import('@/features/TeacherCard'));
 const Messages    = lazyPage(() => import('@/features/Messages'));
@@ -192,7 +191,7 @@ export default function App() {
             <Route path="sinflar" element={<Classes />} />
             <Route path="sinflar/:id" element={<ClassCard />} />
             <Route path="xizmatlar" element={<Services />} />
-            <Route path="yoqlik" element={<Absences />} />
+            <Route path="yoqlik" element={<Navigate to="/davomat" replace />} />
             <Route path="murojaatlar" element={isLC ? <LeadsFunnel /> : <Leads />} />
             <Route path="guruhlar" element={<Groups />} />
             <Route path="guruhlar/:id" element={<GroupCard />} />

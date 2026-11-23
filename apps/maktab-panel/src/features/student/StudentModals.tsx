@@ -15,10 +15,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/auth/AuthProvider';
 import { ClassPicker } from '@/ui/ClassPicker';
-import { useT } from '@/i18n';
-import { isoDate } from '@/lib/format';
+import { useI18n, useT } from '@/i18n';
+
+type DiscMode = 'percent' | 'amount' | 'pays';
+import { isoDate, money } from '@/lib/format';
 import {
-  Button, Field, Input, Modal, MoneyInput, Notice, Select,
+  Button, Field, Input, Modal, MoneyInput, Notice, Segmented, Select,
 } from '@/ui';
 import { PhoneInput } from '@/ui/PhoneInput';
 
@@ -36,6 +38,7 @@ interface ContractRow {
   discount_type_id: string | null;
   discount_kind: 'percent' | 'amount' | null;
   discount_value: number | null;
+  discount_reason?: string | null;
   due_day: number;
   billing_months: number;
   note: string | null;
@@ -50,6 +53,7 @@ export function ContractModal({
   existing: ContractRow | null;
 }) {
   const t = useT();
+  const { lang } = useI18n();
   const qc = useQueryClient();
   const { profile } = useAuth();
 
@@ -78,8 +82,12 @@ export function ContractModal({
     ends_on: existing?.ends_on ?? '',
     tuition: String(existing?.tuition_amount ?? ''),
     discount: initialDiscount,
-    discount_kind: existing?.discount_kind ?? 'percent',
+    //  Kiritish usuli: foiz, chegirma summasi yoki TO'LANADIGAN summa.
+    //  Bazada baribir foiz yoki summa saqlanadi — "to'lanadi" usuli
+    //  saqlashda chegirma summasiga aylantiriladi.
+    discount_mode: (existing?.discount_kind === 'amount' ? 'amount' : 'percent') as DiscMode,
     discount_value: String(existing?.discount_value ?? ''),
+    discount_reason: existing?.discount_reason ?? '',
     due_day: String(existing?.due_day ?? 10),
     months_mode: existing
       ? (existing.billing_months === 12
@@ -91,6 +99,25 @@ export function ContractModal({
   });
 
   const set = (k: string, v: string) => setF((p) => ({ ...p, [k]: v }));
+
+  // --- Chegirma hisobi (jonli ko'rinish uchun) -----------------------
+  const tuition = Number(f.tuition) || 0;
+  const raw = Number(f.discount_value) || 0;
+  //  Bazaga yoziladigan qiymat: foiz yoki chegirma SUMMASI.
+  const manualValue = f.discount_mode === 'percent' ? Math.min(100, raw)
+    : f.discount_mode === 'pays' ? Math.max(0, tuition - raw)
+    : Math.min(raw, tuition);
+  const picked = (discountTypes.data ?? []).find((d) => d.id === f.discount);
+  const discountSum = f.discount === 'manual'
+    ? (f.discount_mode === 'percent' ? Math.round(tuition * manualValue / 100) : manualValue)
+    : picked
+    ? (picked.kind === 'percent' ? Math.round(tuition * Number(picked.value) / 100)
+      : Math.min(Number(picked.value), tuition))
+    : 0;
+  const pays = Math.max(0, tuition - discountSum);
+  const pct = tuition > 0 ? Math.round((discountSum / tuition) * 1000) / 10 : 0;
+  const reasonMissing = f.discount === 'manual' && raw > 0 && !f.discount_reason.trim();
+  const paysTooHigh = f.discount === 'manual' && f.discount_mode === 'pays' && raw > tuition;
 
   const billingMonths = f.months_mode === 'other'
     ? Math.min(12, Math.max(1, Number(f.months_other) || 12))
@@ -108,11 +135,10 @@ export function ContractModal({
         tuition_amount: Number(f.tuition) || 0,
         discount_type_id: f.discount && f.discount !== 'manual' ? f.discount : null,
         discount_kind: f.discount === 'manual'
-          ? (f.discount_kind as 'percent' | 'amount')
+          ? (f.discount_mode === 'percent' ? 'percent' as const : 'amount' as const)
           : null,
-        discount_value: f.discount === 'manual'
-          ? Number(f.discount_value) || 0
-          : null,
+        discount_value: f.discount === 'manual' ? manualValue : null,
+        discount_reason: f.discount === 'manual' ? f.discount_reason.trim() || null : null,
         due_day: Number(f.due_day) || 10,
         billing_months: billingMonths,
         note: f.note.trim() || null,
@@ -157,7 +183,7 @@ export function ContractModal({
           <Button onClick={onClose}>{t('common.cancel')}</Button>
           <Button
             variant="primary" form="contract-form" type="submit"
-            disabled={save.isPending || !f.number || !f.tuition}
+            disabled={save.isPending || !f.number || !f.tuition || reasonMissing || paysTooHigh}
           >
             {save.isPending ? t('common.saving') : t('common.save')}
           </Button>
@@ -246,14 +272,19 @@ export function ContractModal({
           )}
         </div>
 
-        {/* --- Chegirma (TZ 12.2.3, 12.2.4) ---------------------- */}
-        <div className="grid gap-3 sm:grid-cols-2">
+        {/* --- Chegirma (TZ 12.2.3, 12.2.4) ----------------------
+             Asl narx ko'rinib turadi. Qo'lda chegirma uch xil
+             kiritiladi: foiz, chegirma summasi yoki "qancha to'laydi"
+             (1 700 000 o'rniga 1 500 000 → chegirma 200 000). Natija
+             darhol pastda chiqadi. Qo'lda chegirmada SABAB majburiy —
+             hisobotda har chegirma nega berilgani ko'rinsin. */}
+        <div className="space-y-3 rounded-xl border p-4">
           <Field label={t('contracts.discountType')}>
             <Select value={f.discount} onChange={(e) => set('discount', e.target.value)}>
               <option value="">{t('contracts.discountNone')}</option>
               {(discountTypes.data ?? []).map((d) => (
                 <option key={d.id} value={d.id}>
-                  {d.name} — {d.kind === 'percent' ? `${d.value}%` : d.value}
+                  {d.name} — {d.kind === 'percent' ? `${Number(d.value)}%` : money(d.value, lang)}
                 </option>
               ))}
               <option value="manual">{t('contracts.discountManual')}</option>
@@ -261,19 +292,58 @@ export function ContractModal({
           </Field>
 
           {f.discount === 'manual' && (
-            <div className="grid grid-cols-2 gap-2">
-              <Field label={t('pf.row.type')}>
-                <Select value={f.discount_kind}
-                        onChange={(e) => set('discount_kind', e.target.value)}>
-                  <option value="percent">%</option>
-                  <option value="amount">so'm</option>
-                </Select>
-              </Field>
-              <Field label={t('pf.row.value')}>
-                <Input type="number" min={0} value={f.discount_value}
-                       onChange={(e) => set('discount_value', e.target.value)}
-                       className="num text-right" />
-              </Field>
+            <>
+              <Segmented<DiscMode>
+                value={f.discount_mode}
+                onChange={(v) => { set('discount_mode', v); set('discount_value', ''); }}
+                options={[
+                  { value: 'pays', label: t('disc.mode.pays') },
+                  { value: 'percent', label: t('disc.mode.percent') },
+                  { value: 'amount', label: t('disc.mode.amount') },
+                ]}
+              />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label={t(`disc.mode.${f.discount_mode}.label`)}
+                       error={paysTooHigh ? t('disc.paysTooHigh') : undefined}>
+                  {f.discount_mode === 'percent'
+                    ? (
+                      <span className="relative block">
+                        <Input type="number" min={0} max={100} step="0.1" value={f.discount_value}
+                               onChange={(e) => set('discount_value', e.target.value)}
+                               className="num pr-8 text-right" />
+                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2
+                          text-[13px] text-[var(--text-faint)]">%</span>
+                      </span>
+                    )
+                    : <MoneyInput value={f.discount_value}
+                                  onChange={(e) => set('discount_value', e.target.value)} />}
+                </Field>
+                <Field label={t('disc.reason')} required
+                       error={reasonMissing ? t('disc.reasonRequired') : undefined}>
+                  <Input value={f.discount_reason}
+                         onChange={(e) => set('discount_reason', e.target.value)}
+                         placeholder={t('disc.reasonPlaceholder')} />
+                </Field>
+              </div>
+            </>
+          )}
+
+          {tuition > 0 && discountSum > 0 && (
+            <div className="grid grid-cols-3 gap-2 rounded-lg bg-[var(--bg-subtle)] p-3 text-center">
+              <div>
+                <div className="text-[11.5px] text-[var(--text-faint)]">{t('disc.base')}</div>
+                <div className="num text-[14px] text-[var(--text-muted)] line-through">{money(tuition, lang)}</div>
+              </div>
+              <div>
+                <div className="text-[11.5px] text-[var(--text-faint)]">{t('disc.discount')}</div>
+                <div className="num text-[14px] font-medium text-[var(--danger)]">
+                  −{money(discountSum, lang)} <span className="text-[12px]">({pct}%)</span>
+                </div>
+              </div>
+              <div>
+                <div className="text-[11.5px] text-[var(--text-faint)]">{t('disc.pays')}</div>
+                <div className="num text-[15px] font-semibold text-[var(--ok)]">{money(pays, lang)}</div>
+              </div>
             </div>
           )}
         </div>

@@ -166,7 +166,7 @@ export default function Teachers() {
                   // deno-lint-ignore no-explicit-any
                   const tb = (te as any).teacher_branches ?? [];
                   return (
-                    <Tr key={te.id} className={te.is_active ? '' : 'opacity-60'}>
+                    <Tr key={te.id} to={`/oqituvchilar/${te.id}`} className={te.is_active ? '' : 'opacity-60'}>
                       <Td>
                         <Link to={`/oqituvchilar/${te.id}`}
                               className="font-medium hover:underline">

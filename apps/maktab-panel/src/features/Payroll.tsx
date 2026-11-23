@@ -399,7 +399,7 @@ export default function Payroll() {
               </thead>
               <tbody>
                 {shown.map((r) => (
-                  <Tr key={r.payroll_run_id}>
+                  <Tr key={r.payroll_run_id} to={`/oylik/${r.payroll_run_id}`}>
                     <Td>
                       <Link to={`/oylik/${r.payroll_run_id}`}
                             className="font-medium hover:underline">

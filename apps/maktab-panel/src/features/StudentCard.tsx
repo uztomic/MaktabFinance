@@ -432,11 +432,11 @@ export default function StudentCard() {
   // deno-lint-ignore no-explicit-any
   const klass = (s as any).classes;
   const discount = c?.discount_kind
-    ? { kind: c.discount_kind, value: c.discount_value }
+    ? { kind: c.discount_kind, value: c.discount_value, why: c.discount_reason ?? null }
     // deno-lint-ignore no-explicit-any
     : (c as any)?.discount_types
     // deno-lint-ignore no-explicit-any
-    ? { kind: (c as any).discount_types.kind, value: (c as any).discount_types.value }
+    ? { kind: (c as any).discount_types.kind, value: (c as any).discount_types.value, why: (c as any).discount_types.name as string }
     : null;
 
   const age = ageFrom(s.birth_date);
@@ -622,9 +622,11 @@ export default function StudentCard() {
                 {discount && (
                   <Row
                     label={t('contracts.discount')}
-                    value={discount.kind === 'percent'
-                      ? `${discount.value}%`
-                      : money(discount.value, lang)}
+                    value={`${discount.kind === 'percent'
+                      ? `${Number(discount.value)}%`
+                      : money(discount.value, lang)} — ${money(Math.max(0, Number(c.tuition_amount) - (discount.kind === 'percent'
+                        ? Math.round(Number(c.tuition_amount) * Number(discount.value) / 100)
+                        : Number(discount.value))), lang)}${discount.why ? ` · ${discount.why}` : ''}`}
                     mono
                   />
                 )}

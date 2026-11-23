@@ -27,7 +27,7 @@ import {
 import { MonthPicker, periodEnd } from '@/ui/MonthPicker';
 import { type ClassMonth, loadMonthlyDebts } from '@/lib/monthlyDebts';
 import { QuickPayButton } from './QuickPay';
-import { AttendanceToday } from '@/features/AttendanceToday';
+import { AttendanceSummary } from '@/features/AttendanceToday';
 import { TodayActivity } from '@/features/TodayActivity';
 import { LcOverview } from '@/features/lc/LcOverview';
 import { usesGroups } from '@/lib/org';
@@ -239,7 +239,7 @@ export default function Dashboard() {
       ) : <Card><EmptyState /></Card>)}
 
       <div className="grid gap-4 lg:grid-cols-2">
-        {(can('absences.mark') || canSeeFinance) && !isLC && <AttendanceToday />}
+        {(can('absences.mark') || canSeeFinance) && !isLC && <AttendanceSummary />}
         <TodayActivity />
       </div>
     </>
@@ -266,7 +266,7 @@ function Alerts({ setup, gaps, proofs }: {
     items.push({ key: r.code, text: t(`setup.${r.code}`, { count: r.count }),
       to: LINK[r.code] ?? '/', danger: r.severity === 'danger' });
   }
-  if (gaps > 0) items.push({ key: 'gaps', text: t('dashboard.absenceWarningHint', { count: gaps }), to: '/yoqlik' });
+  if (gaps > 0) items.push({ key: 'gaps', text: t('dashboard.absenceWarningHint', { count: gaps }), to: '/davomat' });
   if (proofs > 0) items.push({ key: 'proofs', text: `${t('dashboard.pendingProofs')}: ${proofs}`, to: '/tolovlar' });
   if (items.length === 0) return null;
 

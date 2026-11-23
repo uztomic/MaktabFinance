@@ -76,9 +76,8 @@ export default function Invoices() {
   const [klass, setKlass] = useState('');
   const [statusF, setStatusF] = useState<'' | Status>('');
   const [openId, setOpenId] = useState<string | null>(null);
-  const [helpOpen, setHelpOpen] = useState(() => {
-    try { return localStorage.getItem('inv-help-hidden') !== '1'; } catch { return true; }
-  });
+  //  Qadamlar paneli yopiq turadi — kundalik ishda faqat keyingi amal kerak.
+  const [stepsOpen, setStepsOpen] = useState(false);
 
   const activeBranch = branchId ?? branches[0]?.id ?? null;
   const canRun = mayWrite('invoices.generate');
@@ -374,49 +373,45 @@ export default function Invoices() {
         }
       />
 
-      {/* --- "Hisoblanma nima?" — bir marta o'qiladi, yopib qo'yiladi --- */}
-      {helpOpen ? (
-        <Notice tone="neutral">
-          <div className="flex items-start justify-between gap-3">
-            <div className="space-y-1 text-[13px]">
-              <div className="font-semibold">{t('inv.help.title')}</div>
-              <div>{t('inv.help.what')}</div>
-              <div>{t('inv.help.flow')}</div>
-            </div>
-            <button type="button" className="shrink-0 text-[12px] underline"
-              onClick={() => {
-                setHelpOpen(false);
-                try { localStorage.setItem('inv-help-hidden', '1'); } catch { /* */ }
-              }}>
-              {t('inv.help.hide')}
-            </button>
-          </div>
-        </Notice>
-      ) : (
-        <button type="button" className="mb-1 text-[12px] text-[var(--text-muted)] underline"
-          onClick={() => {
-            setHelpOpen(true);
-            try { localStorage.removeItem('inv-help-hidden'); } catch { /* */ }
-          }}>
-          {t('inv.help.show')}
-        </button>
-      )}
-
       {/* --- Oylik sikl: qaysi qadamdasiz ----------------------------- */}
+      {/*  Hisoblanma oy boshida TIZIMNING O'ZI tuzadi. Kundalik ishda
+           faqat holat va keyingi bitta amal kerak — qolgan qadamlar
+           "Barcha amallar" ichida. */}
       {canRun && (
-        <Card className="my-4">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <div className="text-[13px]">
-              <span className="text-[var(--text-muted)]">{t('inv.nowStep')}: </span>
-              <strong>{t(`inv.stage.${stage}`)}</strong>
+        <Card className="mb-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="text-[14px] font-medium">{t(`inv.stage.${stage}`)}</div>
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                <Badge tone="warn">{t('inv.status.preliminary')} · {counts.preliminary}</Badge>
+                <Badge tone="brand">{t('inv.status.final')} · {counts.final}</Badge>
+                <Badge tone="ok">{t('inv.status.approved')} · {counts.approved}</Badge>
+                {autoRun.data?.period === period && (
+                  <span className="text-[12px] text-[var(--text-faint)]">
+                    {t('inv.autoShort', { date: dateTime(autoRun.data.at, lang) })}
+                  </span>
+                )}
+              </div>
             </div>
-            <div className="flex flex-wrap gap-1.5 text-[12px]">
-              <Badge tone="warn">{t('inv.status.preliminary')} · {counts.preliminary}</Badge>
-              <Badge tone="brand">{t('inv.status.final')} · {counts.final}</Badge>
-              <Badge tone="ok">{t('inv.status.approved')} · {counts.approved}</Badge>
-            </div>
+            {stage === 1 && (
+              <Button variant="primary" disabled={busy} onClick={() => generate.mutate()}>{t('inv.generate')}</Button>
+            )}
+            {stage === 2 && (
+              <Button variant="primary" disabled={busy || list.length === 0} onClick={askNotify}>{t('inv.notify')}</Button>
+            )}
+            {stage === 3 && (
+              <Button variant="primary" onClick={askFinalize}
+                      disabled={busy || counts.preliminary === 0 || (gaps.data?.length ?? 0) > 0}>{t('inv.finalize')}</Button>
+            )}
+            {stage === 4 && (
+              <Button variant="primary" disabled={busy || list.length === 0 || allApproved} onClick={askApprove}>{t('inv.approve')}</Button>
+            )}
+            <Button variant="ghost" onClick={() => setStepsOpen((o) => !o)}>
+              {stepsOpen ? t('inv.hide') : t('inv.allSteps')}
+            </Button>
           </div>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          {stepsOpen && (<>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             <StepButton
               n={1} label={t('inv.generate')} hint={t('inv.generateHint')}
               state={stage > 1 ? 'done' : 'current'}
@@ -448,6 +443,7 @@ export default function Invoices() {
               allApproved={allApproved}
             />
           </div>
+          </>)}
           {busy && (
             <div className="mt-2 flex items-center gap-2 text-[12px] text-[var(--text-muted)]">
               <Spinner /> {t('common.saving')}
@@ -462,7 +458,7 @@ export default function Invoices() {
           <Notice tone="warn">
             <strong>{t('inv.gapsBlock')}.</strong>{' '}
             {t('dashboard.absenceWarningHint', { count: gaps.data!.length })}{' '}
-            <Link to="/yoqlik" className="font-medium underline">
+            <Link to="/davomat" className="font-medium underline">
               {t('nav.absences')}
             </Link>
           </Notice>
@@ -472,14 +468,6 @@ export default function Invoices() {
         )}
         {(stale.data?.length ?? 0) > 0 && (
           <StaleInvoices rows={stale.data!} lang={lang} t={t} />
-        )}
-        {autoRun.data?.period === period && (
-          <Notice tone="neutral">
-            {t('inv.autoRun', {
-              date: dateTime(autoRun.data.at, lang),
-              count: autoRun.data.created,
-            })}
-          </Notice>
         )}
         {note && <Notice tone="ok">{note}</Notice>}
         {error && <Notice tone="danger">{(error as Error).message}</Notice>}

@@ -291,7 +291,7 @@ export default function Classes() {
                   const full = cap ? Number(c.students) >= cap : false;
                   const r = Number(c.collection_rate ?? 0);
                   return (
-                    <Tr key={c.class_id}>
+                    <Tr key={c.class_id} to={`/sinflar/${c.class_id}`}>
                       <Td>
                         <Link to={`/sinflar/${c.class_id}`}
                               className="font-medium hover:underline">

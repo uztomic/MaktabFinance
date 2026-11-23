@@ -15,12 +15,14 @@ import {
   type ChangeEvent,
   type ComponentPropsWithRef,
   type InputHTMLAttributes,
+  type MouseEvent,
   type ReactNode,
   type SelectHTMLAttributes,
   useEffect,
   useLayoutEffect,
   useRef,
 } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { money as fmtMoney } from '@/lib/format';
 import { useI18n } from '@/i18n';
 
@@ -361,16 +363,27 @@ export function Td({
 }
 
 export function Tr({
-  children, onClick, className = '',
+  children, onClick, to, className = '',
 }: {
   children: ReactNode;
   onClick?: () => void;
+  /** Qatorning istalgan joyini bossa — shu sahifa ochiladi. Ichidagi
+   *  tugma, havola va maydonlar o'z ishini qiladi (qatorga o'tmaydi). */
+  to?: string;
   className?: string;
 }) {
+  const navigate = useNavigate();
+  const go = to
+    ? (e: MouseEvent<HTMLTableRowElement>) => {
+        if ((e.target as HTMLElement).closest('a,button,input,select,textarea,label')) return;
+        if (e.ctrlKey || e.metaKey) window.open(to, '_blank');
+        else navigate(to);
+      }
+    : onClick;
   return (
     <tr
-      onClick={onClick}
-      className={`${onClick ? 'cursor-pointer' : ''}
+      onClick={go}
+      className={`${go ? 'cursor-pointer' : ''}
         hover:bg-[var(--bg-subtle)] ${className}`}
     >
       {children}

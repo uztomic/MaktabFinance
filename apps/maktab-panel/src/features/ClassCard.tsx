@@ -355,7 +355,7 @@ export default function ClassCard() {
               </thead>
               <tbody>
                 {list.map((s) => (
-                  <Tr key={s.id}>
+                  <Tr key={s.id} to={`/oquvchilar/${s.id}`}>
                     <Td>
                       <Link to={`/oquvchilar/${s.id}`}
                             className="font-medium hover:underline">

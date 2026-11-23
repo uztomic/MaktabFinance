@@ -192,7 +192,7 @@ export default function Students() {
               </thead>
               <tbody>
                 {rows.map((s) => (
-                  <Tr key={s.student_id}>
+                  <Tr key={s.student_id} to={`/oquvchilar/${s.student_id}`}>
                     <Td>
                       <Link to={`/oquvchilar/${s.student_id}`}
                             className="font-medium hover:underline">

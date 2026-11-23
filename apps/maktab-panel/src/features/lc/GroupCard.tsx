@@ -221,7 +221,7 @@ function Members({ group, members, balances }: { group: GroupRow; members: any[]
             {list.map((m) => {
               const bal = balances?.get(m.student_id) ?? 0;
               return (
-                <Tr key={m.id}>
+                <Tr key={m.id} to={`/oquvchilar/${m.student_id}`}>
                   <Td>
                     <Link to={`/oquvchilar/${m.student_id}`} className="font-medium hover:underline">
                       {m.students?.full_name}

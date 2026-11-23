@@ -1338,6 +1338,7 @@ export type Database = {
           billing_months: number
           created_at: string
           discount_kind: Database["public"]["Enums"]["discount_kind"] | null
+          discount_reason: string | null
           discount_type_id: string | null
           discount_value: number | null
           due_day: number
@@ -1357,6 +1358,7 @@ export type Database = {
           billing_months?: number
           created_at?: string
           discount_kind?: Database["public"]["Enums"]["discount_kind"] | null
+          discount_reason?: string | null
           discount_type_id?: string | null
           discount_value?: number | null
           due_day?: number
@@ -1376,6 +1378,7 @@ export type Database = {
           billing_months?: number
           created_at?: string
           discount_kind?: Database["public"]["Enums"]["discount_kind"] | null
+          discount_reason?: string | null
           discount_type_id?: string | null
           discount_value?: number | null
           due_day?: number
