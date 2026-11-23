@@ -128,6 +128,12 @@ export function CalendarSettings({ editable }: { editable: boolean }) {
       const days: string[] = [];
       const cur = new Date(f.from);
       const end = new Date(f.to || f.from);
+      //  "Gacha" sanasi "dan" dan oldin bo'lsa, ilgari hech narsa
+      //  qo'shilmasdi, lekin oyna "saqlandi" deb yopilardi.
+      if (Number.isNaN(cur.getTime()) || Number.isNaN(end.getTime())) {
+        throw new Error(t('cat.err.date'));
+      }
+      if (end < cur) throw new Error(t('cat.err.range'));
       while (cur <= end) {
         days.push(isoDate(cur));
         cur.setDate(cur.getDate() + 1);
@@ -415,6 +421,13 @@ export function DiscountSettings({ editable }: { editable: boolean }) {
       id?: string; code: string; name: string;
       kind: 'percent' | 'amount'; value: string;
     }) => {
+      //  Bo'sh nom, manfiy yoki 100% dan ortiq chegirma bazaga
+      //  yozilmaydi — u qarzni manfiyga tushirib yuborardi.
+      const v = Number(String(f.value).replace(',', '.'));
+      if (!f.name.trim()) throw new Error(t('cat.err.name'));
+      if (!Number.isFinite(v) || v <= 0) throw new Error(t('cat.err.value'));
+      if (f.kind === 'percent' && v > 100) throw new Error(t('cat.err.percent'));
+      f = { ...f, value: String(v) };
       if (f.id) {
         const { error } = await supabase.from('discount_types')
           .update({ name: f.name.trim(), kind: f.kind, value: Number(f.value) })
@@ -423,7 +436,9 @@ export function DiscountSettings({ editable }: { editable: boolean }) {
       } else {
         const { error } = await supabase.from('discount_types').insert({
           school_id: profile!.school_id,
-          code: f.code.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_'),
+          //  Kirill nomlarida kod bo'sh chiqardi va qo'shish xato berardi.
+          code: f.code.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
+            || `d_${Date.now()}`,
           name: f.name.trim(),
           kind: f.kind,
           value: Number(f.value),
@@ -612,6 +627,7 @@ export function ReasonSettings({ editable }: { editable: boolean }) {
 
   const add = useMutation({
     mutationFn: async (f: { name: string; deducts: boolean }) => {
+      if (!f.name.trim()) throw new Error(t('cat.err.name'));
       const code = f.name.trim().toLowerCase()
         .replace(/[^a-z0-9]+/g, '_') || `r_${Date.now()}`;
       const { error } = await supabase.from('absence_reasons').insert({

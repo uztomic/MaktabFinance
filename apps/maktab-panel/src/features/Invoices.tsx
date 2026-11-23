@@ -14,7 +14,8 @@
 //  server funksiyasini chaqiradi (TZ 5.4.6).
 // =====================================================================
 
-import { useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
+import { useConfirm } from '@/ui/Feedback';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
@@ -26,8 +27,8 @@ import {
 import { exportTable } from '@/lib/export';
 import { PeriodLockButton } from './PeriodLock';
 import {
-  Badge, Button, Card, EmptyState, ErrorState, Loading, Money, Notice,
-  PageHeader, Table, Td, Th, Tr,
+  Badge, Button, Card, EmptyState, ErrorState, Input, Loading, Money, Notice,
+  PageHeader, Select, Spinner, Table, Td, Th, Tr,
 } from '@/ui';
 
 type Status = 'preliminary' | 'final' | 'approved' | 'cancelled';
@@ -68,6 +69,15 @@ export default function Invoices() {
 
   const [period, setPeriod] = useState(currentPeriod());
   const [note, setNote] = useState<string | null>(null);
+  const confirm = useConfirm();
+  //  Ro'yxat filtrlari — 150 qatorli ro'yxatda kerakli bolani topish uchun.
+  const [q, setQ] = useState('');
+  const [klass, setKlass] = useState('');
+  const [statusF, setStatusF] = useState<'' | Status>('');
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [helpOpen, setHelpOpen] = useState(() => {
+    try { return localStorage.getItem('inv-help-hidden') !== '1'; } catch { return true; }
+  });
 
   const activeBranch = branchId ?? branches[0]?.id ?? null;
   const canRun = mayWrite('invoices.generate');
@@ -210,7 +220,11 @@ export default function Invoices() {
       refresh();
       //  Hech narsa yaratilmagan bo'lsa raqam ko'rsatishdan foyda yo'q —
       //  sababi quyidagi tashxis xabarida yoziladi.
-      setNote(d.created + d.rebuilt === 0 ? null : `${t('inv.created')}: ${d.created} · ${t('inv.rebuilt')}: ${d.rebuilt} · ` +
+      //  Hammasi qulflangan bo'lsa ham javob kerak — aks holda tugma
+      //  "ishlamayapti" deb o'ylanadi.
+      setNote(d.created + d.rebuilt === 0
+        ? (d.locked > 0 ? t('inv.allLocked', { count: d.locked }) : null)
+        : `${t('inv.created')}: ${d.created} · ${t('inv.rebuilt')}: ${d.rebuilt} · ` +
         `${t('inv.locked')}: ${d.locked} · ${t('inv.skipped')}: ${d.skipped}`);
     },
   });
@@ -254,6 +268,14 @@ export default function Invoices() {
     onSuccess: (d) => setNote(t('inv.queued', { count: d.queued })),
   });
 
+  const listAll = useMemo(() => (rows.data ?? []).map((r) => ({
+    ...r,
+    student: r.student_id ? students.data?.get(r.student_id) : undefined,
+  })).sort((a, b) =>
+    (a.student?.class_name ?? '').localeCompare(b.student?.class_name ?? '') ||
+    (a.student?.full_name ?? '').localeCompare(b.student?.full_name ?? '')),
+  [rows.data, students.data]);
+
   if (!can('invoices.generate')) {
     return <Notice tone="danger">{t('common.noAccess')}</Notice>;
   }
@@ -263,16 +285,58 @@ export default function Invoices() {
                        onRetry={() => rows.refetch()} />;
   }
 
-  const list = (rows.data ?? []).map((r) => ({
-    ...r,
-    student: r.student_id ? students.data?.get(r.student_id) : undefined,
-  })).sort((a, b) =>
-    (a.student?.class_name ?? '').localeCompare(b.student?.class_name ?? '') ||
-    (a.student?.full_name ?? '').localeCompare(b.student?.full_name ?? ''));
+  const list = listAll;
+  const counts = {
+    preliminary: list.filter((r) => r.status === 'preliminary').length,
+    final: list.filter((r) => r.status === 'final').length,
+    approved: list.filter((r) => r.status === 'approved').length,
+  };
+  const classes = [...new Set(list.map((r) => r.student?.class_name).filter(Boolean) as string[])];
+  const needle = q.trim().toLowerCase();
+  const shown = list.filter((r) =>
+    (!klass || r.student?.class_name === klass) &&
+    (!statusF || r.status === statusF) &&
+    (!needle || (r.student?.full_name ?? '').toLowerCase().includes(needle) ||
+      (r.student?.payment_code ?? '').toLowerCase().includes(needle)));
 
-  const total = list.reduce((s, r) => s + Number(r.total ?? 0), 0);
+  const total = shown.reduce((s, r) => s + Number(r.total ?? 0), 0);
   const hasPreliminary = list.some((r) => r.has_preliminary);
   const allApproved = list.length > 0 && list.every((r) => r.status === 'approved');
+
+  //  QAYSI QADAMDAMIZ. Ilgari 5 ta tugma bir xil ko'rinardi va
+  //  buxgalter "endi nima qilaman" degan savolga javob topolmasdi.
+  //  1 — hali yo'q; 2/3 — dastlabki (yuborish, so'ng oy oxirida
+  //  yakunlash); 4 — yakuniy, tasdiqlash kerak; 5 — hammasi tasdiqlangan.
+  const stage = list.length === 0 ? 1
+    : counts.preliminary > 0 ? (period < currentPeriod() ? 3 : 2)
+    : counts.final > 0 ? 4 : 5;
+
+  const askFinalize = async () => {
+    if (await confirm({
+      title: t('inv.finalize'),
+      message: t('inv.confirmFinalize', { count: counts.preliminary, period: periodLabel(period, lang) }),
+      confirmLabel: t('inv.finalize'),
+    })) finalize.mutate();
+  };
+  const askApprove = async () => {
+    if (await confirm({
+      title: t('inv.approve'),
+      message: t('inv.confirmApprove', { count: list.length - counts.approved, amount: money(list.reduce((a, r) => a + Number(r.total ?? 0), 0), lang) }),
+      //  Yakunlanmagan (taxminiy) hisoblanma ham tasdiqlanishi mumkin —
+      //  lekin unda kunlik xizmatlar taxminiy summada qotib qoladi.
+      warning: hasPreliminary
+        ? `${t('inv.approveHint')} ${t('inv.approvePrelimWarn')}`
+        : t('inv.approveHint'),
+      confirmLabel: t('inv.approve'),
+    })) approve.mutate();
+  };
+  const askNotify = async () => {
+    if (await confirm({
+      title: t('inv.notify'),
+      message: t('inv.confirmNotify', { count: list.length }),
+      confirmLabel: t('inv.notify'),
+    })) notify.mutate(false);
+  };
   const busy = generate.isPending || finalize.isPending ||
     approve.isPending || notify.isPending;
 
@@ -310,37 +374,85 @@ export default function Invoices() {
         }
       />
 
-      {/* --- Oylik sikl tugmalari ------------------------------- */}
+      {/* --- "Hisoblanma nima?" — bir marta o'qiladi, yopib qo'yiladi --- */}
+      {helpOpen ? (
+        <Notice tone="neutral">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-1 text-[13px]">
+              <div className="font-semibold">{t('inv.help.title')}</div>
+              <div>{t('inv.help.what')}</div>
+              <div>{t('inv.help.flow')}</div>
+            </div>
+            <button type="button" className="shrink-0 text-[12px] underline"
+              onClick={() => {
+                setHelpOpen(false);
+                try { localStorage.setItem('inv-help-hidden', '1'); } catch { /* */ }
+              }}>
+              {t('inv.help.hide')}
+            </button>
+          </div>
+        </Notice>
+      ) : (
+        <button type="button" className="mb-1 text-[12px] text-[var(--text-muted)] underline"
+          onClick={() => {
+            setHelpOpen(true);
+            try { localStorage.removeItem('inv-help-hidden'); } catch { /* */ }
+          }}>
+          {t('inv.help.show')}
+        </button>
+      )}
+
+      {/* --- Oylik sikl: qaysi qadamdasiz ----------------------------- */}
       {canRun && (
-        <Card className="mb-4">
-          <div className="flex flex-wrap gap-2">
+        <Card className="my-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="text-[13px]">
+              <span className="text-[var(--text-muted)]">{t('inv.nowStep')}: </span>
+              <strong>{t(`inv.stage.${stage}`)}</strong>
+            </div>
+            <div className="flex flex-wrap gap-1.5 text-[12px]">
+              <Badge tone="warn">{t('inv.status.preliminary')} · {counts.preliminary}</Badge>
+              <Badge tone="brand">{t('inv.status.final')} · {counts.final}</Badge>
+              <Badge tone="ok">{t('inv.status.approved')} · {counts.approved}</Badge>
+            </div>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             <StepButton
               n={1} label={t('inv.generate')} hint={t('inv.generateHint')}
+              state={stage > 1 ? 'done' : 'current'}
               onClick={() => generate.mutate()} disabled={busy}
-              variant="primary"
             />
             <StepButton
               n={2} label={t('inv.notify')} hint={t('inv.notifyHint')}
-              onClick={() => notify.mutate(false)}
+              state={stage === 2 ? 'current' : stage > 2 ? 'done' : 'todo'}
+              onClick={askNotify}
               disabled={busy || list.length === 0}
             />
             <StepButton
               n={3} label={t('inv.finalize')} hint={t('inv.finalizeHint')}
-              onClick={() => finalize.mutate()}
-              disabled={busy || list.length === 0 || (gaps.data?.length ?? 0) > 0}
+              state={stage === 3 ? 'current' : stage > 3 ? 'done' : 'todo'}
+              onClick={askFinalize}
+              disabled={busy || counts.preliminary === 0 || (gaps.data?.length ?? 0) > 0}
             />
             <StepButton
               n={4} label={t('inv.approve')} hint={t('inv.approveHint')}
-              onClick={() => approve.mutate()}
+              state={stage === 4 ? 'current' : stage > 4 ? 'done' : 'todo'}
+              onClick={askApprove}
               disabled={busy || list.length === 0 || allApproved}
-              variant="accent"
             />
+          </div>
+          <div className="mt-2 flex justify-end">
             <PeriodLockButton
               period={period}
               branchId={activeBranch}
               allApproved={allApproved}
             />
           </div>
+          {busy && (
+            <div className="mt-2 flex items-center gap-2 text-[12px] text-[var(--text-muted)]">
+              <Spinner /> {t('common.saving')}
+            </div>
+          )}
         </Card>
       )}
 
@@ -380,6 +492,27 @@ export default function Invoices() {
       {diag.data && <PeriodSummary d={diag.data} rows={list} />}
 
       {/* --- Ro'yxat -------------------------------------------- */}
+      {list.length > 0 && (
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <Input type="search" value={q} onChange={(e) => setQ(e.target.value)}
+                 placeholder={t('students.searchHint')} className="max-w-xs" />
+          <Select value={klass} onChange={(e) => setKlass(e.target.value)} className="w-auto">
+            <option value="">{t('inv.allClasses')}</option>
+            {classes.map((c) => <option key={c} value={c}>{c}</option>)}
+          </Select>
+          <Select value={statusF} onChange={(e) => setStatusF(e.target.value as '' | Status)} className="w-auto">
+            <option value="">{t('inv.allStatuses')}</option>
+            <option value="preliminary">{t('inv.status.preliminary')}</option>
+            <option value="final">{t('inv.status.final')}</option>
+            <option value="approved">{t('inv.status.approved')}</option>
+          </Select>
+          {hasPreliminary && (
+            <span className="text-[12px] text-[var(--text-muted)]">
+              <span className="text-[var(--warn)]">●</span> {t('inv.dotLegend')}
+            </span>
+          )}
+        </div>
+      )}
       <Card padded={false}>
         {list.length === 0
           ? (
@@ -400,6 +533,8 @@ export default function Invoices() {
               )}
             />
           )
+          : shown.length === 0
+          ? <EmptyState title={t('inv.noMatch')} hint="" />
           : (
             <Table>
               <thead>
@@ -410,43 +545,62 @@ export default function Invoices() {
                   <Th>{t('common.status')}</Th>
                   <Th>{t('inv.dueDate')}</Th>
                   <Th align="right">{t('common.total')}</Th>
+                  <Th align="right">{t('inv.details')}</Th>
                 </tr>
               </thead>
               <tbody>
-                {list.map((r) => (
-                  <Tr key={r.invoice_id}>
-                    <Td>
-                      <Link to={`/oquvchilar/${r.student_id}`}
-                            className="font-medium hover:underline">
-                        {r.student?.full_name ?? '—'}
-                      </Link>
-                    </Td>
-                    <Td className="text-[var(--text-muted)]">
-                      {r.student?.class_name ?? '—'}
-                    </Td>
-                    <Td mono className="text-[var(--text-muted)]">
-                      {r.student?.payment_code ?? '—'}
-                    </Td>
-                    <Td>
-                      <Badge tone={TONE[(r.status ?? 'preliminary') as Status]}>
-                        {t(`inv.status.${r.status}`)}
-                      </Badge>
-                      {r.has_preliminary && (
-                        <span className="ml-1 text-[11px] text-[var(--warn)]">●</span>
-                      )}
-                    </Td>
-                    <Td mono className="text-[var(--text-muted)]">
-                      {date(r.due_date, lang)}
-                    </Td>
-                    <Td align="right" mono><Money value={r.total} bold /></Td>
-                  </Tr>
+                {shown.map((r) => (
+                  <Fragment key={r.invoice_id}>
+                    <Tr>
+                      <Td>
+                        <Link to={`/oquvchilar/${r.student_id}`}
+                              className="font-medium hover:underline">
+                          {r.student?.full_name ?? '—'}
+                        </Link>
+                      </Td>
+                      <Td className="text-[var(--text-muted)]">
+                        {r.student?.class_name ?? '—'}
+                      </Td>
+                      <Td mono className="text-[var(--text-muted)]">
+                        {r.student?.payment_code ?? '—'}
+                      </Td>
+                      <Td>
+                        <Badge tone={TONE[(r.status ?? 'preliminary') as Status]}>
+                          {t(`inv.status.${r.status}`)}
+                        </Badge>
+                        {r.has_preliminary && (
+                          <span className="ml-1 text-[11px] text-[var(--warn)]"
+                                title={t('inv.dotLegend')}>●</span>
+                        )}
+                      </Td>
+                      <Td mono className="text-[var(--text-muted)]">
+                        {date(r.due_date, lang)}
+                      </Td>
+                      <Td align="right" mono><Money value={r.total} bold /></Td>
+                      <Td align="right">
+                        <Button size="sm" variant="ghost"
+                          aria-expanded={openId === r.invoice_id}
+                          onClick={() => setOpenId(openId === r.invoice_id ? null : r.invoice_id)}>
+                          {openId === r.invoice_id ? t('inv.hide') : t('inv.showLines')}
+                        </Button>
+                      </Td>
+                    </Tr>
+                    {openId === r.invoice_id && (
+                      <tr>
+                        <td colSpan={7} className="bg-[var(--bg-subtle)] px-4 py-2">
+                          <InvoiceLines invoiceId={r.invoice_id!} />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
               </tbody>
               <tfoot>
                 <tr className="bg-[var(--bg-subtle)] font-semibold">
-                  <Td>{t('common.total')}</Td>
+                  <Td>{t('common.total')}{shown.length !== list.length ? ` (${shown.length})` : ''}</Td>
                   <Td /><Td /><Td /><Td />
                   <Td align="right" mono>{money(total, lang)}</Td>
+                  <Td />
                 </tr>
               </tfoot>
             </Table>
@@ -668,41 +822,83 @@ function PeriodDiagnosis({ d, onGo }: {
 }
 
 /** Sikl qadami — raqami, nomi va nima qilishi ko'rinib turadi. */
+/**
+ *  Hisoblanma qanday tuzilgan: o'quv to'lovi + xizmatlar − chegirma.
+ *  Ilgari buni ko'rish uchun o'quvchi kartochkasiga o'tish kerak edi.
+ */
+function InvoiceLines({ invoiceId }: { invoiceId: string }) {
+  const t = useT();
+  const { lang } = useI18n();
+  const lines = useQuery({
+    queryKey: ['invoice-lines', invoiceId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('invoice_lines')
+        .select('id, description, kind, quantity, unit_price, amount, is_preliminary, sort_order')
+        .eq('invoice_id', invoiceId)
+        .order('sort_order');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  if (lines.isLoading) return <Spinner />;
+  if (lines.error) return <Notice tone="danger">{(lines.error as Error).message}</Notice>;
+  return (
+    <ul className="divide-y text-[13px]">
+      {(lines.data ?? []).map((l) => (
+        <li key={l.id} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 py-1.5">
+          <span className="min-w-0">
+            {l.description}
+            <span className="ml-1.5 text-[11px] text-[var(--text-faint)]">{t(`inv.kind.${l.kind}`)}</span>
+            {l.is_preliminary && <span className="ml-1 text-[11px] text-[var(--warn)]">● {t('inv.preliminary')}</span>}
+          </span>
+          <span className="num whitespace-nowrap text-[var(--text-muted)]">
+            {Number(l.quantity) !== 1 && `${l.quantity} × ${money(l.unit_price, lang)} = `}
+            <span className={Number(l.amount) < 0 ? 'text-[var(--ok)]' : 'font-medium text-[var(--text)]'}>
+              {money(l.amount, lang)}
+            </span>
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function StepButton({
-  n, label, hint, onClick, disabled, variant = 'secondary',
+  n, label, hint, onClick, disabled, state,
 }: {
   n: number;
   label: string;
   hint: string;
   onClick: () => void;
   disabled: boolean;
-  variant?: 'primary' | 'secondary' | 'accent';
+  state: 'done' | 'current' | 'todo';
 }) {
+  const current = state === 'current';
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`flex-1 rounded-lg border p-3 text-left transition-colors
-        min-w-[13rem] disabled:cursor-not-allowed disabled:opacity-45
-        ${variant === 'primary'
-          ? 'border-brand-700 bg-brand-900 text-white hover:bg-brand-800'
-          : variant === 'accent'
-          ? 'border-accent-600 bg-accent-600 text-white hover:bg-accent-700'
+      aria-current={current ? 'step' : undefined}
+      className={`rounded-lg border p-3 text-left transition-colors
+        disabled:cursor-not-allowed disabled:opacity-50
+        ${current
+          ? 'border-brand-700 bg-brand-900 text-white shadow-md hover:bg-brand-800'
           : 'hover:bg-[var(--bg-subtle)]'}`}
     >
       <div className="flex items-center gap-2">
         <span className={`flex h-5 w-5 shrink-0 items-center justify-center
           rounded-full text-[11px] font-semibold
-          ${variant === 'secondary'
-            ? 'bg-[var(--bg-inset)] text-[var(--text-muted)]'
-            : 'bg-white/20 text-white'}`}>
-          {n}
+          ${state === 'done' ? 'bg-[var(--ok)] text-white'
+            : current ? 'bg-white/20 text-white'
+            : 'bg-[var(--bg-inset)] text-[var(--text-muted)]'}`}>
+          {state === 'done' ? '✓' : n}
         </span>
         <span className="text-sm font-medium">{label}</span>
       </div>
       <p className={`mt-1 pl-7 text-[11px] leading-snug
-        ${variant === 'secondary' ? 'text-[var(--text-muted)]' : 'text-white/75'}`}>
+        ${current ? 'text-white/80' : 'text-[var(--text-muted)]'}`}>
         {hint}
       </p>
     </button>

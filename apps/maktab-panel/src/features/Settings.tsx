@@ -102,7 +102,7 @@ interface SettingDef {
   labelKey: string;
   /** Izoh matnining tarjima kaliti. */
   hintKey: string;
-  kind: 'number' | 'select' | 'json';
+  kind: 'number' | 'select' | 'json' | 'hours';
   options?: Array<{ value: string; labelKey: string }>;
   min?: number;
   max?: number;
@@ -163,7 +163,9 @@ const MESSAGING: SettingDef[] = [
     key: 'messaging.quiet_hours',
     labelKey: 'settings.quietHours',
     hintKey: 'settings.quietHours.hint',
-    kind: 'json',
+    //  Ilgari xom JSON edi: {"to":8,"from":20} — buxgalter uchun
+    //  tushunarsiz va bitta qavs xatosi sozlamani buzardi.
+    kind: 'hours',
   },
 ];
 
@@ -216,7 +218,7 @@ function SchoolSettings({
             def={d}
             current={rows.data?.get(d.key)?.value}
             editable={editable}
-            onSave={(value) => save.mutate({ key: d.key, value })}
+            onSave={(value) => save.mutateAsync({ key: d.key, value })}
             busy={save.isPending}
           />
         ))}
@@ -230,17 +232,33 @@ function SchoolSettings({
   );
 }
 
+/** `{"from":20,"to":8}` → soatlar; buzuq qiymatda standart 20→8. */
+function readHours(raw: string): { from: number; to: number } {
+  try {
+    const v = JSON.parse(raw) as { from?: unknown; to?: unknown };
+    const ok = (n: unknown) => typeof n === 'number' && Number.isInteger(n) && n >= 0 && n <= 23;
+    return { from: ok(v.from) ? v.from as number : 20, to: ok(v.to) ? v.to as number : 8 };
+  } catch {
+    return { from: 20, to: 8 };
+  }
+}
+
 function SettingRow({
   def, current, editable, onSave, busy,
 }: {
   def: SettingDef;
   current: unknown;
   editable: boolean;
-  onSave: (v: unknown) => void;
+  onSave: (v: unknown) => Promise<void>;
   busy: boolean;
 }) {
   const t = useT();
-  const initial = def.kind === 'json'
+  const initial = def.kind === 'hours'
+    //  Kalitlar tartibi bazada boshqacha bo'lishi mumkin — bir xil
+    //  ko'rinishga keltiriladi, aks holda saqlangandan keyin ham
+    //  "o'zgargan" deb turaverardi.
+    ? JSON.stringify(readHours(JSON.stringify(current ?? {})))
+    : def.kind === 'json'
     ? JSON.stringify(current ?? {}, null, 0)
     : String(current ?? '').replace(/^"|"$/g, '');
 
@@ -248,18 +266,51 @@ function SettingRow({
   const [err, setErr] = useState<string | null>(null);
   const dirty = value !== initial;
 
+  const [saved, setSaved] = useState(false);
+
+  //  RAQAM TEKSHIRUVI. `min`/`max` faqat brauzerga ishora — foydalanuvchi
+  //  baribir "13" yoki bo'sh maydonni yuborishi mumkin edi va u
+  //  bazaga yozilardi (`Number('')` = 0). Masalan o'quv yili boshi
+  //  13-oy bo'lib qolsa, hisoblanma davrlari buziladi.
   function submit() {
     setErr(null);
-    try {
-      const parsed = def.kind === 'json'
-        ? JSON.parse(value)
-        : def.kind === 'number'
-        ? Number(value)
-        : value;
-      onSave(parsed);
-    } catch {
-      setErr('JSON formati noto\'g\'ri');
+    setSaved(false);
+    let parsed: unknown;
+    if (def.kind === 'hours') {
+      const h = readHours(value);
+      if (h.from === h.to) {
+        setErr(t('settings.err.hoursSame'));
+        return;
+      }
+      parsed = h;
+    } else if (def.kind === 'json') {
+      try {
+        parsed = JSON.parse(value);
+      } catch {
+        setErr(t('settings.err.json'));
+        return;
+      }
+    } else if (def.kind === 'number') {
+      const raw = value.trim().replace(',', '.');
+      const n = Number(raw);
+      if (raw === '' || !Number.isFinite(n)) {
+        setErr(t('settings.err.number'));
+        return;
+      }
+      if (!Number.isInteger(n)) {
+        setErr(t('settings.err.integer'));
+        return;
+      }
+      if ((def.min !== undefined && n < def.min) || (def.max !== undefined && n > def.max)) {
+        setErr(t('settings.err.range', { min: def.min ?? '—', max: def.max ?? '—' }));
+        return;
+      }
+      parsed = n;
+    } else {
+      parsed = value;
     }
+    //  "Saqlandi" faqat server tasdiqlagandan keyin.
+    onSave(parsed).then(() => setSaved(true)).catch(() => { /* xato pastda ko'rsatiladi */ });
   }
 
   const label = t(def.labelKey);
@@ -267,10 +318,37 @@ function SettingRow({
   return (
     <div className="flex flex-wrap items-end gap-3">
       <div className="min-w-[16rem] flex-1">
-        <Field label={label} hint={t(def.hintKey)} error={err ?? undefined}>
-          {def.kind === 'select'
+        <Field label={label}
+               hint={saved && !dirty ? `✓ ${t('settings.saved')}` : t(def.hintKey)}
+               error={err ?? undefined}>
+          {def.kind === 'hours'
             ? (
-              <Select value={value} onChange={(e) => setValue(e.target.value)}
+              <div className="flex items-center gap-2">
+                {(['from', 'to'] as const).map((k) => (
+                  <label key={k} className="flex items-center gap-1.5 text-[13px]">
+                    <span className="text-[var(--text-muted)]">{t(`settings.hours.${k}`)}</span>
+                    <Select
+                      value={String(readHours(value)[k])}
+                      disabled={!editable}
+                      className="w-24"
+                      onChange={(e) => {
+                        const h = { ...readHours(value), [k]: Number(e.target.value) };
+                        setValue(JSON.stringify(h));
+                        setErr(null);
+                        setSaved(false);
+                      }}
+                    >
+                      {Array.from({ length: 24 }, (_, i) => (
+                        <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>
+                      ))}
+                    </Select>
+                  </label>
+                ))}
+              </div>
+            )
+            : def.kind === 'select'
+            ? (
+              <Select value={value} onChange={(e) => { setValue(e.target.value); setSaved(false); }}
                       disabled={!editable}>
                 {def.options!.map((o) => (
                   <option key={o.value} value={o.value}>{t(o.labelKey)}</option>
@@ -282,8 +360,13 @@ function SettingRow({
                 type={def.kind === 'number' ? 'number' : 'text'}
                 min={def.min} max={def.max}
                 value={value}
-                onChange={(e) => setValue(e.target.value)}
+                onChange={(e) => {
+                  setValue(e.target.value);
+                  setErr(null);
+                  setSaved(false);
+                }}
                 disabled={!editable}
+                aria-invalid={!!err}
                 className={def.kind === 'json' ? 'font-mono text-[12px]' : ''}
               />
             )}

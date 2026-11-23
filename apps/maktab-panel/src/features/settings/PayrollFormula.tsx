@@ -196,6 +196,38 @@ export default function PayrollFormula({ editable }: { editable: boolean }) {
     [loaded, form],
   );
 
+  // --- Tekshiruv: noto'g'ri qiymat bazaga yozilmaydi --------------
+  //  Ilgari manfiy soat narxi, 0 soatli stavka yoki 40-sana kabi
+  //  qiymatlar to'g'ridan-to'g'ri saqlanardi va keyingi oylik
+  //  hisobida noto'g'ri (yoki 0 ga bo'lish tufayli cheksiz) natija
+  //  chiqarardi. Endi birinchi xato ko'rsatiladi va saqlanmaydi.
+  const problems = useMemo(() => {
+    const out: string[] = [];
+    const bad = (n: unknown) => typeof n !== 'number' || !Number.isFinite(n);
+    if (form.base_type === 'rate' && (bad(form.hours_per_rate) || form.hours_per_rate <= 0 || form.hours_per_rate > 100)) {
+      out.push(t('pf.err.hoursPerRate'));
+    }
+    if (bad(form.hour_price) || form.hour_price < 0) out.push(t('pf.err.hourPrice'));
+    if (bad(form.substitution_percent) || form.substitution_percent < 0 || form.substitution_percent > 300) {
+      out.push(t('pf.err.substitution'));
+    }
+    if (form.category_factors.some((r) => r.key.trim() && (bad(r.value) || r.value < 0 || r.value > 10))) {
+      out.push(t('pf.err.factor'));
+    }
+    for (const r of [...form.allowances, ...form.deductions]) {
+      if (!r.code.trim() && !r.name.trim()) continue;
+      if (!r.name.trim()) { out.push(t('pf.err.rowName')); break; }
+      if (bad(r.value) || r.value < 0 || (r.type === 'percent' && r.value > 100)) {
+        out.push(t('pf.err.rowValue', { name: r.name }));
+        break;
+      }
+    }
+    const { start_day: sd, end_day: ed } = form.period;
+    if (bad(sd) || !Number.isInteger(sd) || sd < 1 || sd > 28) out.push(t('pf.err.startDay'));
+    if (bad(ed) || !Number.isInteger(ed) || ed < 0 || ed > 31) out.push(t('pf.err.endDay'));
+    return out;
+  }, [form, t]);
+
   // --- Saqlash: faqat o'zgargan kalitlar --------------------------
   const save = useMutation({
     mutationFn: async () => {
@@ -515,11 +547,13 @@ export default function PayrollFormula({ editable }: { editable: boolean }) {
 
       {/* ============ SAQLASH PANELI ============ */}
       {editable && (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-[var(--bg)]/95
-          px-4 py-3 backdrop-blur md:pl-60">
+        <div className="fixed inset-x-0 bottom-[calc(56px+env(safe-area-inset-bottom))] z-30 border-t
+          bg-[var(--bg)]/95 px-4 py-3 backdrop-blur md:bottom-0 md:pl-60">
           <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
             <span className="text-[13px] text-[var(--text-muted)]">
-              {save.error
+              {problems.length > 0
+                ? <span className="text-[var(--danger)]">⚠ {problems[0]}</span>
+                : save.error
                 ? <span className="text-[var(--danger)]">
                     {(save.error as Error).message}
                   </span>
@@ -532,7 +566,7 @@ export default function PayrollFormula({ editable }: { editable: boolean }) {
             <Button
               variant={dirty ? 'primary' : 'secondary'}
               onClick={() => save.mutate()}
-              disabled={!dirty || save.isPending}
+              disabled={!dirty || save.isPending || problems.length > 0}
             >
               {save.isPending ? t('common.saving') : t('pf.saveAll')}
             </Button>
