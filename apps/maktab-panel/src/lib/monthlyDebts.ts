@@ -45,6 +45,8 @@ export interface ClassMonth {
   class_id: string | null;
   name: string;
   grade: number | null;
+  /** Filial nomi — "Barcha filiallar"da bir xil nomli sinflarni ajratish uchun. */
+  branch: string | null;
   students: StudentMonth[];
   charged: number;
   paid: number;
@@ -75,7 +77,7 @@ interface StuRow {
   id: string; full_name: string; payment_code: string | null;
   class_id: string | null; class_name: string | null; status: string;
 }
-interface ClsRow { id: string; name: string; grade_level: number | null }
+interface ClsRow { id: string; name: string; grade_level: number | null; branches: { name: string } | null }
 
 export async function loadMonthlyDebts(
   period: string,
@@ -88,7 +90,7 @@ export async function loadMonthlyDebts(
       .select('id, full_name, payment_code, class_id, class_name, status')
       .is('deleted_at', null)).order('id')),
     fetchAll<ClsRow>(() => br(supabase.from('classes')
-      .select('id, name, grade_level')
+      .select('id, name, grade_level, branches(name)')
       .is('deleted_at', null)).order('id')),
     fetchAll<InvRow>(() => br(supabase.from('v_invoice_totals')
       .select('student_id, period, total')
@@ -164,6 +166,7 @@ export async function loadMonthlyDebts(
         key, class_id: r.class_id,
         name: cls?.name ?? r.class_name ?? '—',
         grade: cls?.grade_level ?? null,
+        branch: cls?.branches?.name ?? null,
         students: [], charged: 0, paid: 0, remaining: 0, totalDebt: 0,
         count: { paid: 0, partial: 0, unpaid: 0, none: 0 },
       };
@@ -185,5 +188,6 @@ export async function loadMonthlyDebts(
       || a.full_name.localeCompare(b.full_name));
   }
   return list.sort((a, b) => (a.grade ?? 99) - (b.grade ?? 99)
-    || a.name.localeCompare(b.name, undefined, { numeric: true }));
+    || a.name.localeCompare(b.name, undefined, { numeric: true })
+    || (a.branch ?? '').localeCompare(b.branch ?? ''));
 }

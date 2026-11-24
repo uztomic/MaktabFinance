@@ -327,6 +327,11 @@ export default function Classes() {
                             {m.academic_year}
                           </span>
                         )}
+                        {!branchId && branches.length > 1 && (
+                          <div className="text-[11.5px] text-[var(--text-faint)]">
+                            {branches.find((b) => b.id === c.branch_id)?.name}
+                          </div>
+                        )}
                       </Td>
                       <Td className="text-[var(--text-muted)]">
                         {c.teacher_name ?? '—'}

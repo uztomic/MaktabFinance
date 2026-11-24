@@ -303,6 +303,8 @@ function Alerts({ setup, gaps, proofs }: {
 function ClassList({ rows, loading }: { rows: ClassMonth[]; loading: boolean }) {
   const t = useT();
   const { lang } = useI18n();
+  const { branchId, branches } = useAuth();
+  const multi = !branchId && branches.length > 1;
   if (loading) return <Loading />;
   const list = rows.filter((c) => c.charged > 0 || c.students.length > 0);
   if (list.length === 0) return <EmptyState hint="" />;
@@ -314,8 +316,8 @@ function ClassList({ rows, loading }: { rows: ClassMonth[]; loading: boolean }) 
           <>
             <div className="w-36 min-w-0 shrink-0">
               <div className="truncate text-[14px] font-medium" title={c.name}>{c.name}</div>
-              <div className="text-[11.5px] text-[var(--text-faint)]">
-                {t('dm.studentsCount', { count: c.students.length })}
+              <div className="truncate text-[11.5px] text-[var(--text-faint)]">
+                {c.branch && multi ? `${c.branch} · ` : ''}{t('dm.studentsCount', { count: c.students.length })}
               </div>
             </div>
             <div className="min-w-0 flex-1">

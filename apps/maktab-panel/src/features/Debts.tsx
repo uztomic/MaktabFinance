@@ -242,6 +242,8 @@ function ClassRow({
 }) {
   const t = useT();
   const { lang } = useI18n();
+  const { branchId, branches } = useAuth();
+  const multi = !branchId && branches.length > 1;
   const rate = c.charged > 0 ? Math.round((c.paid / c.charged) * 100) : 0;
 
   return (
@@ -260,8 +262,8 @@ function ClassRow({
 
         <div className="min-w-0 flex-1 md:flex-none md:basis-48">
           <div className="truncate text-[15px] font-semibold tracking-tight">{c.name}</div>
-          <div className="text-[12px] text-[var(--text-faint)]">
-            {t('dm.studentsCount', { count: c.students.length })}
+          <div className="truncate text-[12px] text-[var(--text-faint)]">
+            {c.branch && multi ? `${c.branch} · ` : ''}{t('dm.studentsCount', { count: c.students.length })}
           </div>
         </div>
 
