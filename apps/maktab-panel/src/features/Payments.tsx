@@ -14,7 +14,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/auth/AuthProvider';
 import { useI18n, useT } from '@/i18n';
-import { date, dateTime, isoDate, money } from '@/lib/format';
+import { clock, date, dateTime, isoDate, money } from '@/lib/format';
 import { exportTable, parseAmount, parseCsv, parseDate } from '@/lib/export';
 import {
   Badge, Button, Card, EmptyState, ErrorState, Field, Input, Loading,
@@ -198,6 +198,7 @@ function AllPayments() {
       receipt_code: rc.receipt_code,
       amount: p.amount as number,
       paid_on: p.paid_on as string,
+      issued_at: (p as { created_at?: string }).created_at ?? null,
       student_name: st?.full_name ?? '',
       student_class: st?.class_name ?? null,
       payment_code: st?.payment_code ?? null,
@@ -367,6 +368,7 @@ function AllPayments() {
                   <Tr key={p.id} className={dim ? 'opacity-60' : ''}>
                     <Td mono className="whitespace-nowrap text-[var(--text-muted)]">
                       {date(p.paid_on, lang)}
+                      <div className="text-[11.5px] text-[var(--text-faint)]">{clock(p.created_at)}</div>
                     </Td>
                     <Td>
                       <Link to={`/oquvchilar/${p.student_id}`}

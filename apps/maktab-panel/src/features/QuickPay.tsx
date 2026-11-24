@@ -128,6 +128,7 @@ export function QuickPay({ open, onClose, preset }: { open: boolean; onClose: ()
         receipt_code: res.receipt_code,
         amount: vars.amount,
         paid_on: vars.paid_on,
+        issued_at: new Date().toISOString(),
         student_name: picked!.full_name,
         student_class: picked!.class_name,
         payment_code: picked!.payment_code,

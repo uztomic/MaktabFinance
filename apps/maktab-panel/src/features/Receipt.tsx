@@ -13,7 +13,7 @@
 
 import { useState } from 'react';
 import { useI18n, useT } from '@/i18n';
-import { date, money } from '@/lib/format';
+import { money, payStamp } from '@/lib/format';
 import {
   bluetoothSupported, buildAiyinJob, buildEscPosJob, buildTextJob,
   canvasToBitmap, connectPrinter, loadSettings, type PrintMode,
@@ -26,6 +26,8 @@ export interface ReceiptData {
   receipt_code: string;
   amount: number | string;
   paid_on: string;
+  /** Kiritilgan aniq payt (soat:daqiqa). */
+  issued_at?: string | null;
   student_name: string;
   student_class?: string | null;
   payment_code?: string | null;
@@ -152,7 +154,7 @@ export function ReceiptModal({
           <div className="my-3 border-t border-dashed" />
 
           <dl className="space-y-1.5 text-[13px]">
-            <Row label={t('common.date')} value={date(data.paid_on, lang)} />
+            <Row label={t('common.date')} value={payStamp(data.paid_on, data.issued_at, lang)} />
             <Row label={t('receipt.from')} value={data.student_name} />
             {data.student_class && (
               <Row label={t('students.class')} value={data.student_class} />

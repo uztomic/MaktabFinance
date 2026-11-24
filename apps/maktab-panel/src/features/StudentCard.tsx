@@ -17,7 +17,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/auth/AuthProvider';
 import { useI18n, useT } from '@/i18n';
-import { date, dateTime, isoDate, money, periodLabel } from '@/lib/format';
+import { clock, date, dateTime, isoDate, money, periodLabel } from '@/lib/format';
 import {
   Badge, Button, Card, EmptyState, ErrorState, Field, Input, Loading,
   Modal, Money, MoneyInput, Notice, PageHeader, Segmented, Table, Td, Th, Tr,
@@ -263,6 +263,7 @@ export default function StudentCard() {
         receipt_code: res.receipt_code,
         amount: vars.amount,
         paid_on: vars.paid_on,
+        issued_at: new Date().toISOString(),
         student_name: student.data?.full_name ?? '',
         student_class: student.data?.class_name,
         payment_code: student.data?.payment_code,
@@ -393,6 +394,7 @@ export default function StudentCard() {
       receipt_code: code,
       amount: p.amount as number,
       paid_on: p.paid_on as string,
+      issued_at: (p as { created_at?: string }).created_at ?? null,
       student_name: student.data?.full_name ?? '',
       student_class: student.data?.class_name,
       payment_code: student.data?.payment_code,
@@ -829,6 +831,7 @@ export default function StudentCard() {
                         className={p.status !== 'confirmed' ? 'opacity-60' : ''}>
                       <Td mono className="whitespace-nowrap">
                         {date(p.paid_on, lang)}
+                        <div className="text-[11.5px] text-[var(--text-faint)]">{clock(p.created_at)}</div>
                       </Td>
                       <Td>
                         {p.channel === 'cash' ? '💵' : p.channel === 'bank' ? '🏦' : '📸'}

@@ -1809,5 +1809,6 @@
   "common.clear": "Tozalash",
   "teachers.issue.no_salary": "Oyligi belgilanmagan",
   "teachers.issue.no_rate": "Stavka ulushi nol",
-  "teachers.issue.no_allowance": "Sinf rahbarligi ustamasi yo'q"
+  "teachers.issue.no_allowance": "Sinf rahbarligi ustamasi yo'q",
+  "home.coveredMonth": "Oldindan to'langan"
 }

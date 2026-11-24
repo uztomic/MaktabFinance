@@ -155,6 +155,9 @@ export default function Dashboard() {
     unpaid: mSum((c) => c.count.unpaid),
     partial: mSum((c) => c.count.partial),
     paid: mSum((c) => c.count.paid),
+    //  Shu oy hisoblanmasiga tushgan to'lov — oldingi oylarda
+    //  oldindan to'langani ham (FIFO). Hisoblangan = to'langan + qarz.
+    covered: mSum((c) => c.paid),
   };
 
   return (
@@ -202,6 +205,11 @@ export default function Dashboard() {
                 tone={month.remaining > 0 ? 'danger' : 'neutral'}
                 hint={t('dm.counts', { unpaid: month.unpaid, partial: month.partial })}
               >
+                {month.covered > 0 && (
+                  <div className="mt-1 truncate text-[12px] text-[var(--ok)]">
+                    {t('home.coveredMonth')}: <span className="num">{money(month.covered, lang)}</span>
+                  </div>
+                )}
                 <div className="mt-1 truncate text-[12px] text-[var(--text-faint)]">
                   {t('home.debtAll')}: <span className="num">{money(s.total_debt, lang)}</span>
                 </div>
@@ -312,14 +320,14 @@ function ClassList({ rows, loading }: { rows: ClassMonth[]; loading: boolean }) 
             </div>
             <div className="min-w-0 flex-1">
               <Progress value={r} />
-              <div className="mt-1 flex flex-wrap gap-x-3 text-[11.5px] text-[var(--text-faint)]">
-                <span className="num">{money(c.paid, lang)} / {money(c.charged, lang)}</span>
+              <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3 text-[13px] text-[var(--text-muted)]">
+                <span className="num"><span className="font-semibold text-[var(--text)]">{money(c.paid, lang)}</span> / {money(c.charged, lang)}</span>
                 {c.count.unpaid > 0 && (
                   <span className="text-[var(--danger)]">{c.count.unpaid} {t('dm.state.unpaid').toLowerCase()}</span>
                 )}
               </div>
             </div>
-            <div className={`num w-28 shrink-0 text-right text-[13px] font-medium
+            <div className={`num w-32 shrink-0 text-right text-[15.5px] font-semibold
               ${c.remaining > 0 ? 'text-[var(--danger)]' : 'text-[var(--ok)]'}`}>
               {c.charged <= 0 ? '—' : c.remaining > 0 ? `−${money(c.remaining, lang)}` : '✓'}
             </div>

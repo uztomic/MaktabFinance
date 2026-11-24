@@ -104,3 +104,25 @@ export function isoDate(d: Date = new Date()): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${
     String(d.getDate()).padStart(2, '0')}`;
 }
+
+/**
+ *  To'lov payti: "24.11.2026, 14:32".
+ *  Vaqt — to'lov TIZIMGA KIRITILGAN aniq payt (server yozadi, qo'lda
+ *  o'zgartirib bo'lmaydi). To'lov sanasi orqaga qo'yilgan bo'lsa,
+ *  ikkalasi ham ko'rinadi: "20.11.2026 (kiritildi 24.11, 14:32)".
+ */
+export function payStamp(paidOn: string | null | undefined, at: string | null | undefined, lang: Lang = 'uz'): string {
+  if (!at) return date(paidOn, lang);
+  const d = new Date(at);
+  if (Number.isNaN(d.getTime())) return date(paidOn, lang);
+  const hm = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  const sameDay = paidOn && isoDate(d) === String(paidOn).slice(0, 10);
+  return sameDay ? `${date(paidOn, lang)}, ${hm}` : `${date(paidOn, lang)} (${date(d, lang).slice(0, 5)}, ${hm})`;
+}
+
+/** Faqat soat:daqiqa — "14:32". */
+export function clock(at: string | null | undefined): string {
+  if (!at) return '';
+  const d = new Date(at);
+  return Number.isNaN(d.getTime()) ? '' : `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}

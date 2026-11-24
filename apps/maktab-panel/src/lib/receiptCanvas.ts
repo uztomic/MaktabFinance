@@ -9,13 +9,14 @@
 //  Tasvir sifatida esa hamma narsa ekrandagidek bosiladi.
 // =====================================================================
 
-import { date, type Lang, money } from '@/lib/format';
+import { type Lang, money, payStamp } from '@/lib/format';
 
 export interface ReceiptPrintData {
   school_name: string;
   branch_name?: string | null;
   receipt_code: string;
   paid_on: string;
+  issued_at?: string | null;
   student_name: string;
   student_class?: string | null;
   payment_code?: string | null;
@@ -81,7 +82,7 @@ export function renderReceipt(
   items.push({ t: 'center', text: d.receipt_code, px: big, bold: true });
   items.push({ t: 'rule' });
 
-  items.push({ t: 'pair', left: labels.date, right: date(d.paid_on, lang), px: base });
+  items.push({ t: 'pair', left: labels.date, right: payStamp(d.paid_on, d.issued_at, lang), px: base });
   items.push({ t: 'pair', left: labels.from, right: d.student_name, px: base });
   if (d.student_class) {
     items.push({ t: 'pair', left: labels.klass, right: d.student_class, px: base });
@@ -211,7 +212,7 @@ export function receiptLines(
   const out = [center(d.school_name)];
   if (d.branch_name) out.push(center(d.branch_name));
   out.push(center(labels.title), center(d.receipt_code), rule);
-  out.push(pair(labels.date, date(d.paid_on, lang)));
+  out.push(pair(labels.date, payStamp(d.paid_on, d.issued_at, lang)));
   out.push(pair(labels.from, d.student_name));
   if (d.student_class) out.push(pair(labels.klass, d.student_class));
   if (d.payment_code) out.push(pair(labels.code, d.payment_code));

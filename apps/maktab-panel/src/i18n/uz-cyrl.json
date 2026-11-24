@@ -1809,5 +1809,6 @@
   "common.clear": "Тозалаш",
   "teachers.issue.no_salary": "Ойлиги белгиланмаган",
   "teachers.issue.no_rate": "Ставка улуши нол",
-  "teachers.issue.no_allowance": "Синф раҳбарлиги устамаси йўқ"
+  "teachers.issue.no_allowance": "Синф раҳбарлиги устамаси йўқ",
+  "home.coveredMonth": "Олдиндан тўланган"
 }
