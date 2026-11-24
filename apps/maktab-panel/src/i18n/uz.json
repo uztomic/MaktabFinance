@@ -1804,5 +1804,10 @@
   "home.charged": "Hisoblangan",
   "cls.remainingMonth": "Qoldi",
   "dm.tab.classes": "Sinflar",
-  "dm.thisMonthDebt": "Shu oy qarzi"
+  "dm.thisMonthDebt": "Shu oy qarzi",
+  "common.fix": "Tuzatish",
+  "common.clear": "Tozalash",
+  "teachers.issue.no_salary": "Oyligi belgilanmagan",
+  "teachers.issue.no_rate": "Stavka ulushi nol",
+  "teachers.issue.no_allowance": "Sinf rahbarligi ustamasi yo'q"
 }

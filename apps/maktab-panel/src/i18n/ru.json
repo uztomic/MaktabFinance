@@ -1804,5 +1804,10 @@
   "home.charged": "Начислено",
   "cls.remainingMonth": "Остаток",
   "dm.tab.classes": "Классы",
-  "dm.thisMonthDebt": "Долг за месяц"
+  "dm.thisMonthDebt": "Долг за месяц",
+  "common.fix": "Исправить",
+  "common.clear": "Сбросить",
+  "teachers.issue.no_salary": "Оклад не указан",
+  "teachers.issue.no_rate": "Ставка равна нулю",
+  "teachers.issue.no_allowance": "Нет надбавки классного руководителя"
 }

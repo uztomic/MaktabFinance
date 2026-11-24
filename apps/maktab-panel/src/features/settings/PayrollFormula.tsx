@@ -296,6 +296,7 @@ export default function PayrollFormula({ editable }: { editable: boolean }) {
 
   return (
     <div className="space-y-4 pb-24">
+      <ScrollToHash />
       <Notice tone="neutral">{t('pf.intro')}</Notice>
 
       {/* ============ 1. ASOSIY HAQ TURI ============ */}
@@ -347,6 +348,7 @@ export default function PayrollFormula({ editable }: { editable: boolean }) {
       </Card>
 
       {/* ============ 2. STAVKA VA SOAT ============ */}
+      <div id="pf-hours" className="scroll-mt-4" />
       <Card title={`${t('pf.hoursPerRate')} / ${t('pf.hourPrice')}`}>
         <div className="grid gap-4 sm:grid-cols-2">
           <Dim on={used('hours_per_rate')} usedBy={USED_BY.hours_per_rate}>
@@ -373,6 +375,7 @@ export default function PayrollFormula({ editable }: { editable: boolean }) {
       </Card>
 
       {/* ============ 3. TOIFA KOEFFITSIYENTLARI ============ */}
+      <div id="pf-categories" className="scroll-mt-4" />
       <Dim on={used('category_factors')} usedBy={USED_BY.category_factors}>
         <Card title={t('pf.categories')}>
           <p className="mb-3 text-[12px] text-[var(--text-muted)]">
@@ -430,6 +433,7 @@ export default function PayrollFormula({ editable }: { editable: boolean }) {
       </Card>
 
       {/* ============ 5. USTAMALAR ============ */}
+      <div id="pf-allowances" className="scroll-mt-4" />
       <Card title={t('pf.allowances')}>
         <p className="mb-3 text-[12px] text-[var(--text-muted)]">
           {t('pf.allowances.hint')} {t('pf.allowances.free')}
@@ -442,6 +446,7 @@ export default function PayrollFormula({ editable }: { editable: boolean }) {
       </Card>
 
       {/* ============ 6. USHLANMALAR ============ */}
+      <div id="pf-deductions" className="scroll-mt-4" />
       <Card title={t('pf.deductions')}>
         <p className="mb-3 text-[12px] text-[var(--text-muted)]">
           {t('pf.deductions.hint')}
@@ -844,4 +849,19 @@ function NamedRows({
       )}
     </div>
   );
+}
+
+/** Oylik sahifasidagi ogohlantirishdan kelinganda — o'sha bo'limga suradi. */
+function ScrollToHash() {
+  useEffect(() => {
+    const id = globalThis.location?.hash.slice(1);
+    if (!id) return;
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const card = el.nextElementSibling as HTMLElement | null;
+    card?.animate?.([{ boxShadow: '0 0 0 3px var(--warn)' }, { boxShadow: '0 0 0 0 transparent' }],
+      { duration: 1800, easing: 'ease-out' });
+  }, []);
+  return null;
 }

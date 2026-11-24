@@ -19,6 +19,18 @@ import { useI18n, useT } from '@/i18n';
 import { currentPeriod, money, periodLabel, shiftPeriod } from '@/lib/format';
 import { exportTable } from '@/lib/export';
 import { useConfirm } from '@/ui/Feedback';
+
+/** payroll_config_issues kodi → tuzatiladigan joy. */
+const ISSUE_LINK: Record<string, string> = {
+  hour_price_zero: '/sozlamalar?b=payroll#pf-hours',
+  hour_price_zero_subst: '/sozlamalar?b=payroll#pf-hours',
+  no_deductions: '/sozlamalar?b=payroll#pf-deductions',
+  zero_allowance: '/sozlamalar?b=payroll#pf-allowances',
+  no_category_factors: '/sozlamalar?b=payroll#pf-categories',
+  teacher_no_salary: '/oqituvchilar?muammo=no_salary',
+  teacher_no_rate: '/oqituvchilar?muammo=no_rate',
+  class_teacher_no_allowance: '/oqituvchilar?muammo=no_allowance',
+};
 import {
   Badge, Button, Card, EmptyState, ErrorState, Field, Input, Loading,
   Modal, Notice, PageHeader, Table, Td, Th, Tr,
@@ -297,20 +309,27 @@ export default function Payroll() {
 
       {(issues.data?.length ?? 0) > 0 && (
         <div className="mb-3 space-y-2">
-          {issues.data!.map((i) => (
-            <Notice
-              key={i.code}
-              tone={i.severity === 'error' ? 'danger'
-                : i.severity === 'warning' ? 'warn' : 'neutral'}
-            >
-              {i.message}
-              {i.hint && (
-                <span className="ml-1.5 text-[var(--text-muted)]">
-                  → {i.hint}
+          {issues.data!.map((i) => {
+            const body = (
+              <Notice
+                tone={i.severity === 'error' ? 'danger'
+                  : i.severity === 'warning' ? 'warn' : 'neutral'}
+              >
+                <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className="flex-1">{i.message}</span>
+                  {ISSUE_LINK[i.code] && (
+                    <span className="shrink-0 rounded-lg border border-current px-2.5 py-1 text-[12.5px] font-medium">
+                      {t('common.fix')} →
+                    </span>
+                  )}
                 </span>
-              )}
-            </Notice>
-          ))}
+              </Notice>
+            );
+            //  Ogohlantirish BOSILADI va aynan tuzatiladigan joyni ochadi.
+            return ISSUE_LINK[i.code]
+              ? <Link key={i.code} to={ISSUE_LINK[i.code]} className="block transition-opacity hover:opacity-85">{body}</Link>
+              : <div key={i.code}>{body}</div>;
+          })}
         </div>
       )}
 

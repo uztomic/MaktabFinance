@@ -9,7 +9,7 @@
 import { MonthPicker } from '@/ui/MonthPicker';
 import { type FormEvent, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/auth/AuthProvider';
 import { useI18n, useT } from '@/i18n';
@@ -35,6 +35,23 @@ export default function Teachers() {
   const [period, setPeriod] = useState(currentPeriod());
 
   const canEdit = mayWrite('teachers.manage');
+
+  //  Oylik sahifasidagi ogohlantirishdan kelinganda — aynan o'sha
+  //  o'qituvchilar: ?muammo=no_salary | no_rate | no_allowance.
+  const [params, setParams] = useSearchParams();
+  const issue = params.get('muammo');
+
+  const classTeacherAllow = useQuery({
+    queryKey: ['class-teacher-allowances'],
+    enabled: issue === 'no_allowance',
+    queryFn: async () => {
+      const today = isoDate();
+      const { data, error } = await supabase.from('teacher_allowances')
+        .select('teacher_id, ends_on').eq('code', 'class_teacher').lte('starts_on', today);
+      if (error) throw error;
+      return new Set((data ?? []).filter((a) => !a.ends_on || a.ends_on >= today).map((a) => a.teacher_id));
+    },
+  });
 
   const list = useQuery({
     queryKey: ['teachers'],
@@ -110,6 +127,19 @@ export default function Teachers() {
     },
   });
 
+  // deno-lint-ignore no-explicit-any
+  const shown = (list.data ?? []).filter((te: any) => {
+    if (!issue) return true;
+    if (!te.is_active) return false;
+    if (issue === 'no_salary') return !Number(te.base_salary);
+    if (issue === 'no_rate') return !Number(te.rate_factor);
+    if (issue === 'no_allowance') {
+      return (te.classes ?? []).some((c: { is_active: boolean }) => c.is_active)
+        && !(classTeacherAllow.data?.has(te.id) ?? true);
+    }
+    return true;
+  });
+
   if (!can('teachers.manage')) {
     return <Notice tone="danger">{t('common.noAccess')}</Notice>;
   }
@@ -136,8 +166,19 @@ export default function Teachers() {
         }
       />
 
+      {issue && (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-2 rounded-full border border-[var(--warn)]
+            bg-[var(--warn-bg)] px-3 py-1 text-[13px] text-[var(--warn)]">
+            {t(`teachers.issue.${issue}`)} · <span className="num font-semibold">{shown.length}</span>
+            <button type="button" onClick={() => setParams({}, { replace: true })}
+                    aria-label={t('common.clear')} className="ml-1 font-semibold">✕</button>
+          </span>
+        </div>
+      )}
+
       <Card padded={false}>
-        {(list.data?.length ?? 0) === 0
+        {shown.length === 0
           ? (
             <EmptyState
               action={canEdit && (
@@ -161,7 +202,7 @@ export default function Teachers() {
                 </tr>
               </thead>
               <tbody>
-                {list.data!.map((te) => {
+                {shown.map((te) => {
                   const h = hours.data?.get(te.id);
                   // deno-lint-ignore no-explicit-any
                   const tb = (te as any).teacher_branches ?? [];

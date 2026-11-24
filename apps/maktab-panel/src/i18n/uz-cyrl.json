@@ -1804,5 +1804,10 @@
   "home.charged": "Ҳисобланган",
   "cls.remainingMonth": "Қолди",
   "dm.tab.classes": "Синфлар",
-  "dm.thisMonthDebt": "Шу ой қарзи"
+  "dm.thisMonthDebt": "Шу ой қарзи",
+  "common.fix": "Тузатиш",
+  "common.clear": "Тозалаш",
+  "teachers.issue.no_salary": "Ойлиги белгиланмаган",
+  "teachers.issue.no_rate": "Ставка улуши нол",
+  "teachers.issue.no_allowance": "Синф раҳбарлиги устамаси йўқ"
 }
