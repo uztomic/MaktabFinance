@@ -1810,5 +1810,12 @@
   "teachers.issue.no_salary": "Оклад не указан",
   "teachers.issue.no_rate": "Ставка равна нулю",
   "teachers.issue.no_allowance": "Нет надбавки классного руководителя",
-  "home.coveredMonth": "Оплачено заранее"
+  "home.coveredMonth": "Оплачено заранее",
+  "wo.startsOn": "Учёт начинается",
+  "wo.fromBeginning": "С начала",
+  "wo.button": "Списать прошлые месяцы",
+  "wo.pick": "Учёт начинается с месяца:",
+  "wo.warn": "Все начисления до {month} будут отменены и не будут созданы заново. Платежи сохраняются и переходят на {month}. Действие записывается в журнал.",
+  "wo.confirm": "Начать с {month}",
+  "wo.done": "Списано начислений: {count} ({amount})"
 }

@@ -1810,5 +1810,12 @@
   "teachers.issue.no_salary": "Oyligi belgilanmagan",
   "teachers.issue.no_rate": "Stavka ulushi nol",
   "teachers.issue.no_allowance": "Sinf rahbarligi ustamasi yo'q",
-  "home.coveredMonth": "Oldindan to'langan"
+  "home.coveredMonth": "Oldindan to'langan",
+  "wo.startsOn": "Hisob boshlanadi",
+  "wo.fromBeginning": "Boshidan",
+  "wo.button": "Eski oylarni hisobdan chiqarish",
+  "wo.pick": "Hisob shu oydan boshlansin:",
+  "wo.warn": "{month} dan oldingi barcha hisoblanmalar bekor qilinadi va qayta tuzilmaydi. To'lovlar o'chmaydi — ular {month} ga o'tadi. Amal jurnalga yoziladi.",
+  "wo.confirm": "{month} dan boshlash",
+  "wo.done": "{count} ta hisoblanma ({amount}) hisobdan chiqarildi"
 }

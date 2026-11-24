@@ -19,6 +19,7 @@ import { currentPeriod, dateTime, money, periodLabel, shiftPeriod } from '@/lib/
 import {
   Badge, Button, Card, Input, Loading, Modal, Notice,
 } from '@/ui';
+import { MonthPicker } from '@/ui/MonthPicker';
 
 interface MonthRow {
   period: string;
@@ -43,6 +44,40 @@ export function MonthClose() {
   const [opening, setOpening] = useState<string | null>(null);
   const [reason, setReason] = useState('');
   const [note, setNote] = useState<string | null>(null);
+  //  Eski oylarni hisobdan chiqarish (faqat direktor).
+  const [woOpen, setWoOpen] = useState(false);
+  const [woStart, setWoStart] = useState(currentPeriod);
+  const [woReason, setWoReason] = useState('');
+
+  const start = useQuery({
+    queryKey: ['billing-start'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('school_settings')
+        .select('value').eq('key', 'billing.starts_on').maybeSingle();
+      if (error) throw error;
+      return data?.value ? String(data.value) : null;
+    },
+  });
+
+  const writeOff = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.rpc('write_off_before', {
+        p_start: woStart, p_reason: woReason.trim(),
+      });
+      if (error) throw error;
+      return data as { cancelled: number; amount: number };
+    },
+    onSuccess: (d) => {
+      setWoOpen(false);
+      setWoReason('');
+      setNote(t('wo.done', { count: d.cancelled, amount: money(d.amount, lang) }));
+      refresh();
+      qc.invalidateQueries({ queryKey: ['billing-start'] });
+      qc.invalidateQueries({ queryKey: ['debts-monthly'] });
+      qc.invalidateQueries({ queryKey: ['fin-summary'] });
+      qc.invalidateQueries({ queryKey: ['trend'] });
+    },
+  });
 
   const months = Array.from({ length: 12 }, (_, i) => shiftPeriod(currentPeriod(), -i));
 
@@ -124,6 +159,20 @@ export function MonthClose() {
 
   return (
     <>
+      {isOwner && (
+        <div className="mb-3 flex flex-wrap items-center gap-3 rounded-2xl border bg-[var(--bg)] px-5 py-3.5">
+          <div className="min-w-0 flex-1">
+            <div className="text-[13px] text-[var(--text-muted)]">{t('wo.startsOn')}</div>
+            <div className="text-[15px] font-semibold">
+              {start.data ? periodLabel(start.data, lang) : t('wo.fromBeginning')}
+            </div>
+          </div>
+          <Button onClick={() => { setWoStart(start.data ?? currentPeriod()); setWoOpen(true); }}>
+            {t('wo.button')}
+          </Button>
+        </div>
+      )}
+
       <Card padded={false} title={t('mc.title')}>
         {note && <div className="px-5 pt-3"><Notice tone="ok">{note}</Notice></div>}
         {notify.error && <div className="px-5 pt-3"><Notice tone="danger">{(notify.error as Error).message}</Notice></div>}
@@ -188,6 +237,30 @@ export function MonthClose() {
         <div className="space-y-3">
           <Notice tone="warn">{t('mc.closeWarn')}</Notice>
           {lock.error && <Notice tone="danger">{(lock.error as Error).message}</Notice>}
+        </div>
+      </Modal>
+
+      <Modal
+        open={woOpen}
+        title={t('wo.button')}
+        onClose={() => setWoOpen(false)}
+        footer={<>
+          <Button onClick={() => setWoOpen(false)}>{t('common.cancel')}</Button>
+          <Button variant="danger" disabled={writeOff.isPending || !woReason.trim()}
+                  onClick={() => writeOff.mutate()}>
+            {writeOff.isPending ? t('common.saving') : t('wo.confirm', { month: periodLabel(woStart, lang) })}
+          </Button>
+        </>}
+      >
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-[13.5px] text-[var(--text-muted)]">{t('wo.pick')}</span>
+            <MonthPicker value={woStart} onChange={setWoStart} />
+          </div>
+          <Notice tone="warn">{t('wo.warn', { month: periodLabel(woStart, lang) })}</Notice>
+          <Input value={woReason} onChange={(e) => setWoReason(e.target.value)}
+                 placeholder={t('mc.reasonPlaceholder')} />
+          {writeOff.error && <Notice tone="danger">{(writeOff.error as Error).message}</Notice>}
         </div>
       </Modal>
 

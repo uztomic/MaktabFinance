@@ -5190,6 +5190,10 @@ export type Database = {
           permission: string
         }[]
       }
+      write_off_before: {
+        Args: { p_reason: string; p_start: string }
+        Returns: Json
+      }
     }
     Enums: {
       billing_type: "monthly_fixed" | "daily" | "one_time"
