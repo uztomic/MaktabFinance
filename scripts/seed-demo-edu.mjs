@@ -157,10 +157,10 @@ async function wipe() {
   // O'quvchi–sinf va o'quvchi–ota-ona bog'lanishlari alohida: ularda
   // `school_id` yo'q, ota jadval orqali o'chiriladi.
   await sql(`
+    set session_replication_role = replica;
     do $$
     declare s uuid;
     begin
-      perform set_config('session_replication_role', 'replica', true);
       for s in select id from public.schools where name = ${q(SCHOOL)} loop
         delete from public.student_parents where student_id in
           (select id from public.students where school_id = s);

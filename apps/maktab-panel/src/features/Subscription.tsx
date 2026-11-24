@@ -167,7 +167,14 @@ export default function Subscription() {
                 {(sub.data?.plans as unknown as { name: string } | null)?.name ?? '—'}
               </span>
             </div>
-            <div className="flex justify-between border-b py-1.5">
+            {(sub.data as { billing_model?: string } | null)?.billing_model === 'purchase' && (
+              <div className="flex justify-between border-b py-1.5">
+                <span className="text-[var(--text-muted)]">{t('sub.model')}</span>
+                <span className="font-medium">{t('sub.model.purchase')}</span>
+              </div>
+            )}
+            <div className="flex justify-between border-b py-1.5"
+                 hidden={(sub.data as { billing_model?: string } | null)?.billing_model === 'purchase'}>
               <span className="text-[var(--text-muted)]">{t('sub.monthly')}</span>
               {/*  JORIY hisob ko'rsatiladi, saqlangan qiymat emas.
                    Ilgari bu yerda `monthly_amount` turardi — u maktab

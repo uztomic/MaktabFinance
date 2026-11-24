@@ -110,7 +110,7 @@
   "att.notCame": "Kelmadi",
   "att.notChecked": "Olinmagan",
   "att.notMarked": "Olinmagan",
-  "att.notWorkday": "Bu kun ish kuni emas — davomat olinmaydi.",
+  "att.notWorkday": "Bugun sozlamada dam olish kuni deb belgilangan.",
   "att.overviewHint": "Qaysi sinfda davomat olingan va bugun kim kelgan",
   "att.overviewTitle": "Kunlik davomat",
   "att.present": "Keldi",
@@ -1817,5 +1817,9 @@
   "wo.pick": "Hisob shu oydan boshlansin:",
   "wo.warn": "{month} dan oldingi barcha hisoblanmalar bekor qilinadi va qayta tuzilmaydi. To'lovlar o'chmaydi — ular {month} ga o'tadi. Amal jurnalga yoziladi.",
   "wo.confirm": "{month} dan boshlash",
-  "wo.done": "{count} ta hisoblanma ({amount}) hisobdan chiqarildi"
+  "wo.done": "{count} ta hisoblanma ({amount}) hisobdan chiqarildi",
+  "sub.model": "To'lov turi",
+  "sub.model.purchase": "Sotib olingan · server to'lovi yiliga bir marta",
+  "att.openCalendar": "Kalendarni ochish",
+  "cal.removeDayConfirm": "{day} ish kunlaridan olib tashlansinmi? Shu kuni davomat olib bo'lmaydi va xizmatlar hisoblanmaydi."
 }

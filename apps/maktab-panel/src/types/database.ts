@@ -2879,6 +2879,7 @@ export type Database = {
       }
       school_subscriptions: {
         Row: {
+          billing_model: string
           created_at: string
           id: string
           last_paid_at: string | null
@@ -2892,6 +2893,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          billing_model?: string
           created_at?: string
           id?: string
           last_paid_at?: string | null
@@ -2905,6 +2907,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          billing_model?: string
           created_at?: string
           id?: string
           last_paid_at?: string | null
@@ -5039,6 +5042,10 @@ export type Database = {
           status: string
           student_id: string
         }[]
+      }
+      set_billing_model: {
+        Args: { p_model: string; p_school_id: string }
+        Returns: Json
       }
       set_group_price: {
         Args: { p_group_id: string; p_price: number; p_valid_from?: string }

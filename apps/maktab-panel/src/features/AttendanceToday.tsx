@@ -395,6 +395,9 @@ function ClassPanel({ r, day }: { r: ClassRow; day: string }) {
               <Notice tone="danger">
                 {(save.error as Error).message.includes('Davr yopilgan')
                   ? t('absences.lockedPeriod')
+                  : (save.error as Error).message.includes('ish kuni emas')
+                  ? <>{t('att.notWorkday')}{' '}
+                      <Link to="/sozlamalar?b=calendar" className="font-medium underline">{t('att.openCalendar')} →</Link></>
                   : (save.error as Error).message}
               </Notice>
             </div>

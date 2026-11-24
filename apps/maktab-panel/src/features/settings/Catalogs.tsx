@@ -198,9 +198,12 @@ export function CalendarSettings({ editable }: { editable: boolean }) {
                 key={d}
                 type="button"
                 disabled={!editable || saveWeek.isPending}
-                onClick={() => saveWeek.mutate(
-                  on ? week.filter((x) => x !== d) : [...week, d],
-                )}
+                onClick={() => {
+                  //  Ish kunini olib tashlash davomatni to'xtatadi — tasdiq so'raladi.
+                  if (on && !globalThis.confirm(t('cal.removeDayConfirm', { day: t(`cal.dow.${d}`) }))) return;
+                  if (on && week.length === 1) return;
+                  saveWeek.mutate(on ? week.filter((x) => x !== d) : [...week, d]);
+                }}
                 className={`rounded-[10px] border px-3 py-1.5 text-[13px] ${
                   on
                     ? 'bg-[var(--primary)] border-[var(--primary)] font-medium text-[var(--on-primary)]'
